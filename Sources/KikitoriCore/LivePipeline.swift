@@ -13,6 +13,8 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         case heard(time: Double, duration: Double, ja: String, asrSeconds: Double)
         case translated(time: Double, lines: [TranscriptLine], cost: Double, seconds: Double, tokens: Int)
         case translationFailed(time: Double, ClaudeClient.Failure)
+        /// The chunk was not sent for translation (no translator, or Japanese only right now).
+        case translationSkipped(time: Double)
     }
 
     public var engine: any SpeechEngine
@@ -53,7 +55,10 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         let translate = Task { [translator] in
             for await (time, ja) in heard {
-                guard let translator, await shouldTranslate() else { continue }
+                guard let translator, await shouldTranslate() else {
+                    emit.yield(.translationSkipped(time: time))
+                    continue
+                }
                 let start = Date()
                 do {
                     let r = try await translator.translate(ja)

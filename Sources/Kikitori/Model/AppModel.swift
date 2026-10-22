@@ -70,6 +70,8 @@ final class AppModel {
     var latencies: [Double] = []
     var capOverride = false
     var explain: [UUID: ExplainState] = [:]
+    /// Lines whose English is still on its way (everything else without English stays Japanese only).
+    var pendingLines: Set<UUID> = []
     var hasAPIKey = KeychainStore.apiKey() != nil
     var overlayRevision = 0
 
@@ -331,13 +333,17 @@ final class AppModel {
             let t = time + offset
             pendingEnds[t] = Date.now.addingTimeInterval(-asr)
             _ = duration
-            record.lines.append(TranscriptLine(time: t, ja: ja))
+            let line = TranscriptLine(time: t, ja: ja)
+            record.lines.append(line)
+            pendingLines.insert(line.id)
             clear(.noAudio(name: source?.name ?? ""))
         case let .translated(time, lines, cost, _, tokens):
             let t = time + offset
             if let i = record.lines.firstIndex(where: { $0.time == t && $0.en == nil }) {
+                pendingLines.remove(record.lines[i].id)
                 let translated = lines.map { var l = $0; l.time = t; return l }
-                record.lines.replaceSubrange(i...i, with: translated.isEmpty ? [record.lines[i]] : translated)
+                // No lines back means fillers or backchannels: the Japanese stays, without English.
+                if !translated.isEmpty { record.lines.replaceSubrange(i...i, with: translated) }
             }
             if let end = pendingEnds.removeValue(forKey: t) { latencies.append(Date.now.timeIntervalSince(end)) }
             record.cost += cost
@@ -346,7 +352,10 @@ final class AppModel {
             consecutiveFailures = 0
             for issue in [Issue.offline, .apiOutage, .rateLimited, .keyInvalid, .creditsExhausted] { clear(issue) }
             saveLedgerSoon()
-        case let .translationFailed(_, failure):
+        case let .translationSkipped(time):
+            settle(time + offset, in: &record)
+        case let .translationFailed(time, failure):
+            settle(time + offset, in: &record)
             consecutiveFailures += 1
             switch failure {
             case .invalidKey: raise(.keyInvalid)
@@ -359,6 +368,11 @@ final class AppModel {
         }
         session = record
         overlayRevision += 1
+    }
+
+    private func settle(_ time: Double, in record: inout SessionRecord) {
+        if let line = record.lines.first(where: { $0.time == time && $0.en == nil }) { pendingLines.remove(line.id) }
+        pendingEnds[time] = nil
     }
 
     func raise(_ issue: Issue) { if !issues.contains(issue) { issues.append(issue) } }

@@ -15,6 +15,7 @@ struct TranscriptRow: View {
             Group {
                 if pending {
                     HStack(spacing: 4) { Circle().fill(Color.kkDanger).frame(width: 6, height: 6); Text("Live") }
+                        .accessibilityLabel("Translating")
                 } else {
                     Text(TranscriptExport.clock(line.time))
                 }
@@ -38,7 +39,7 @@ struct TranscriptRow: View {
                         marked(en).font(.system(size: textSize))
                         if let term = line.term { NoteChip(term: term) }
                     }
-                } else {
+                } else if pending {
                     TranslatingDots().frame(height: textSize)
                 }
             }

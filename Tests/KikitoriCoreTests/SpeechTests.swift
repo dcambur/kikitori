@@ -64,3 +64,30 @@ func signal(_ parts: [(speech: Bool, seconds: Double)]) -> [Float] {
         #expect(TranscriptFilter.clean("ダメだー!ダメだー!ダメだー!ダメだー!") == "ダメだー!ダメだー!ダメだー!ダメだー!")
     }
 }
+
+/// Returns fixed Japanese for every chunk.
+struct FakeEngine: SpeechEngine {
+    let name = "fake"
+    func prepare() async throws {}
+    func transcribe(_ samples: [Float], context: [String]) async throws -> String { "こんにちは" }
+}
+
+@Suite struct LivePipelineTests {
+    @Test func everyHeardChunkIsSettledWhenThereIsNoTranslator() async {
+        let pipeline = LivePipeline(engine: FakeEngine(), translator: nil, vad: EnergyVAD())
+        let audio = AsyncStream<[Float]> { c in
+            c.yield(signal([(false, 1), (true, 2), (false, 1), (true, 2), (false, 2)]))
+            c.finish()
+        }
+        var heard: [Double] = [], skipped: [Double] = []
+        for await event in pipeline.run(audio) {
+            switch event {
+            case let .heard(time, _, _, _): heard.append(time)
+            case let .translationSkipped(time): skipped.append(time)
+            default: break
+            }
+        }
+        #expect(heard.count == 2)
+        #expect(skipped == heard)   // nothing is left waiting for English that will never come
+    }
+}

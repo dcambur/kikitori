@@ -72,8 +72,9 @@ no kikitori server. Transcripts, profiles and usage stay in `~/Library/Applicati
 
 ## Status
 
-Version 0.1: the full pipeline runs end to end on real stream audio, and every screen of the design
-exists. Not yet done: a stable signing identity (ad-hoc builds re-ask for the audio permission
+Version 0.1: every screen of the design exists, and the app has been tested live: it captured a
+stream playing in Firefox, with subtitles about 2.5–3 s behind the speaker (≈ $0.0036 per minute of
+talk). Not yet done: a stable signing identity (ad-hoc builds re-ask for the audio permission
 after each rebuild), Whisper turbo as an optional engine, speaker labels for collabs.
 
 ## License

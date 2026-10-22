@@ -100,6 +100,7 @@ enum Snapshots {
         ]
         session.cost = 0.14
         model.session = session
+        model.pendingLines = [session.lines.last!.id]
         model.source = AudioSource(id: "com.apple.Safari", name: "Safari", pid: 0, processObjects: [], isPlaying: true)
         model.state = .listening
         model.latencies = [2.7, 2.9, 3.1, 2.8, 2.9]

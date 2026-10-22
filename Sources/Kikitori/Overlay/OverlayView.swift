@@ -85,9 +85,12 @@ struct OverlayView: View {
                         .accessibilityLabel("Has a note: \(line.term ?? "")")
                     }
                 }
-            } else {
+            } else if model.pendingLines.contains(line.id) {
                 Text(line.ja).font(.japanese(size.japanese)).foregroundStyle(textColor.opacity(0.8))
                 TranslatingDots(color: textColor.opacity(0.7)).frame(height: size.english)
+            } else {
+                Text(line.ja).font(.japanese(size.english * 0.8, weight: .bold)).foregroundStyle(textColor.opacity(opacity))
+                    .japaneseText()
             }
         }
         .multilineTextAlignment(.center)

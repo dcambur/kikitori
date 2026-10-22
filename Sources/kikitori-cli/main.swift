@@ -64,6 +64,7 @@ func runFile(_ path: String, realTime: Bool) async throws {
             for l in lines {
                 print(String(format: "[%6.1f] EN (+%.1fs): %@%@", time, seconds, l.en ?? "", l.note.map { "  [注 \($0)]" } ?? ""))
             }
+        case .translationSkipped: break
         case let .translationFailed(time, failure):
             print(String(format: "[%6.1f] translation failed: %@", time, "\(failure)"))
         }

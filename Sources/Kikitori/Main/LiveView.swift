@@ -51,7 +51,7 @@ struct LiveView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     ForEach(shown) { line in
-                        TranscriptRow(line: line, selected: line.id == selection, pending: line.en == nil,
+                        TranscriptRow(line: line, selected: line.id == selection, pending: model.pendingLines.contains(line.id),
                                       textSize: model.prefs.transcriptTextSize, showJapanese: model.prefs.showJapanese,
                                       highlight: search)
                             .id(line.id)
