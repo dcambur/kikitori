@@ -82,6 +82,17 @@ func messageJSON(text: String, model: String = "claude-haiku-5-5", stop: String 
         #expect(last.first?["role"] as? String == "user")
     }
 
+    @Test func notesMustNameSomethingThatWasHeard() {
+        func line(_ term: String, _ note: String = "n") -> LiveTranslator.Line {
+            try! JSONDecoder().decode(LiveTranslator.Line.self, from: Data(
+                #"{"ja":"草生える","en":"lol","note":"\#(note)","term":"\#(term)"}"#.utf8))
+        }
+        #expect(LiveTranslator.groundNote(line("草"), heard: "草生える").note == "n")
+        #expect(LiveTranslator.groundNote(line("ケロップゲ"), heard: "草生える").note == "")
+        #expect(LiveTranslator.groundNote(line(""), heard: "草生える").note == "")
+        #expect(LiveTranslator.groundNote(line("草", "Japanese 草 misheard, left as-is"), heard: "草生える").note == "")
+    }
+
     @Test func emptyChunkCostsNothing() async throws {
         let stub = StubTransport([])
         let t = LiveTranslator(client: ClaudeClient(apiKey: "k", transport: stub), profile: nil)

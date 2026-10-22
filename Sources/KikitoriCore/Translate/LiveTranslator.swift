@@ -11,13 +11,24 @@ public actor LiveTranslator {
         public var lines: [Line]
         public var usage: ClaudeClient.Usage
         public var cost: Double
+        /// The model's JSON answer, for logs.
+        public var raw = ""
     }
 
     public struct Line: Codable, Sendable, Equatable {
-        public var ja: String
+        /// The corrected Japanese for this line; empty unless `echoJapanese` is on.
+        public var ja = ""
         public var en: String
         public var note: String
         public var term: String
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            ja = try c.decodeIfPresent(String.self, forKey: .ja) ?? ""
+            en = try c.decode(String.self, forKey: .en)
+            note = try c.decode(String.self, forKey: .note)
+            term = try c.decode(String.self, forKey: .term)
+        }
     }
 
     public static let model = "claude-haiku-5-5"
@@ -25,19 +36,21 @@ public actor LiveTranslator {
     let client: ClaudeClient
     let pricing: Pricing
     let historyBudget: Int
+    let schema: JSONValue
     var system: [ClaudeClient.TextBlock]
     var history: [ClaudeClient.Message] = []
 
     public init(client: ClaudeClient, profile: Profile?, streamInfo: String? = nil,
                 settings: TranslationSettings = .init(), pricing: Pricing = .bundled,
-                historyBudget: Int = 12_000) {
+                historyBudget: Int = 12_000, echoJapanese: Bool = true) {
         self.client = client
         self.pricing = pricing
         self.historyBudget = historyBudget
+        schema = Self.schema(echoJapanese: echoJapanese)
         var context = settings.promptBlock
         if let profile { context += "\n\n" + profile.promptBlock }
         if let streamInfo, !streamInfo.isEmpty { context += "\n\nThis stream: \(streamInfo)" }
-        system = [.init(Self.instructions), .init(context)]
+        system = [.init(Self.instructions(echoJapanese: echoJapanese)), .init(context)]
     }
 
     /// Translate one chunk. An empty chunk returns no lines without calling the API.
@@ -49,15 +62,34 @@ public actor LiveTranslator {
             model: Self.model, maxTokens: 2048, system: system,
             messages: history + [.user(ja)],
             thinking: .disabled,
-            outputConfig: .init(effort: "low", format: .init(schema: Self.schema)))
+            outputConfig: .init(effort: "low", format: .init(schema: schema)))
         let response = try await client.send(request)
         let answer = response.text
         let lines = try JSONDecoder().decode(Answer.self, from: Data(answer.utf8)).lines
             .filter { !$0.en.trimmingCharacters(in: .whitespaces).isEmpty }
+            .map { Self.groundNote($0, heard: ja) }
         history += [.user(ja), .assistant(answer)]
         return Result(lines: lines, usage: response.usage,
-                      cost: pricing.cost(response.usage, model: response.model))
+                      cost: pricing.cost(response.usage, model: response.model), raw: answer)
     }
+
+    /// A note survives only if its term is in what was actually heard (or in the corrected line):
+    /// notes about words the model imagined, or with no term at all, are dropped.
+    static func groundNote(_ line: Line, heard: String) -> Line {
+        var line = line
+        let term = line.term.trimmingCharacters(in: .whitespaces)
+        let aboutRecognition = recognitionWords.contains { line.note.localizedCaseInsensitiveContains($0) }
+        if line.note.isEmpty || term.isEmpty || aboutRecognition
+            || !(heard.contains(term) || line.ja.contains(term)) {
+            line.note = ""; line.term = ""
+        }
+        return line
+    }
+
+    /// Notes that talk about the transcript instead of the language (the prompt forbids them,
+    /// but the model still writes some).
+    static let recognitionWords = ["mishear", "misheard", "garbled", "recognition", "transcri",
+                                   "made-up", "made up", "nonsense", "unclear", "typo", "left as-is"]
 
     /// Recent Japanese/English pairs, for the explainer's context.
     public func recentHistory() -> [ClaudeClient.Message] { history }
@@ -75,16 +107,23 @@ public actor LiveTranslator {
 
     struct Answer: Decodable { var lines: [Line] }
 
-    static let schema: JSONValue = .strictObject([
-        "lines": [
-            "type": "array",
-            "items": .strictObject([
-                "ja": .stringSchema, "en": .stringSchema, "note": .stringSchema, "term": .stringSchema,
-            ]),
-        ],
-    ])
+    static func schema(echoJapanese: Bool) -> JSONValue {
+        var line: [String: JSONValue] = ["en": .stringSchema, "note": .stringSchema, "term": .stringSchema]
+        if echoJapanese { line["ja"] = .stringSchema }
+        return .strictObject(["lines": ["type": "array", "items": .strictObject(line)]])
+    }
 
-    static let instructions = """
+    static func instructions(echoJapanese: Bool) -> String {
+        let fields = echoJapanese
+            ? """
+              ja: the Japanese for that line, with obvious recognition errors fixed;
+              en: the subtitle, short enough to read at a glance (aim for under 90 characters).
+            """
+            : "  en: the subtitle, short enough to read at a glance (aim for under 90 characters)."
+        return instructionsTemplate.replacingOccurrences(of: "{fields}", with: fields)
+    }
+
+    static let instructionsTemplate = """
     You write live English subtitles for Japanese VTuber livestreams.
 
     Each user message is one chunk of automatic speech recognition (ASR) from the stream: \
@@ -97,15 +136,15 @@ public actor LiveTranslator {
     for example), wrong kanji, dropped particles, words cut off at the start or end of a chunk, \
     and occasional nonsense. Use the conversation so far, the streamer profile and common sense \
     to work out what was actually said.
-    - Never translate recognizer garbage literally, and never invent content that is not there. \
-    If a fragment is unintelligible, leave it out.
+    - Translate everything that is plausibly speech, giving your best reading of misrecognized \
+    words. Leave out only stretches that are clearly noise or nonsense, and never invent content \
+    that is not there. A chunk with real sentences never gets an empty list.
     - Several people may speak in one chunk. Keep each person's line separate when you can tell \
     them apart; do not label speakers.
 
     How to write the lines
     - Split the chunk into subtitle lines at natural sentence or turn boundaries. Each line has:
-      ja: the Japanese for that line, with obvious recognition errors fixed;
-      en: the subtitle, short enough to read at a glance (aim for under 90 characters).
+    {fields}
     - Match the speaker's tone and energy: casual speech stays casual, screams and reactions \
     stay short and punchy ("Wait wait wait!", "No way!"). Keep catchphrases and greetings \
     recognisable.
@@ -121,5 +160,9 @@ public actor LiveTranslator {
     - note: at most 12 words, plain English. term: the Japanese word or phrase it explains.
     - Most lines have no note: then note and term are empty strings. Never repeat a note \
     already given earlier in the conversation for the same term.
+    - Only note things you are confident are real: established slang, memes, references and \
+    wordplay you can actually explain. If a word is unfamiliar or might be a recognition \
+    error, fix it silently or translate your best guess, and give no note. Never note \
+    something as "made-up", "unclear" or "possibly a mishearing".
     """
 }
