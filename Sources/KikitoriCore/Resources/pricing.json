@@ -1,0 +1,7 @@
+{
+  "comment": "USD per million tokens. Prompts of 100K tokens or fewer; kikitori never sends more. Update when Anthropic changes prices.",
+  "models": {
+    "claude-haiku-5-5": { "input": 0.10, "output": 0.50, "cacheWrite": 0.125, "cacheRead": 0.01 },
+    "claude-sonnet-5-5": { "input": 2.00, "output": 10.00, "cacheWrite": 2.50, "cacheRead": 0.20 }
+  }
+}
