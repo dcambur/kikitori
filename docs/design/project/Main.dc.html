@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>kikitori foundations</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:1680px;height:1000px;padding:56px;display:flex;flex-direction:column;gap:36px;overflow:hidden">
+  <header style="display:flex;align-items:center;gap:24px">
+    <div class="appicon" style="width:96px;height:96px;gap:7px"><span class="k" style="font-size:46px">聞</span><span class="bars" style="gap:4px"><i style="width:44px;height:5px"></i><i style="width:28px;height:5px;opacity:.7"></i></span></div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div class="h1d">kikitori <span class="jp" style="font-weight:600;color:#55555C">聞き取り</span></div>
+      <div class="capn" style="font-size:15px;max-width:900px">Live English subtitles and cultural context for Japanese VTuber streams. Native macOS 26 app: SwiftUI, Apple Silicon.</div>
+      <div class="capn">Design v1 · 2026-10-22 · Accent “Fuji” (wisteria) · Sample streamer: Hoshimi Kuu 星見くう (fictional)</div>
+    </div>
+  </header>
+
+  <div style="display:grid;grid-template-columns:460px 520px minmax(0,1fr);gap:44px;flex:1;min-height:0">
+
+    <section style="display:flex;flex-direction:column;gap:22px">
+      <div class="cap">App icon and the 聞 mark</div>
+      <div style="display:flex;align-items:flex-end;gap:22px">
+        <div class="appicon" style="width:128px;height:128px;gap:9px"><span class="k" style="font-size:60px">聞</span><span class="bars" style="gap:5px"><i style="width:58px;height:7px"></i><i style="width:36px;height:7px;opacity:.7"></i></span></div>
+        <div class="appicon" style="width:64px;height:64px;gap:4px"><span class="k" style="font-size:30px">聞</span><span class="bars" style="gap:3px"><i style="width:30px;height:3.5px"></i><i style="width:18px;height:3.5px;opacity:.7"></i></span></div>
+        <div class="appicon" style="width:32px;height:32px;gap:2px"><span class="k" style="font-size:16px">聞</span><span class="bars"><i style="width:15px;height:2px"></i></span></div>
+        <div class="appicon" style="width:16px;height:16px"><span class="k" style="font-size:10px">聞</span></div>
+      </div>
+      <div class="capn">Squircle in Fuji #6A4FD8, white 聞 (Hiragino Sans W6) over two subtitle bars. Under 32 px the bars drop out. Icon Composer layers: background, kanji, bars (bars get the glass highlight).</div>
+
+      <div class="cap" style="margin-top:6px">Menu bar glyph (template image, 18 × 16 pt)</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:22px;height:30px;padding:0 16px;border-radius:8px;background:#ECECF1;color:#1D1D1F;font-size:12px">
+          <span style="display:flex;align-items:center;gap:6px"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke-linecap="round"></path></svg>Idle</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="18" height="16" viewBox="0 0 18 16" aria-hidden="true"><rect x="1" y="1.5" width="16" height="13" rx="3.2" fill="currentColor"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke="#ECECF1" stroke-width="1.6" stroke-linecap="round"></path></svg>Live</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M7 5.5v5M11 5.5v5" stroke-linecap="round" stroke-width="1.8"></path></svg>Paused</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke-linecap="round"></path><circle cx="16.5" cy="3.5" r="3" fill="#FF9F0A" stroke="#ECECF1" stroke-width="1.2"></circle></svg>Needs attention</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:22px;height:30px;padding:0 16px;border-radius:8px;background:#2B2B30;color:#F2F2F5;font-size:12px">
+          <span style="display:flex;align-items:center;gap:6px"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke-linecap="round"></path></svg>Idle</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="18" height="16" viewBox="0 0 18 16" aria-hidden="true"><rect x="1" y="1.5" width="16" height="13" rx="3.2" fill="currentColor"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke="#2B2B30" stroke-width="1.6" stroke-linecap="round"></path></svg>Live</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M7 5.5v5M11 5.5v5" stroke-linecap="round" stroke-width="1.8"></path></svg>Paused</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke-linecap="round"></path><circle cx="16.5" cy="3.5" r="3" fill="#FFB547" stroke="#2B2B30" stroke-width="1.2"></circle></svg>Needs attention</span>
+        </div>
+      </div>
+      <div class="capn">The attention dot is the only colour in the menu bar; it appears for budget warnings, offline and errors (never for normal states).</div>
+
+      <div class="cap" style="margin-top:6px">Materials</div>
+      <div style="position:relative;height:200px;border-radius:14px;overflow:hidden;background:#3B2F7A">
+        <div style="position:absolute;left:0;top:0;width:50%;height:100%;background:#F4D35E"></div>
+        <div style="position:absolute;left:30%;top:30%;width:40%;height:70%;background:#2EC4B6;border-radius:50% 50% 0 0"></div>
+        <div class="ov" style="position:absolute;left:16px;top:18px;width:220px;padding:10px 14px"><div class="oe" style="font-size:15px">Overlay glass</div><div style="font-size:11px;color:rgba(255,255,255,.8)">rgba(16,16,22,.72) · blur 24 · sat 1.5</div></div>
+        <div class="kk kl" style="position:absolute;right:16px;top:18px;width:200px"><div class="menu" style="padding:10px 12px"><b>Popover / menu</b><div class="mut" style="font-size:11px">.popover material</div></div></div>
+        <div class="ov solid" style="position:absolute;left:16px;bottom:16px;width:220px;padding:10px 14px"><div class="oe" style="font-size:15px">Reduced transparency</div><div style="font-size:11px;color:rgba(255,255,255,.8)">#121216 solid · 1.5 pt edge</div></div>
+        <div class="kk kd" style="position:absolute;right:16px;bottom:16px;width:200px"><div class="menu" style="padding:10px 12px"><b>Popover, dark</b><div class="mut" style="font-size:11px">system vibrancy</div></div></div>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <div class="cap">Colour tokens (light / dark)</div>
+      <table class="tbl" style="background:#FFFFFF;border-radius:12px;overflow:hidden;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.1)">
+        <thead><tr><th>Token</th><th>Light</th><th>Dark</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">accent</td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#5E43CF;display:block"></i>#5E43CF</span></td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#A894FF;display:block"></i>#A894FF</span></td><td class="mut">tint, links, selected icons</td></tr>
+          <tr><td class="mono">accentFill</td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#6A4FD8;display:block"></i>#6A4FD8</span></td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#6E56E0;display:block"></i>#6E56E0</span></td><td class="mut">filled buttons (white text 5.2:1+)</td></tr>
+          <tr><td class="mono">note</td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#9A4B00;display:block"></i>#9A4B00</span></td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#FFB547;display:block"></i>#FFB547</span></td><td class="mut">注 note markers, warnings</td></tr>
+          <tr><td class="mono">success</td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#1A7F37;display:block"></i>#1A7F37</span></td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#4CD964;display:block"></i>#4CD964</span></td><td class="mut">granted, valid, levels</td></tr>
+          <tr><td class="mono">danger</td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#C4001A;display:block"></i>#C4001A</span></td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#FF6B61;display:block"></i>#FF6B61</span></td><td class="mut">errors, destructive</td></tr>
+          <tr><td class="mono">info</td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#0060C7;display:block"></i>#0060C7</span></td><td><span style="display:flex;gap:6px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#5AB0FF;display:block"></i>#5AB0FF</span></td><td class="mut">neutral banners</td></tr>
+          <tr><td class="mono">speakerA…D</td><td><span style="display:flex;gap:3px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#0B6E99;display:block"></i><i style="width:14px;height:14px;border-radius:4px;background:#B24A00;display:block"></i><i style="width:14px;height:14px;border-radius:4px;background:#2D7D1F;display:block"></i><i style="width:14px;height:14px;border-radius:4px;background:#B0287A;display:block"></i></span></td><td><span style="display:flex;gap:3px;align-items:center"><i style="width:14px;height:14px;border-radius:4px;background:#6CCBFF;display:block"></i><i style="width:14px;height:14px;border-radius:4px;background:#FFAE73;display:block"></i><i style="width:14px;height:14px;border-radius:4px;background:#9FE07A;display:block"></i><i style="width:14px;height:14px;border-radius:4px;background:#F59AD4;display:block"></i></span></td><td class="mut">speaker tags (always with a letter)</td></tr>
+          <tr><td class="mono">label / 2nd</td><td>#1D1D1F / #626268</td><td>#F2F2F5 / #A6A6AD</td><td class="mut">system .primary / .secondary</td></tr>
+          <tr><td class="mono">window</td><td>#FFFFFF</td><td>#1E1E21</td><td class="mut">system windowBackground</td></tr>
+          <tr><td class="mono">grouped</td><td>#F3F3F6</td><td>#1A1A1D</td><td class="mut">Settings form background</td></tr>
+          <tr><td class="mono">separator</td><td>black 11%</td><td>white 11%</td><td class="mut">system separator</td></tr>
+        </tbody>
+      </table>
+      <div class="cap" style="margin-top:10px">Overlay tokens (same in both modes)</div>
+      <div style="display:flex;gap:12px;align-items:stretch">
+        <div class="ov" style="flex:1;padding:12px 16px;background:#16161C">
+          <div class="oj" style="font-size:12px">背景 rgba(16,16,22,.72) · 本文 #FFFFFF</div>
+          <div class="oe" style="font-size:17px">English line <span class="onu">#FFFFFF</span><span class="onm">注</span></div>
+          <div style="display:flex;gap:10px;font-size:12px;font-weight:700;margin-top:6px"><span class="ovA">A #7FD4FF</span><span class="ovB">B #FFB37A</span><span class="ovC">C #B9F27C</span><span class="ovD">D #F7A6DA</span></div>
+        </div>
+      </div>
+      <div class="capn">Japanese line: white 80%. Older line: white 62%. Note: #FFCB7A on rgba(255,190,90,.24). All overlay text passes 4.5:1 on the solid fallback #121216; on glass, a 1 pt text shadow keeps it legible over bright frames.</div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <div class="cap">Type scale</div>
+      <div style="background:#FFFFFF;border-radius:12px;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.1);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span class="oe" style="font-size:34px;color:#1D1D1F">Overlay L</span><span class="capn">SF Pro Rounded Semibold 34/44</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span class="oe" style="font-size:24px;color:#1D1D1F">Overlay M (default)</span><span class="capn">Rounded Semibold 24/31</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span class="oe" style="font-size:18px;color:#1D1D1F">Overlay S</span><span class="capn">Rounded Semibold 18/23</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span class="jp" style="font-size:15px">日本語の原文 くうばんは</span><span class="capn">Hiragino Sans W3 15/22 (S 13, L 20)</span></div>
+        <div class="hsep"></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:26px;font-weight:700">Large title</span><span class="capn">SF Pro Bold 26 · onboarding</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:15px;font-weight:700">Window title</span><span class="capn">SF Pro Bold 15 · .headline</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:15px">Transcript English</span><span class="capn">SF Pro 15/21 · .title3 reg.</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span class="jp" style="font-size:13px;color:#626268">トランスクリプト日本語</span><span class="capn">Hiragino Sans 13/20</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:13px">Body</span><span class="capn">SF Pro 13/18 · .body</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><span style="font-size:11px;color:#626268">Caption, timestamps</span><span class="capn">SF Pro 11/14 · .caption, monospaced digits</span></div>
+      </div>
+
+      <div class="cap" style="margin-top:8px">Spacing and radii</div>
+      <div style="display:flex;gap:14px;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><i style="display:block;width:4px;height:4px;background:#6A4FD8"></i><span class="capn">4</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><i style="display:block;width:8px;height:8px;background:#6A4FD8"></i><span class="capn">8</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><i style="display:block;width:12px;height:12px;background:#6A4FD8"></i><span class="capn">12</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><i style="display:block;width:16px;height:16px;background:#6A4FD8"></i><span class="capn">16</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><i style="display:block;width:20px;height:20px;background:#6A4FD8"></i><span class="capn">20</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><i style="display:block;width:24px;height:24px;background:#6A4FD8"></i><span class="capn">24</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><i style="display:block;width:32px;height:32px;background:#6A4FD8"></i><span class="capn">32</span></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <span class="chip" style="border-radius:5px;background:#FFFFFF;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)">5 marker</span>
+        <span class="chip" style="border-radius:8px;background:#FFFFFF;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)">8 field, row</span>
+        <span class="chip" style="border-radius:12px;background:#FFFFFF;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)">12 card, sidebar</span>
+        <span class="chip" style="border-radius:16px;background:#FFFFFF;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)">16 sheet</span>
+        <span class="chip" style="border-radius:18px;background:#FFFFFF;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)">18 overlay</span>
+        <span class="chip" style="background:#FFFFFF;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)">capsule buttons</span>
+      </div>
+
+      <div class="cap" style="margin-top:8px">Pipeline status (icon + word, never colour alone)</div>
+      <div style="background:#1B1B22;border-radius:12px;padding:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+        <span class="ovst"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4.5 6.5a3.5 3.5 0 0 1 7 0c0 2.2-2.3 2.6-2.3 4.8a2.2 2.2 0 0 1-4 1.2"></path></svg>Listening</span>
+        <span class="ovst"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#7CE38B" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2.5 7v2M5 5v6M7.5 2.5v11M10 5.5v5M12.5 6.5v3"></path></svg>Speech</span>
+        <span class="ovst"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8CC8FF" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h6"></path></svg>Transcribing</span>
+        <span class="ovst"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C3B6FF" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h7v5h-4l-3 2.5z"></path><path d="M11.5 6h2v5.5h-1.5v2l-2.5-2h-3v-1.5"></path></svg>Translating</span>
+        <span class="ovst"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.6" height="10" rx="1" fill="currentColor"></rect><rect x="9.4" y="3" width="2.6" height="10" rx="1" fill="currentColor"></rect></svg>Paused</span>
+        <span class="ovst"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 12V3.5l7-1.5v8.5"></path><circle cx="4.5" cy="12" r="1.8"></circle><circle cx="11.5" cy="10.5" r="1.8"></circle></svg>Music only</span>
+        <span class="ovst" style="color:#FFCB7A"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 6a9 9 0 0 1 12 0M4.3 8.4a5.6 5.6 0 0 1 7.4 0M6.5 10.8a2.3 2.3 0 0 1 3 0M2.5 2.5l11 11"></path></svg>Offline · JP only</span>
+        <span class="ovst" style="color:#FFCB7A"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 1 1 11 0"></path><path d="M8 11.5l3-3.5"></path></svg>Cap reached</span>
+        <span class="ovst" style="color:#FF8A80"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5l6 10.5H2z"></path><path d="M8 6.5v3M8 11.3v.2"></path></svg>Error</span>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1680,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

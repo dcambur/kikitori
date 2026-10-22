@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Onboarding: Claude API key</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2112px;height:1300px;padding:48px;display:grid;grid-template-columns:repeat(3,640px);row-gap:40px;column-gap:48px;align-content:start">
+
+  <!-- 1 Empty -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">5 · API key: empty</div><div class="capn">Continue stays disabled until a key validates. “How do I get a key?” is expanded on first view.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 2 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:6px 64px 0;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--accsoft);display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.8"></circle><path d="M7.5 8.5L13 3M11 5l1.5 1.5"></path></svg></div>
+          <div style="font-size:26px;font-weight:700;line-height:1.15">Connect Claude</div>
+          <div style="font-size:14px;color:var(--label2);max-width:470px">kikitori translates with your own Claude API key. Your Max plan includes monthly API credits.</div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="font-weight:600">API key</span>
+          <span style="display:flex;gap:8px"><span class="tf lg focus"><span class="ph mono">sk-ant-…</span></span><button class="btn" style="height:34px">Paste</button></span>
+        </label>
+        <div class="hint" style="display:flex;gap:6px;align-items:center"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"></path></svg>Stored in your Mac’s Keychain. Sent only to Anthropic.</div>
+        <div class="card inset" style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+          <div style="display:flex;align-items:center;gap:6px;font-weight:600"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"></path></svg>How do I get a key?</div>
+          <div>1. Open the Claude Console and sign in with your Claude account.</div>
+          <div>2. Claim the API credits included with your Max plan.</div>
+          <div>3. Go to API Keys › Create Key, name it “kikitori”, and copy it.</div>
+          <a class="lnk" href="#" style="margin-top:2px">Open Claude Console ↗</a>
+        </div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri dis" disabled>Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 2 Validating -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">6 · Validating</div><div class="capn">Starts 0.4 s after paste or typing stops. One tiny request to Claude Haiku 5.5 (about $0.0001). Timeout 10 s.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 2 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:6px 64px 0;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--accsoft);display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.8"></circle><path d="M7.5 8.5L13 3M11 5l1.5 1.5"></path></svg></div>
+          <div style="font-size:26px;font-weight:700;line-height:1.15">Connect Claude</div>
+          <div style="font-size:14px;color:var(--label2);max-width:470px">kikitori translates with your own Claude API key. Your Max plan includes monthly API credits.</div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="font-weight:600">API key</span>
+          <span style="display:flex;gap:8px"><span class="tf lg focus"><span class="mono">sk-ant-api03-••••••••••••••••••••Q7xA</span></span><button class="btn" style="height:34px">Paste</button></span>
+        </label>
+        <div style="display:flex;gap:8px;align-items:center;color:var(--label2)"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="var(--fill2)" stroke-width="2"></circle><path d="M8 2a6 6 0 0 1 6 6" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round"></path></svg>Checking key…</div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri dis" disabled>Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 3 Valid -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">7 · Key works</div><div class="capn">Key saved to Keychain on success. Field shows only the last 4 characters from now on.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 2 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:6px 64px 0;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--accsoft);display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.8"></circle><path d="M7.5 8.5L13 3M11 5l1.5 1.5"></path></svg></div>
+          <div style="font-size:26px;font-weight:700;line-height:1.15">Connect Claude</div>
+          <div style="font-size:14px;color:var(--label2);max-width:470px">kikitori translates with your own Claude API key. Your Max plan includes monthly API credits.</div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="font-weight:600">API key</span>
+          <span style="display:flex;gap:8px"><span class="tf lg" style="box-shadow:inset 0 0 0 1px var(--ok)"><span class="mono">sk-ant-…Q7xA</span><span class="sp"></span><svg width="16" height="16" viewBox="0 0 16 16" aria-label="Valid"><circle cx="8" cy="8" r="7" fill="var(--ok)"></circle><path d="M4.8 8.2l2.2 2.2 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><button class="btn" style="height:34px">Change</button></span>
+        </label>
+        <div class="ban ok"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg><div><b>Key works.</b><div class="hint" style="font-size:12px;color:var(--label)">Live subtitles: Claude Haiku 5.5 · Explanations: Claude Sonnet 5.5. Expect about $0.05–0.15 per stream hour.</div></div></div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri">Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 4 Invalid -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">8 · Invalid key (HTTP 401 / 403)</div><div class="capn">Red focus ring + message under the field. VoiceOver announces the message. Key is not saved.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 2 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:6px 64px 0;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--accsoft);display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.8"></circle><path d="M7.5 8.5L13 3M11 5l1.5 1.5"></path></svg></div>
+          <div style="font-size:26px;font-weight:700;line-height:1.15">Connect Claude</div>
+          <div style="font-size:14px;color:var(--label2);max-width:470px">kikitori translates with your own Claude API key. Your Max plan includes monthly API credits.</div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="font-weight:600">API key</span>
+          <span style="display:flex;gap:8px"><span class="tf lg bad"><span class="mono">sk-ant-api03-••••••••••••••Zp</span></span><button class="btn" style="height:34px">Paste</button></span>
+        </label>
+        <div style="display:flex;gap:8px;align-items:flex-start;color:var(--err)" role="alert"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" style="flex:none;margin-top:1px"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8v3.8M8 11v.2"></path></svg><span><b>This key wasn’t accepted.</b> <span style="color:var(--label)">Check that you copied the whole key, or create a new one in the Claude Console.</span></span></div>
+        <a class="lnk" href="#">Open Claude Console ↗</a>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri dis" disabled>Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 5 Network -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">9 · Can’t reach Anthropic (offline, DNS, 5xx, timeout)</div><div class="capn">The key is kept unverified in Keychain; it is checked again on first use. The user may continue.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 2 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:6px 64px 0;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--accsoft);display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.8"></circle><path d="M7.5 8.5L13 3M11 5l1.5 1.5"></path></svg></div>
+          <div style="font-size:26px;font-weight:700;line-height:1.15">Connect Claude</div>
+          <div style="font-size:14px;color:var(--label2);max-width:470px">kikitori translates with your own Claude API key. Your Max plan includes monthly API credits.</div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="font-weight:600">API key</span>
+          <span style="display:flex;gap:8px"><span class="tf lg"><span class="mono">sk-ant-api03-••••••••••••••••••••Q7xA</span></span><button class="btn" style="height:34px">Paste</button></span>
+        </label>
+        <div class="ban"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 6a9 9 0 0 1 12 0M4.3 8.4a5.6 5.6 0 0 1 7.4 0M6.5 10.8a2.3 2.3 0 0 1 3 0M2.5 2.5l11 11"></path></svg><div style="display:flex;flex-direction:column;gap:6px"><div><b>Can’t reach Anthropic.</b> Check your internet connection and try again. You can also continue now: kikitori shows Japanese only until it connects.</div><div style="display:flex;gap:8px"><button class="btn sm">Try Again</button></div></div></div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn">Continue Without Checking</button></div>
+    </div>
+  </div>
+
+  <!-- 6 Valid dark -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">7 · Key works, dark</div><div class="capn">Other key errors use the invalid layout: 429 “Claude is busy, try again in a minute”, 402/credit “No API credits left. Claim or add credits in the Claude Console.”</div></div>
+    <div class="kk kd" style="border-radius:16px">
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 2 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:6px 64px 0;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--accsoft);display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.8"></circle><path d="M7.5 8.5L13 3M11 5l1.5 1.5"></path></svg></div>
+          <div style="font-size:26px;font-weight:700;line-height:1.15">Connect Claude</div>
+          <div style="font-size:14px;color:var(--label2);max-width:470px">kikitori translates with your own Claude API key. Your Max plan includes monthly API credits.</div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="font-weight:600">API key</span>
+          <span style="display:flex;gap:8px"><span class="tf lg" style="box-shadow:inset 0 0 0 1px var(--ok)"><span class="mono">sk-ant-…Q7xA</span><span class="sp"></span><svg width="16" height="16" viewBox="0 0 16 16" aria-label="Valid"><circle cx="8" cy="8" r="7" fill="var(--ok)"></circle><path d="M4.8 8.2l2.2 2.2 4.2-4.6" fill="none" stroke="#1E1E21" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><button class="btn" style="height:34px">Change</button></span>
+        </label>
+        <div class="ban ok"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg><div><b>Key works.</b><div class="hint" style="font-size:12px;color:var(--label)">Live subtitles: Claude Haiku 5.5 · Explanations: Claude Sonnet 5.5. Expect about $0.05–0.15 per stream hour.</div></div></div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri">Continue</button></div>
+    </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2112,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Usage and budget</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.bars{display:flex;align-items:flex-end;gap:2px;height:110px;border-bottom:1px solid var(--sep)}
+.bars i{display:block;flex:1;border-radius:4px 4px 0 0;background:var(--accf)}
+.bars i.p{background:none;box-shadow:inset 0 0 0 1px var(--acc);border-bottom:0;opacity:.55;background-image:repeating-linear-gradient(135deg,var(--accsoft) 0 3px,transparent 3px 6px)}
+.bars i.z{background:var(--fill2);height:2px !important;border-radius:1px}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width:2392px;height:830px;display:flex">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width:1196px;height:830px">
+<div class="desk" style="width:1196px;height:830px;padding:44px 48px;display:flex;flex-direction:column;gap:10px">
+  <div class="cap">{{t.name}} · Usage: cycle to date, projection, split, cap, sessions</div>
+  <div class="win" style="width:1100px;height:700px">
+    <nav class="sb" style="width:200px" aria-label="Sections">
+      <div class="lights" style="padding:0 6px 10px"><i></i><i></i><i></i></div>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="1.6" fill="currentColor"></circle><path d="M5 5a4.2 4.2 0 0 0 0 6M11 5a4.2 4.2 0 0 1 0 6M3 3a7 7 0 0 0 0 10M13 3a7 7 0 0 1 0 10"></path></svg>Live<span class="badge">Idle</span></button>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg>Sessions</button>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="5.5" r="2.6"></circle><path d="M3 13.5a5 5 0 0 1 10 0"></path></svg>Profiles</button>
+      <button class="si on"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 13V8M6.5 13V4M10 13V9.5M13.5 13V6"></path></svg>Usage</button>
+    </nav>
+    <div class="main">
+      <div class="tb" style="padding-left:18px">
+        <div style="display:flex;flex-direction:column"><span class="ttl">Usage</span><span class="sub">Billing cycle Oct 15 – Nov 14 · day 8 of 31</span></div>
+        <span class="sp"></span>
+        <button class="btn sm">Open Claude Console ↗</button>
+      </div>
+      <div style="flex:1;display:flex;gap:16px;padding:6px 18px 16px;min-height:0">
+        <div style="flex:1;display:flex;flex-direction:column;gap:14px;min-width:0">
+          <section class="card inset" style="display:flex;flex-direction:column;gap:12px" aria-label="Spend this cycle">
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:34px;font-weight:700;letter-spacing:-.01em" class="num">$6.12</span><span class="mut">of $100 monthly credit used</span></div>
+            <div style="position:relative">
+              <div class="meter" style="height:10px;border-radius:5px" role="img" aria-label="6 percent used, 23 percent projected by Nov 14"><i style="width:6.1%;background:var(--accf)"></i><i style="width:17.3%;background-image:repeating-linear-gradient(135deg,var(--acc) 0 2px,transparent 2px 5px);opacity:.45;margin-left:2px"></i></div>
+              <i style="position:absolute;left:80%;top:-4px;width:2px;height:18px;background:var(--label2);display:block;border-radius:1px"></i>
+            </div>
+            <div style="display:flex;gap:16px;font-size:11px;color:var(--label2)"><span style="display:flex;gap:5px;align-items:center"><i style="width:10px;height:10px;border-radius:3px;background:var(--accf);display:block"></i>Used $6.12</span><span style="display:flex;gap:5px;align-items:center"><i style="width:10px;height:10px;border-radius:3px;box-shadow:inset 0 0 0 1px var(--acc);display:block"></i>Projected $23.40</span><span style="display:flex;gap:5px;align-items:center"><i style="width:2px;height:10px;background:var(--label2);display:block"></i>Warning at $80</span><span class="sp" style="flex:1"></span><span>Cap $100</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;border-top:.5px solid var(--sep);padding-top:10px">
+              <div class="stat"><span class="hint">Projected by Nov 14</span><span class="v">$23.40</span></div>
+              <div class="stat"><span class="hint">Per stream hour</span><span class="v">$0.11</span></div>
+              <div class="stat"><span class="hint">Left this cycle</span><span class="v">$93.88</span></div>
+            </div>
+          </section>
+          <section class="card inset" style="display:flex;flex-direction:column;gap:8px" aria-label="Daily spend chart">
+            <div style="display:flex;align-items:center"><b>Daily spend</b><span class="sp" style="flex:1"></span><span class="hint">Max $1.48 · Oct 18</span></div>
+            <div style="position:relative">
+              <div class="bars" role="img" aria-label="Daily spend Oct 15 to Oct 22, between 0 and 1.48 dollars, then projected about 0.77 dollars a day">
+                <i style="height:30%"></i><i style="height:52%"></i><i class="z"></i><i style="height:100%"></i><i style="height:44%"></i><i style="height:61%"></i><i class="z"></i><i style="height:73%"></i>
+                <i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i><i class="p" style="height:52%"></i>
+              </div>
+              <div class="menu" style="position:absolute;left:70px;top:-12px;padding:6px 10px;font-size:11px;border-radius:8px;width:max-content"><b>Sun Oct 18</b> · $1.48 · 2 sessions, 6 h 10 min</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--label2)"><span>Oct 15</span><span>Today</span><span>Nov 14</span></div>
+          </section>
+          <section aria-label="Recent sessions" style="border-radius:12px;box-shadow:inset 0 0 0 .5px var(--sep);overflow:hidden;background:var(--grp)">
+            <table class="tbl num" style="font-size:12px">
+              <thead><tr><th>Date</th><th>Streamer</th><th>Length</th><th style="text-align:right">Subtitles</th><th style="text-align:right">Explain</th><th style="text-align:right">Total</th></tr></thead>
+              <tbody>
+                <tr><td>Today 20:01</td><td>Hoshimi Kuu</td><td>1 h 13 min</td><td style="text-align:right">$0.10</td><td style="text-align:right">$0.04</td><td style="text-align:right"><b>$0.14</b></td></tr>
+                <tr><td>Oct 21</td><td>Amane Rio</td><td>2 h 05 min</td><td style="text-align:right">$0.21</td><td style="text-align:right">$0.08</td><td style="text-align:right"><b>$0.29</b></td></tr>
+                <tr><td>Oct 20</td><td>Hoshimi Kuu</td><td>3 h 40 min</td><td style="text-align:right">$0.39</td><td style="text-align:right">$0.12</td><td style="text-align:right"><b>$0.51</b></td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+        <div style="width:290px;flex:none;display:flex;flex-direction:column;gap:14px">
+          <section class="card inset" style="display:flex;flex-direction:column;gap:10px" aria-label="Spend by model">
+            <b>By model</b>
+            <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between"><span>Live subtitles</span><b class="num">$4.38</b></div><div class="meter"><i style="width:71.6%;background:var(--accf)"></i></div><span class="hint">Claude Haiku 5.5 · 72 % · 3.1 M tokens</span></div>
+            <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between"><span>Explanations</span><b class="num">$1.74</b></div><div class="meter"><i style="width:28.4%;background:var(--accf)"></i></div><span class="hint">Claude Sonnet 5.5 · 28 % · 61 explanations</span></div>
+          </section>
+          <section aria-label="Budget settings">
+            <div class="form">
+              <div class="row"><span>Monthly cap</span><span style="display:flex;align-items:center;gap:6px"><span class="tf num" style="width:70px;height:24px">$100</span></span></div>
+              <div class="row"><span>When reached</span><button class="pop">Japanese only<span class="chev"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></div>
+              <div class="row"><span>Warn at 80 %</span><button class="sw on" role="switch" aria-checked="true" aria-label="Warn at 80 percent"></button></div>
+            </div>
+            <div class="foot">Credits included with Max expire at the end of each billing cycle and don’t carry over. Spend here is estimated from token counts; the Claude Console shows the exact amount.</div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2392,"height":830}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { themes: [ { cls: 'kk kl', name: 'Light' }, { cls: 'kk kd', name: 'Dark' } ] };
+  }
+}
+</script>
+</body>
+</html>

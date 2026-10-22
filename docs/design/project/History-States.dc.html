@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>History states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:1440px;height:700px;padding:48px;display:flex;gap:40px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Empty: no past sessions</div><div class="capn" style="max-width:520px">A session is saved when it ends (Stop, quit, or source gone for 10 min). Sessions under 1 minute with no lines are not saved.</div></div>
+    <div class="win" style="width:520px;height:400px;flex-direction:column">
+      <div class="tb"><span class="ttl">Sessions</span></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:0 60px 40px;text-align:center">
+        <svg width="46" height="46" viewBox="0 0 16 16" fill="none" stroke="var(--label3)" stroke-width=".9" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg>
+        <b style="font-size:17px">No past sessions</b>
+        <div style="color:var(--label2)">Finished streams appear here with their transcripts and explanations.</div>
+        <button class="btn pri" style="margin-top:6px">Start Listening</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Delete (⌫ on a selection)</div><div class="capn" style="max-width:280px">Deletes from disk immediately; no trash. Multi-select shows the count.</div></div>
+    <div class="alert">
+      <div class="appicon" style="width:48px;height:48px;gap:3px"><span class="k" style="font-size:22px">聞</span><span class="bars" style="gap:2px"><i style="width:22px;height:3px"></i></span></div>
+      <div class="at">Delete 3 sessions?</div>
+      <div class="ab">Their transcripts and explanations are removed from this Mac. Spend history in Usage is kept.</div>
+      <div class="abtns"><button class="btn destf">Delete</button><button class="btn">Cancel</button></div>
+    </div>
+    <div class="kk kd" style="border-radius:22px;margin-top:16px"><div class="alert">
+      <div class="appicon" style="width:48px;height:48px;gap:3px"><span class="k" style="font-size:22px">聞</span><span class="bars" style="gap:2px"><i style="width:22px;height:3px"></i></span></div>
+      <div class="at">Delete this session?</div>
+      <div class="ab">“【雑談】初見さん歓迎！” and its 23 explanations are removed from this Mac.</div>
+      <div class="abtns"><button class="btn destf">Delete</button><button class="btn">Cancel</button></div>
+    </div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Retention (Settings › General › History)</div><div class="capn" style="max-width:420px">Applied at launch and daily. Shortening it asks first if sessions would be removed.</div></div>
+    <div style="width:420px;background:var(--grpbg);border-radius:14px;padding:16px">
+      <div class="form">
+        <div class="row"><span>Keep sessions</span><button class="pop">1 year<span class="chev"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></div>
+        <div class="row"><span class="lbl"><span>Save explanations</span><span class="hint">Keeps Claude’s explanations with the transcript</span></span><button class="sw on" role="switch" aria-checked="true" aria-label="Save explanations"></button></div>
+        <div class="row"><span>Storage used</span><span class="mut num">14.2 MB · 38 sessions</span></div>
+      </div>
+      <div class="foot">Options: Forever, 1 year, 90 days, 30 days, 7 days, Don’t keep (transcripts vanish when the session ends). Audio is never saved.</div>
+    </div>
+    <div class="alert" style="margin-top:12px">
+      <div class="at">Remove 12 older sessions?</div>
+      <div class="ab">Changing to 30 days deletes sessions from before Sep 22 now.</div>
+      <div class="abtns"><button class="btn destf">Remove 12 Sessions</button><button class="btn">Cancel</button></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

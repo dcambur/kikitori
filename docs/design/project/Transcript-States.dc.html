@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Transcript states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+mark{background:rgba(255,214,10,.45);color:inherit;border-radius:3px;padding:0 1px}
+.kd mark{background:rgba(255,214,10,.35)}
+mark.cur{background:#FFD60A;color:#1D1D1F}
+.pane{width:620px;height:460px;flex-direction:column}
+.ins{width:310px;height:520px;flex-direction:column;background:var(--win2)}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2200px;height:1260px;padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;gap:40px">
+    <!-- A jump to live -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div><div class="cap">Scrolled up: auto-scroll paused</div><div class="capn">Scrolling up more than 1 row stops auto-scroll. The capsule counts new lines; click, End or ⌘↓ jumps back and resumes.</div></div>
+      <div class="win pane">
+        <div class="hdr" style="justify-content:space-between"><span>Transcript pane (window cropped)</span><span class="chip">Auto-scroll paused</span></div>
+        <div style="flex:1;position:relative;padding:6px 8px;overflow:hidden">
+          <div class="tr"><span class="t">0:42:10</span><div><div class="ja">ここ、前にリオちゃんと来たとこだ！</div><div class="en">This is where Rio and I came before!</div></div></div>
+          <div class="tr"><span class="t">0:42:19</span><div><div class="ja">あの時はゾンビに追いかけられて大変だったんだよね</div><div class="en">We got chased by zombies that time, it was a mess.</div></div></div>
+          <div class="tr"><span class="t">0:42:31</span><div><div class="ja">星屑のみんな、覚えてる？</div><div class="en">Do you remember, <span class="nu">Stardust</span>? <span class="nm"><b>注</b> 星屑</span></div></div></div>
+          <div class="tr"><span class="t">0:42:44</span><div><div class="ja">ちょっと待って、今のコメント面白すぎる</div><div class="en">Hold on, that comment is way too funny.</div></div></div>
+          <div class="tr"><span class="t">0:42:52</span><div><div class="ja">「くうちゃん方向音痴」って、ひどくない！？</div><div class="en">“Kuu has no sense of direction”? That’s so mean!</div></div></div>
+          <div style="position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center">
+            <button class="btn pri" style="box-shadow:0 6px 16px rgba(60,40,160,.35)"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v10M4 9l4 4 4-4"></path></svg>Jump to Live · 6 new lines</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- C search -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div><div class="cap">Search (⌘F)</div><div class="capn">Matches Japanese, English and notes; ↩ / ⇧↩ step through. Live lines keep arriving; search does not pause auto-scroll unless a match is focused.</div></div>
+      <div class="win pane">
+        <div class="tb" style="height:48px;gap:8px;padding:0 12px">
+          <div class="search focusring" style="flex:1;color:var(--label)"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.2"></circle><path d="M10.2 10.2L13.5 13.5"></path></svg>てぇてぇ<span class="sp"></span><span class="mut" style="font-size:12px">2 of 3</span></div>
+          <div class="tbg"><button class="tbb" aria-label="Previous match"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4.5 10L8 6.5l3.5 3.5"></path></svg></button><button class="tbb" aria-label="Next match"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"></path></svg></button></div>
+          <div class="seg"><button class="on">All</button><button>Notes</button></div>
+        </div>
+        <div style="flex:1;padding:6px 8px;overflow:hidden">
+          <div class="tr"><span class="t">0:12:03</span><div><div class="ja">コメントで<mark>てぇてぇ</mark>って流れてる</div><div class="en">Chat is spamming “<mark>tee-tee</mark>”.</div></div></div>
+          <div class="tr sel"><span class="t">1:11:30</span><div><div class="ja">リオちゃんとのコラボ、<mark class="cur">てぇてぇ</mark>って言われてて…</div><div class="en">People keep calling my collab with Rio “<mark class="cur">tee-tee</mark>”… <span class="nm"><b>注</b> てぇてぇ</span></div></div></div>
+          <div class="tr"><span class="t">1:11:41</span><div><div class="ja">いや、<mark>てぇてぇ</mark>じゃないから！普通に仲良しなだけ！</div><div class="en">It’s not <mark>tee-tee</mark>! We’re just normal friends!</div></div></div>
+          <div class="hint" style="padding:16px 14px">No more matches. Empty result: “No lines match ‘…’.” with Clear Search.</div>
+        </div>
+      </div>
+    </div>
+    <!-- F collab dark -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div><div class="cap">Collab, speaker labels on (dark)</div><div class="capn">Labels are best effort (diarization). Click a label to rename it for this session (“A” → “Kuu”); names can come from the profile.</div></div>
+      <div class="kk kd" style="border-radius:16px"><div class="win pane">
+        <div class="hdr"><span>Speakers</span><span style="display:flex;gap:6px"><span class="spk spA">A · Kuu</span><span class="spk spB">B · Rio</span></span><span class="sp"></span><span class="chip">best effort</span></div>
+        <div style="flex:1;padding:6px 8px;overflow:hidden">
+          <div class="tr"><span class="t">0:31:02</span><div><div class="ja"><span class="spk spA">A</span> リオちゃん後ろ！TNTある！</div><div class="en">Rio, there’s TNT right behind you!</div></div></div>
+          <div class="tr"><span class="t">0:31:05</span><div><div class="ja"><span class="spk spB">B</span> え？どこ？…ねぇ、それ置いたのくうちゃんでしょ</div><div class="en">Huh? Where? …Wait, did you put that there?</div></div></div>
+          <div class="tr"><span class="t">0:31:09</span><div><div class="ja"><span class="spk spA">A</span> 置いてないよ！たぶん</div><div class="en">I didn’t! Probably.</div></div></div>
+          <div class="tr"><span class="t">0:31:12</span><div><div class="ja"><span class="spk spB">B</span> 草、それ自白じゃん</div><div class="en"><span class="nu">LOL</span>, that’s a confession. <span class="nm"><b>注</b> 草</span></div></div></div>
+          <div class="tr"><span class="t">0:31:15</span><div><div class="ja"><span class="spk">?</span> （同時に話している）</div><div class="en" style="color:var(--label2);font-size:13px">Overlapping speech; best-guess text, not split by speaker.</div></div></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:40px;align-items:flex-start">
+    <!-- B inspector states -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div><div class="cap">Inspector: explanation states</div><div class="capn">Explain = click a line (or ⌃⌥E for the newest). One request at a time per line; a new click cancels the previous one.</div></div>
+      <div style="display:flex;gap:24px">
+        <div class="win ins">
+          <div style="padding:14px 16px 8px;display:flex"><b>Explanation</b><span class="sp"></span><span class="mut num" style="font-size:11px">1:11:58</span></div>
+          <div style="padding:0 12px;display:flex;flex-direction:column;gap:10px">
+            <div class="card" style="display:flex;flex-direction:column;gap:10px" aria-busy="true">
+              <div class="jp" style="font-size:20px;font-weight:700">マネちゃん</div>
+              <div class="skel" style="width:92%"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:60%"></div>
+              <div class="hint" style="display:flex;gap:6px;align-items:center"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="var(--fill2)" stroke-width="2"></circle><path d="M8 2a6 6 0 0 1 6 6" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round"></path></svg>Asking Claude Sonnet…</div>
+            </div>
+            <div><button class="btn sm">Cancel</button></div>
+          </div>
+          <div class="capn" style="padding:16px">Loading. Skeleton shimmer is off with Reduce Motion. Text streams in as it arrives.</div>
+        </div>
+        <div class="win ins">
+          <div style="padding:14px 16px 8px;display:flex"><b>Explanation</b><span class="sp"></span><span class="mut num" style="font-size:11px">1:11:58</span></div>
+          <div style="padding:0 12px;display:flex;flex-direction:column;gap:10px">
+            <div class="card" style="display:flex;flex-direction:column;gap:8px">
+              <div class="jp" style="font-size:20px;font-weight:700">マネちゃん</div>
+              <div style="display:flex;gap:8px;color:var(--err)" role="alert"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="flex:none" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8v3.8M8 11v.2"></path></svg><span style="color:var(--label)"><b>Couldn’t get an explanation.</b> Claude didn’t answer in time.</span></div>
+            </div>
+            <div style="display:flex;gap:6px"><button class="btn sm pri">Try Again</button></div>
+          </div>
+          <div class="capn" style="padding:16px">Error. Other causes: “You’re offline.” · “Claude is busy right now.” (429/529) · “Monthly cap reached. Explanations are paused.” with Open Usage.</div>
+        </div>
+        <div class="win ins">
+          <div style="padding:14px 16px 8px;display:flex"><b>Explanation</b></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;margin-top:-40px">
+            <svg width="40" height="40" viewBox="0 0 16 16" fill="none" stroke="var(--label3)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5h10v7H7l-3 2.5v-2.5H3z"></path><path d="M8 5.8v.1M8 7.4v1.6"></path></svg>
+            <b>Nothing selected</b>
+            <div class="hint" style="font-size:12px">Click a line to see what it means. Lines marked <span class="nm"><b>注</b></span> have something worth knowing.</div>
+          </div>
+          <div class="capn" style="padding:16px">Empty. Explain Again keeps earlier answers: “‹ 2 of 2 ›” pager in the card header.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D export sheet -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div><div class="cap">Export sheet (⇧⌘E)</div><div class="capn">Sheet on the main window; Export opens NSSavePanel with the name prefilled.</div></div>
+      <div class="sheet" style="width:520px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <b style="font-size:15px">Export Transcript</b>
+        <div class="row" style="padding:0"><span>Format</span><div class="seg"><button class="on">SRT</button><button>WebVTT</button><button>Markdown</button></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-weight:600">Include</span>
+          <label style="display:flex;gap:8px;align-items:center"><button class="chk on" role="checkbox" aria-checked="true" aria-label="English"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></button>English</label>
+          <label style="display:flex;gap:8px;align-items:center"><button class="chk on" role="checkbox" aria-checked="true" aria-label="Japanese"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></button>Japanese (above English)</label>
+          <label style="display:flex;gap:8px;align-items:center"><button class="chk" role="checkbox" aria-checked="false" aria-label="Speaker labels"></button>Speaker labels</label>
+          <label style="display:flex;gap:8px;align-items:center;color:var(--label3)"><button class="chk" role="checkbox" aria-checked="false" aria-disabled="true" aria-label="Notes and explanations, Markdown only"></button>Notes and explanations (Markdown only)</label>
+        </div>
+        <div class="row" style="padding:0"><span>Times from</span><button class="pop">Session start<span class="chev"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></div>
+        <div class="row" style="padding:0"><span>Lines</span><div class="seg"><button class="on">All 1,284</button><button>Selected 3</button></div></div>
+        <div class="mono" style="font-size:11px;line-height:1.5;background:var(--fill);border-radius:8px;padding:10px 12px;white-space:pre-line">412
+01:11:30,120 --> 01:11:33,840
+リオちゃんとのコラボ、てぇてぇって言われてて…
+People keep calling my collab with Rio “tee-tee”…</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn">Cancel</button><button class="btn pri">Export…</button></div>
+      </div>
+      <div class="capn">Default file name: “Hoshimi Kuu – 2026-10-22 – Minecraft.srt”. SRT/VTT cues use the speech segment times; overlapping cues are clipped.</div>
+    </div>
+
+    <!-- E menu + G popover -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div><div class="cap">Line context menu</div></div>
+      <div class="menu" style="width:260px">
+        <button class="mi">Explain<span class="kb">↩</span></button>
+        <button class="mi">Explain Again</button>
+        <div class="msep"></div>
+        <button class="mi hl">Copy English<span class="kb">⌘C</span></button>
+        <button class="mi">Copy Japanese<span class="kb">⌥⌘C</span></button>
+        <button class="mi">Copy Both with Time</button>
+        <div class="msep"></div>
+        <button class="mi">Add Term to Glossary…</button>
+        <button class="mi">Report Bad Translation…</button>
+      </div>
+      <div class="capn" style="max-width:260px">Multi-select with ⇧/⌘ click; Copy then joins lines. “Report” only stores a local flag for the export (nothing is sent).</div>
+      <div class="cap" style="margin-top:12px">Stream info popover</div>
+      <div class="popover" style="width:300px;padding:14px;display:flex;flex-direction:column;gap:10px">
+        <label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:600">Stream title</span><span class="tf jp">【Minecraft】空に浮かぶ城をつくる！#3</span></label>
+        <label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:600">Game or topic</span><span class="tf">Minecraft</span></label>
+        <div class="hint">Sent to Claude as context. Type it or paste it from the stream page.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2200,"height":1260}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

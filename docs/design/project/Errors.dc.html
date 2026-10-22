@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Errors and edge cases</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.ec{background:#FFFFFF;border-radius:14px;box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 4px 14px rgba(0,0,0,.06);padding:16px;display:flex;flex-direction:column;gap:10px}
+.eh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.ew{font-size:12px;color:var(--label2)}
+.ev{height:96px;border-radius:10px;background:#1B1830;display:flex;align-items:center;justify-content:center;padding:0 16px}
+.eo{background:rgba(16,16,22,.82);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;color:#fff;font-size:13px;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.16);width:100%}
+.eo .b{background:rgba(255,255,255,.18);color:#fff;box-shadow:none}
+.tag{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--fill);color:var(--label2)}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2100px;height:1150px;padding:48px;display:flex;flex-direction:column;gap:20px">
+  <div><div class="cap">Errors and edge cases: one cause, one next step</div><div class="capn" style="max-width:1500px">Pattern: the overlay shows a one-line pill with at most one button (the stream is what the user is looking at); the main window shows a banner with the same words; the menu bar icon gets the attention dot. Transcription keeps running whenever it can. Tags: <b>auto</b> = clears itself when fixed, <b>user</b> = needs an action.</div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px">
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--err)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5l6 10.5H2z"></path><path d="M8 6.5v3M8 11.3v.2"></path></svg>Audio permission revoked<span class="sp" style="flex:1"></span><span class="tag">user</span></div>
+      <div class="ew">Tap creation fails or the tap goes silent with an access error mid-session. Session is kept, listening stops.</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#FF8A80" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5l6 10.5H2z"></path><path d="M8 6.5v3M8 11.3v.2"></path></svg><span style="flex:1"><b>Audio access was turned off.</b></span><button class="btn sm b">Open System Settings</button></div></div>
+      <div class="ew">Banner: “kikitori can no longer hear apps. Turn on kikitori in Screen &amp; System Audio Recording, then press Resume.”</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="3" width="11" height="10" rx="2"></rect><path d="M5.5 6.5l5 3M10.5 6.5l-5 3"></path></svg>Source app quit<span class="sp" style="flex:1"></span><span class="tag">auto</span></div>
+      <div class="ew">NSWorkspace didTerminate for the source. kikitori waits 10 min; if the app relaunches, listening resumes in the same session.</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#FFCB7A" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg><span style="flex:1"><b>Safari quit.</b> Waiting for it · 9:52</span><button class="btn sm b">Choose Source…</button></div></div>
+      <div class="ew">After 10 min: session ends and is saved; overlay hides; notification “Session saved: Hoshimi Kuu, 1 h 13 min”.</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--info)" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10L5 10H2.5z"></path><path d="M11 6l3 4M14 6l-3 4" stroke-linecap="round"></path></svg>No audio from the source<span class="sp" style="flex:1"></span><span class="tag">auto</span></div>
+      <div class="ew">Source alive but digital silence for 60 s (paused video, muted tab, audio playing in a different app).</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10L5 10H2.5z"></path><path d="M11 6l3 4M14 6l-3 4" stroke-linecap="round"></path></svg><span style="flex:1"><b>No sound from Safari.</b> Is the stream paused or muted?</span><button class="btn sm b">Choose Source…</button></div></div>
+      <div class="ew">Neutral (not red). If another app is playing, the pill says “Chrome is playing sound. Switch to Chrome?” with Switch.</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--err)" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 1 1 11 0"></path><path d="M8 11.5l3-3.5"></path></svg>API credits exhausted<span class="sp" style="flex:1"></span><span class="tag">user</span></div>
+      <div class="ew">Anthropic returns a billing / credit-balance error. Differs from the user’s own cap: the account itself is empty.</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#FFCB7A" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 1 1 11 0"></path><path d="M8 11.5l3-3.5"></path></svg><span style="flex:1"><b>No API credits left</b> · Japanese only</span><button class="btn sm b">Claude Console</button></div></div>
+      <div class="ew">Banner: “Your Claude account has no API credits left. Claim this month’s Max credits or add credits in the Claude Console.” Retries on Resume or every 10 min.</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg>Rate limited (429)<span class="sp" style="flex:1"></span><span class="tag">auto</span></div>
+      <div class="ew">Honour retry-after; exponential backoff 2 → 4 → 8 → 30 s. Missed chunks are queued (max 2 min), then dropped from the overlay but translated for the transcript.</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#FFCB7A" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg><span style="flex:1"><b>Claude is busy.</b> Retrying in 20 s · Japanese only meanwhile</span></div></div>
+      <div class="ew">Explanations during a 429: inspector error “Claude is busy right now.” with Try Again.</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 6a9 9 0 0 1 12 0M4.3 8.4a5.6 5.6 0 0 1 7.4 0M6.5 10.8a2.3 2.3 0 0 1 3 0M2.5 2.5l11 11"></path></svg>Offline or API outage (5xx, overloaded)<span class="sp" style="flex:1"></span><span class="tag">auto</span></div>
+      <div class="ew">NWPathMonitor unsatisfied, or 3 failures in a row. Probe every 15 s; first success resumes live translation.</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#FFCB7A" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 6a9 9 0 0 1 12 0M4.3 8.4a5.6 5.6 0 0 1 7.4 0M6.5 10.8a2.3 2.3 0 0 1 3 0M2.5 2.5l11 11"></path></svg><span style="flex:1"><b>Offline</b> · Japanese only</span></div></div>
+      <div class="ew">Outage wording: “Claude isn’t responding · Japanese only”. On reconnect: “Back online. Translating the last 4 minutes in the transcript…”</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--err)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.8"></circle><path d="M7.5 8.5L13 3M11 5l1.5 1.5"></path></svg>API key stopped working (401/403)<span class="sp" style="flex:1"></span><span class="tag">user</span></div>
+      <div class="ew">Key revoked or deleted in the Console. No retries until the key changes.</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#FF8A80" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.8"></circle><path d="M7.5 8.5L13 3M11 5l1.5 1.5"></path></svg><span style="flex:1"><b>Your API key stopped working</b> · Japanese only</span><button class="btn sm b">Update Key…</button></div></div>
+      <div class="ew">Update Key opens Settings › Account with the key field focused and the onboarding validation states.</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--err)" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 7v2M5 5v6M7.5 2.5v11M10 5.5v5M12.5 6.5v3"></path></svg>Speech model missing or damaged<span class="sp" style="flex:1"></span><span class="tag">user</span></div>
+      <div class="ew">Model folder gone, checksum mismatch, or Core ML load fails. Nothing can be transcribed, so Start is blocked with an alert.</div>
+      <div style="display:flex;justify-content:center"><div class="alert" style="width:300px;padding:14px">
+        <div class="at">The speech model can’t be loaded</div>
+        <div class="ab">“Balanced” is missing or damaged. Download it again (1.6 GB), or use Apple Speech for now.</div>
+        <div style="display:flex;gap:6px;width:100%;margin-top:4px"><button class="btn sm" style="flex:1">Use Apple Speech</button><button class="btn sm pri" style="flex:1">Download Again</button></div>
+      </div></div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="4" width="11" height="8" rx="1.5"></rect><path d="M5 9.5h.1M11 9.5h-3" stroke-linecap="round"></path></svg>Disk almost full<span class="sp" style="flex:1"></span><span class="tag">auto</span></div>
+      <div class="ew">Under 1 GB free on the data volume. Saving continues in memory; written when space frees up. Under 200 MB the session stops saving.</div>
+      <div class="ban" style="font-size:12px"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="4" width="11" height="8" rx="1.5"></rect><path d="M5 9.5h.1M11 9.5h-3" stroke-linecap="round"></path></svg><div style="flex:1"><b>Your Mac is almost out of space.</b> This session may not be saved.</div><button class="btn sm">Storage Settings</button></div>
+      <div class="ew">Main window and menu bar only; the overlay stays clean (no impact on live subtitles).</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.5" aria-hidden="true"><path d="M6.5 9.5V3.5a1.5 1.5 0 0 1 3 0v6a2.8 2.8 0 1 1-3 0z"></path></svg>Mac is hot: delay rising<span class="sp" style="flex:1"></span><span class="tag">auto</span></div>
+      <div class="ew">ProcessInfo.thermalState ≥ .serious and median delay &gt; 6 s. Suggest a lighter model; never switch on its own.</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#FF8A80" stroke-width="1.5" aria-hidden="true"><path d="M6.5 9.5V3.5a1.5 1.5 0 0 1 3 0v6a2.8 2.8 0 1 1-3 0z"></path></svg><span style="flex:1"><b>≈ 7.9 s behind.</b> Your Mac is hot.</span><button class="btn sm b">Use Light Model</button></div></div>
+      <div class="ew">Dismiss hides it for the session. Switch takes effect at the next chunk; “Back to Balanced” offered when cool for 10 min.</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--info)" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 8h8M9 5l3 3-3 3"></path></svg>Translation falling behind<span class="sp" style="flex:1"></span><span class="tag">auto</span></div>
+      <div class="ew">More than 30 s of untranslated speech queued (slow network, fast talk). The overlay skips ahead so it stays live.</div>
+      <div class="ev"><div class="eo"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 8h8M9 5l3 3-3 3"></path></svg><span style="flex:1"><b>Skipped ahead to live.</b> Missed lines are in the transcript.</span><button class="btn sm b">Open</button></div></div>
+      <div class="ew">Pill shows for 4 s, then the overlay continues. Skipped lines get translated in the background at normal priority.</div></div>
+
+    <div class="ec"><div class="eh"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--info)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 7.3v3.7M8 5v.2"></path></svg>Very long session<span class="sp" style="flex:1"></span><span class="tag">info</span></div>
+      <div class="ew">Over 6 h or 5,000 lines. Lines stream to disk every 30 s; the list is virtualised; the translator only ever gets the last 12 lines plus the profile.</div>
+      <div class="ban info" style="font-size:12px"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--info)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 7.3v3.7M8 5v.2"></path></svg><div style="flex:1"><b>Long session: 6 h 12 min.</b> Everything is saved and searchable. Start a new session if this is a different stream.</div><button class="btn sm">New Session</button></div>
+      <div class="ew">Shown once, in the main window only. Cost and duration keep counting; nothing slows down.</div></div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2100,"height":1150}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

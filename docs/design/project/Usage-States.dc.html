@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Budget states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.pane{width:620px;flex-direction:column}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2120px;height:480px;padding:48px;display:flex;gap:40px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">80 % of the cap used</div><div class="capn" style="max-width:620px">Fires once per cycle when estimated spend crosses 80 % of the cap: banner on Usage and Live, a notification, the menu bar attention dot.</div></div>
+    <div class="win pane">
+      <div class="tb"><div style="display:flex;flex-direction:column"><span class="ttl">Usage</span><span class="sub">Billing cycle Oct 15 – Nov 14 · day 26 of 31</span></div></div>
+      <div style="padding:4px 18px 18px;display:flex;flex-direction:column;gap:12px">
+        <div class="ban" role="status"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 1 1 11 0"></path><path d="M8 11.5l3-3.5"></path></svg><div style="flex:1"><b>80 % of your monthly cap is used.</b> At this pace you’ll reach $100 around Nov 11, and translation will pause then.</div><button class="btn sm">Change Cap…</button></div>
+        <div class="card inset" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:34px;font-weight:700" class="num">$80.40</span><span class="mut">of $100 monthly credit used</span></div>
+          <div style="position:relative"><div class="meter" style="height:10px;border-radius:5px" role="img" aria-label="80 percent used"><i style="width:80.4%;background:var(--accf)"></i><i style="width:19.6%;background-image:repeating-linear-gradient(135deg,var(--warn) 0 2px,transparent 2px 5px);opacity:.5;margin-left:2px"></i></div><i style="position:absolute;left:80%;top:-4px;width:2px;height:18px;background:var(--label2);display:block"></i></div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px"><div><div class="hint">Projected by Nov 14</div><b class="num" style="font-size:18px">$112.60</b></div><div><div class="hint">Per stream hour</div><b class="num" style="font-size:18px">$0.13</b></div><div><div class="hint">Left this cycle</div><b class="num" style="font-size:18px">$19.60</b></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Cap reached</div><div class="capn" style="max-width:620px">Translation and explanations stop; Japanese transcription keeps running. Overlay shows “Monthly cap reached · Japanese only”. Resets automatically at the next cycle.</div></div>
+    <div class="win pane">
+      <div class="tb"><div style="display:flex;flex-direction:column"><span class="ttl">Usage</span><span class="sub">Billing cycle Oct 15 – Nov 14 · day 28 of 31</span></div></div>
+      <div style="padding:4px 18px 18px;display:flex;flex-direction:column;gap:12px">
+        <div class="ban err" role="alert"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--err)" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 1 1 11 0"></path><path d="M8 11.5l3-3.5"></path></svg><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div><b>Monthly cap reached.</b> Translation is paused until Nov 15. Japanese subtitles keep working.</div><div style="display:flex;gap:8px"><button class="btn sm">Raise Cap…</button><button class="btn sm">Translate This Session Anyway</button></div></div></div>
+        <div class="card inset" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:34px;font-weight:700" class="num">$100.02</span><span class="mut">of $100 monthly credit used</span></div>
+          <div class="meter" style="height:10px;border-radius:5px" role="img" aria-label="100 percent used"><i style="width:100%;background:var(--accf)"></i></div>
+          <div class="hint">“Translate This Session Anyway” lifts the cap until this session ends and asks again next time. If the account itself runs out of credit, Anthropic returns an error and kikitori shows “No API credits left” (Errors board).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div><div class="cap">Notifications</div><div class="capn" style="max-width:360px">UNUserNotificationCenter, category with one action. Only when kikitori isn’t frontmost.</div></div>
+    <div class="notif">
+      <div class="appicon" style="width:36px;height:36px;gap:2px"><span class="k" style="font-size:17px">聞</span><span class="bars"><i style="width:17px;height:2px"></i></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="display:flex"><b>kikitori</b><span class="sp" style="flex:1"></span><span class="hint">now</span></div><div style="font-size:13px"><b>80 % of your monthly cap used</b></div><div style="font-size:12px;color:var(--label2)">$80.40 of $100. At this pace you’ll reach it around Nov 11.</div></div>
+    </div>
+    <div class="notif">
+      <div class="appicon" style="width:36px;height:36px;gap:2px"><span class="k" style="font-size:17px">聞</span><span class="bars"><i style="width:17px;height:2px"></i></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="display:flex"><b>kikitori</b><span class="sp" style="flex:1"></span><span class="hint">now</span></div><div style="font-size:13px"><b>Monthly cap reached</b></div><div style="font-size:12px;color:var(--label2)">Translation is paused until Nov 15. Japanese subtitles keep working.</div></div>
+    </div>
+    <div class="kk kd" style="border-radius:20px"><div class="notif">
+      <div class="appicon" style="width:36px;height:36px;gap:2px"><span class="k" style="font-size:17px">聞</span><span class="bars"><i style="width:17px;height:2px"></i></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="display:flex"><b>kikitori</b><span class="sp" style="flex:1"></span><span class="hint">now</span></div><div style="font-size:13px"><b>Monthly cap reached</b></div><div style="font-size:12px;color:var(--label2)">Translation is paused until Nov 15. Japanese subtitles keep working.</div></div>
+    </div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">“When reached” options</div></div>
+    <div class="menu" style="width:300px">
+      <button class="mi hl"><span style="width:12px">✓</span>Japanese only<span class="kb">default</span></button>
+      <button class="mi"><span style="width:12px"></span>Keep subtitles, stop explanations</button>
+      <button class="mi"><span style="width:12px"></span>Stop listening</button>
+      <button class="mi"><span style="width:12px"></span>Only warn me</button>
+    </div>
+    <div class="capn" style="max-width:300px">Cap range $1–$500 in $1 steps; default $100, the Max credit. Above $100 the sheet notes that extra spend uses other credit on the account, if any.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2120,"height":480}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

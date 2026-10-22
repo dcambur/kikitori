@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings: Overlay, Hotkeys, Account and Privacy</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.sw-win{width:680px;flex-direction:column;background:var(--grpbg)}
+.shead{background:var(--win2);border-bottom:.5px solid var(--sep)}
+.stitle{height:30px;display:flex;align-items:center;padding:0 12px;position:relative}
+.stitle b{position:absolute;left:0;right:0;text-align:center;font-size:13px}
+.stabs{display:flex;justify-content:center;gap:2px;padding:2px 0 8px}
+.stab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:82px;height:50px;border:0;background:none;border-radius:9px;font-size:11px;color:var(--label2)}
+.stab.on{background:var(--fill);color:var(--acc)}
+.sbody{padding:18px 28px 24px;display:flex;flex-direction:column}
+.step{display:inline-flex;align-items:center;gap:8px}
+.step button{width:22px;height:22px;border-radius:6px;border:0;background:var(--btn);box-shadow:0 0 0 .5px var(--sep2);display:grid;place-items:center}
+.lst{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:12px}
+.lst li{display:flex;gap:8px;align-items:flex-start}
+</style>
+</helmet>
+<div style="width:2232px;height:1780px;display:flex;flex-direction:column">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}">
+<div class="desk" style="width:2232px;height:890px;padding:44px 48px;display:flex;gap:48px;align-items:flex-start">
+
+  <!-- Overlay -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="cap">Overlay · {{t.name}}</div>
+    <div class="win sw-win">
+      <div class="shead"><div class="stitle"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><b>Overlay</b></div>
+        <div class="stabs" role="tablist">
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4L5 11M11 5l1.4-1.4"></path></svg>General</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10L5 10H2.5z"></path><path d="M11 5.5a3.5 3.5 0 0 1 0 5" stroke-linecap="round"></path></svg>Audio</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 7v2M5 5v6M7.5 2.5v11M10 5.5v5M12.5 6.5v3"></path></svg>Speech</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h7v5h-4l-3 2.5z"></path><path d="M11.5 6h2v5.5h-1.5v2l-2.5-2h-3v-1.5"></path></svg>Translation</button>
+          <button class="stab on" role="tab" aria-selected="true"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="2" y="3.5" width="12" height="9" rx="2"></rect><path d="M4.5 9.5h4M10 9.5h1.5"></path></svg>Overlay</button>
+          <button class="stab" role="tab"><span style="font-size:17px;line-height:20px;height:20px">⌘</span>Hotkeys</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"></path></svg>Account</button>
+        </div>
+      </div>
+      <div class="sbody">
+        <div style="height:96px;border-radius:12px;background:#1B1830;display:flex;align-items:center;justify-content:center;padding:0 40px" aria-label="Live preview of the overlay">
+          <div class="ov" style="text-align:center;padding:8px 18px 10px"><div class="oj" style="font-size:13px">ねぇ、マネちゃんに怒られちゃうよ</div><div class="oe" style="font-size:20px">Hey, my manager’s going to scold me.</div></div>
+        </div>
+        <div class="gh">Text</div>
+        <div class="form">
+          <div class="row"><span>Font</span><button class="pop">SF Pro Rounded<span class="chev"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></div>
+          <div class="row"><span>Size</span><div class="seg"><button>S</button><button class="on">M</button><button>L</button><button>XL</button></div></div>
+          <div class="row"><span>Lines</span><span class="step"><button aria-label="Fewer lines">−</button><b class="num">2</b><button aria-label="More lines">+</button></span></div>
+        </div>
+        <div class="gh">Look</div>
+        <div class="form">
+          <div class="row"><span>Style</span><div class="seg"><button class="on">Dark glass</button><button>Light glass</button><button>Outline</button></div></div>
+          <div class="row"><span>Background opacity</span><span style="display:flex;gap:10px;align-items:center;width:260px;white-space:nowrap"><input class="rng" type="range" min="30" max="100" value="72" aria-label="Background opacity"><b class="num">72 %</b></span></div>
+          <div class="row"><span>Speaker colours</span><button class="sw on" role="switch" aria-checked="true" aria-label="Speaker colours"></button></div>
+        </div>
+        <div class="gh">Behaviour</div>
+        <div class="form">
+          <div class="row"><span>Position</span><button class="pop">Bottom centre<span class="chev"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></div>
+          <div class="row"><span>Click-through</span><button class="sw" role="switch" aria-checked="false" aria-label="Click-through"></button></div>
+          <div class="row"><span>Hide when no one is speaking</span><button class="sw on" role="switch" aria-checked="true" aria-label="Hide when idle"></button></div>
+          <div class="row"><span>Always show delay</span><button class="sw" role="switch" aria-checked="false" aria-label="Always show delay"></button></div>
+          <div class="row"><span class="lbl"><span>Announce new lines with VoiceOver</span><span class="hint">Off by default: it would talk over the stream.</span></span><button class="sw" role="switch" aria-checked="false" aria-label="Announce new lines with VoiceOver"></button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hotkeys -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="cap">Hotkeys · {{t.name}}</div>
+    <div class="win sw-win">
+      <div class="shead"><div class="stitle"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><b>Hotkeys</b></div>
+        <div class="stabs" role="tablist">
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4L5 11M11 5l1.4-1.4"></path></svg>General</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10L5 10H2.5z"></path><path d="M11 5.5a3.5 3.5 0 0 1 0 5" stroke-linecap="round"></path></svg>Audio</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 7v2M5 5v6M7.5 2.5v11M10 5.5v5M12.5 6.5v3"></path></svg>Speech</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h7v5h-4l-3 2.5z"></path><path d="M11.5 6h2v5.5h-1.5v2l-2.5-2h-3v-1.5"></path></svg>Translation</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="2" y="3.5" width="12" height="9" rx="2"></rect><path d="M4.5 9.5h4M10 9.5h1.5"></path></svg>Overlay</button>
+          <button class="stab on" role="tab" aria-selected="true"><span style="font-size:17px;line-height:20px;height:20px">⌘</span>Hotkeys</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"></path></svg>Account</button>
+        </div>
+      </div>
+      <div class="sbody">
+        <div class="form">
+          <div class="row"><span>Show or hide subtitles</span><span class="rec">⌃⌥S<span class="x" aria-label="Clear">×</span></span></div>
+          <div class="row"><span>Pause or resume</span><span class="rec">⌃⌥P<span class="x" aria-label="Clear">×</span></span></div>
+          <div class="row"><span>Explain the last line</span><span class="rec focus" style="box-shadow:0 0 0 3.5px var(--ring),inset 0 0 0 1px var(--acc);color:var(--label2)">Type a shortcut…</span></div>
+          <div class="row"><span class="lbl"><span>Open transcript</span><span class="hint" style="color:var(--warn)">⌃⌥T may also be used by another app.</span></span><span class="rec" style="box-shadow:inset 0 0 0 1px var(--warn)">⌃⌥T<span class="x" aria-label="Clear">×</span></span></div>
+          <div class="row"><span>Click-through on or off</span><span class="rec">⌃⌥C<span class="x" aria-label="Clear">×</span></span></div>
+          <div class="row"><span>Show Japanese on or off</span><span class="rec">⌃⌥J<span class="x" aria-label="Clear">×</span></span></div>
+          <div class="row"><span>Choose source</span><span class="rec">⌃⌥O<span class="x" aria-label="Clear">×</span></span></div>
+        </div>
+        <div class="foot">Shortcuts work in every app, also over full-screen video. A shortcut needs ⌃, ⌥ or ⌘. Esc cancels recording; Delete clears.</div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn">Restore Defaults</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account & Privacy -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="cap">Account &amp; Privacy · {{t.name}}</div>
+    <div class="win sw-win">
+      <div class="shead"><div class="stitle"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><b>Account &amp; Privacy</b></div>
+        <div class="stabs" role="tablist">
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"></circle><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4L5 11M11 5l1.4-1.4"></path></svg>General</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10L5 10H2.5z"></path><path d="M11 5.5a3.5 3.5 0 0 1 0 5" stroke-linecap="round"></path></svg>Audio</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 7v2M5 5v6M7.5 2.5v11M10 5.5v5M12.5 6.5v3"></path></svg>Speech</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h7v5h-4l-3 2.5z"></path><path d="M11.5 6h2v5.5h-1.5v2l-2.5-2h-3v-1.5"></path></svg>Translation</button>
+          <button class="stab" role="tab"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="2" y="3.5" width="12" height="9" rx="2"></rect><path d="M4.5 9.5h4M10 9.5h1.5"></path></svg>Overlay</button>
+          <button class="stab" role="tab"><span style="font-size:17px;line-height:20px;height:20px">⌘</span>Hotkeys</button>
+          <button class="stab on" role="tab" aria-selected="true"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"></rect><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"></path></svg>Account</button>
+        </div>
+      </div>
+      <div class="sbody">
+        <div class="gh">Claude</div>
+        <div class="form">
+          <div class="row"><span class="lbl"><span>API key</span><span class="hint mono">sk-ant-…Q7xA · in Keychain</span></span><span style="display:flex;gap:6px"><button class="btn sm">Change…</button><button class="btn sm dest">Remove…</button></span></div>
+          <div class="row"><span>Status</span><span class="chip ok"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg>Key works · checked today 20:01</span></div>
+          <div class="row"><span>Billing cycle starts on</span><button class="pop">Day 15<span class="chev"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></div>
+        </div>
+        <div class="gh">What is sent to Claude</div>
+        <div class="form" style="padding:12px 14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+          <ul class="lst" aria-label="Sent">
+            <li><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg>Japanese text of each chunk</li>
+            <li><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg>The profile: names, glossary, notes</li>
+            <li><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg>Stream title and game</li>
+            <li><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg>For Explain: that line and nearby lines</li>
+          </ul>
+          <ul class="lst" aria-label="Never sent">
+            <li><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--label2)" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg>Audio, ever</li>
+            <li><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--label2)" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg>Your screen or other apps</li>
+            <li><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--label2)" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg>Past sessions</li>
+            <li><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--label2)" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg>Anything about you</li>
+          </ul>
+        </div>
+        <div class="foot">Requests go straight from this Mac to Anthropic’s API; there is no kikitori server. <a class="lnk" href="#">Anthropic Privacy Policy ↗</a></div>
+        <div class="gh">Data on this Mac</div>
+        <div class="form">
+          <div class="row"><span class="lbl"><span>Transcripts, profiles, usage</span><span class="hint">~/Library/Application Support/kikitori · 16.8 MB</span></span><span style="display:flex;gap:6px"><button class="btn sm">Show in Finder</button><button class="btn sm dest">Delete All…</button></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2232,"height":1780}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { themes: [ { cls: 'kk kl', name: 'Light' }, { cls: 'kk kd', name: 'Dark' } ] };
+  }
+}
+</script>
+</body>
+</html>

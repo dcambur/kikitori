@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.av{border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-weight:700;flex:none;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2200px;height:700px;padding:48px;display:flex;gap:40px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Empty: no profiles yet</div><div class="capn" style="max-width:560px">Profiles section, first visit. Without a profile kikitori uses generic VTuber context.</div></div>
+    <div class="win" style="width:560px;height:460px;flex-direction:column">
+      <div class="tb"><span class="ttl">Profiles</span></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:0 60px 40px;text-align:center">
+        <svg width="48" height="48" viewBox="0 0 16 16" fill="none" stroke="var(--label3)" stroke-width=".9" aria-hidden="true"><circle cx="8" cy="5.5" r="2.6"></circle><path d="M3 13.5a5 5 0 0 1 10 0"></path></svg>
+        <b style="font-size:17px">No streamer profiles</b>
+        <div style="color:var(--label2)">A profile teaches the translator a streamer’s names, fan name, catchphrases and running jokes.</div>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn">Import…</button><button class="btn pri">New Profile</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">New profile sheet (⌘N)</div><div class="capn" style="max-width:440px">Create is enabled once either name is filled. Glossary starts empty; the user lands in the editor.</div></div>
+    <div class="sheet" style="width:440px;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <b style="font-size:15px">New Profile</b>
+      <label style="display:flex;flex-direction:column;gap:4px"><span class="hint" style="font-weight:600">Name (English)</span><span class="tf focus">Amane Rio</span></label>
+      <label style="display:flex;flex-direction:column;gap:4px"><span class="hint" style="font-weight:600">Name (Japanese)</span><span class="tf jp">天音リオ</span></label>
+      <label style="display:flex;flex-direction:column;gap:4px"><span class="hint" style="font-weight:600">Channel link (optional)</span><span class="tf"><span class="ph">https://…</span></span></label>
+      <div class="hint">Used only to match this profile to a stream automatically. kikitori does not visit the link.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px"><button class="btn">Cancel</button><button class="btn pri">Create</button></div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Import (JSON)</div><div class="capn" style="max-width:520px">File › Import Profile… or drop a .json on the window. Same name merges; conflicting terms get a choice per row.</div></div>
+    <div class="sheet" style="width:520px;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <b style="font-size:15px">Import “hoshimi-kuu.json”</b>
+      <div class="hint" style="font-size:12px;color:var(--label)">Merging into <b>Hoshimi Kuu</b>: 18 new terms, 3 terms differ.</div>
+      <div style="border-radius:10px;box-shadow:inset 0 0 0 .5px var(--sep2);overflow:hidden">
+        <table class="tbl" style="font-size:12px">
+          <thead><tr><th>Term</th><th>Yours</th><th>Imported</th><th>Keep</th></tr></thead>
+          <tbody>
+            <tr><td class="jp">星屑</td><td>Stardust</td><td>Stardusts</td><td><button class="pop" style="height:22px;font-size:12px">Yours<span class="chev"><svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></td></tr>
+            <tr><td class="jp">ポンコツ</td><td>airhead</td><td>klutz</td><td><button class="pop" style="height:22px;font-size:12px">Imported<span class="chev"><svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></td></tr>
+            <tr><td class="jp">空城</td><td>Sky Castle</td><td>Castle in the Sky</td><td><button class="pop" style="height:22px;font-size:12px">Yours<span class="chev"><svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center"><button class="chk on" role="checkbox" aria-checked="true" aria-label="Also import notes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></button>Append imported notes to mine</label>
+      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn">Cancel</button><button class="btn pri">Import 21 Terms</button></div>
+    </div>
+    <div class="capn" style="max-width:520px">Bad file: alert “This file isn’t a kikitori profile.” with the parse reason in small text. Export writes { version, name, nameJa, colour, glossary[], notes } as pretty JSON, UTF-8.</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Pick the profile for this session</div><div class="capn" style="max-width:280px">Session header Profile button and menu bar. Auto-match by channel link or name in the stream title shows “Matched”.</div></div>
+    <div class="menu" style="width:280px">
+      <div class="mh">Profile for this session</div>
+      <button class="mi hl"><span style="width:12px">✓</span><span class="av" style="width:18px;height:18px;background:#8D7BE0;font-size:10px">星</span>Hoshimi Kuu<span class="kb">Matched</span></button>
+      <button class="mi"><span style="width:12px"></span><span class="av" style="width:18px;height:18px;background:#2F8FB8;font-size:10px">天</span>Amane Rio</button>
+      <button class="mi"><span style="width:12px"></span><span class="av" style="width:18px;height:18px;background:#C2571A;font-size:10px">黒</span>Kurogane Mei</button>
+      <button class="mi"><span style="width:12px"></span><span class="av" style="width:18px;height:18px;background:var(--fill2);color:var(--label2);font-size:10px">?</span>No Profile</button>
+      <div class="msep"></div>
+      <button class="mi">Collab: Add Second Profile…</button>
+      <button class="mi">Edit “Hoshimi Kuu”…</button>
+      <button class="mi">New Profile…</button>
+    </div>
+    <div class="capn" style="max-width:280px">Collab: up to 3 profiles per session; their glossaries merge (first profile wins on conflicts).</div>
+    <div class="cap" style="margin-top:14px">Delete profile</div>
+    <div class="alert">
+      <div class="appicon" style="width:48px;height:48px;gap:3px"><span class="k" style="font-size:22px">聞</span><span class="bars" style="gap:2px"><i style="width:22px;height:3px"></i></span></div>
+      <div class="at">Delete “Kurogane Mei”?</div>
+      <div class="ab">Its 6 glossary terms and notes are removed. Past sessions keep their transcripts.</div>
+      <div class="abtns"><button class="btn destf">Delete</button><button class="btn">Cancel</button></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2200,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

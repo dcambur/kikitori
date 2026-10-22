@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Streamer profiles</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.av{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+.pl{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;border:0;background:none;width:100%;text-align:left}
+.pl.on{background:var(--selbg)}
+.gl td{font-size:12px}
+.gl td.jp{font-size:13px}
+</style>
+</helmet>
+<div style="width:2392px;height:830px;display:flex">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width:1196px;height:830px">
+<div class="desk" style="width:1196px;height:830px;padding:44px 48px;display:flex;flex-direction:column;gap:10px">
+  <div class="cap">{{t.name}} · Profiles: list, edit, glossary</div>
+  <div class="win" style="width:1100px;height:700px">
+    <nav class="sb" style="width:200px" aria-label="Sections">
+      <div class="lights" style="padding:0 6px 10px"><i></i><i></i><i></i></div>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="1.6" fill="currentColor"></circle><path d="M5 5a4.2 4.2 0 0 0 0 6M11 5a4.2 4.2 0 0 1 0 6M3 3a7 7 0 0 0 0 10M13 3a7 7 0 0 1 0 10"></path></svg>Live<span class="badge">Idle</span></button>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg>Sessions</button>
+      <button class="si on"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="5.5" r="2.6"></circle><path d="M3 13.5a5 5 0 0 1 10 0"></path></svg>Profiles</button>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 13V8M6.5 13V4M10 13V9.5M13.5 13V6"></path></svg>Usage</button>
+    </nav>
+    <!-- content column -->
+    <div style="width:230px;flex:none;display:flex;flex-direction:column;border-right:.5px solid var(--sep)">
+      <div class="tb" style="padding:0 10px 0 14px"><span class="ttl">Profiles</span><span class="sp"></span><div class="tbg"><button class="tbb" aria-label="New profile (⌘N)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg></button></div></div>
+      <div style="padding:0 10px 8px"><div class="search" style="min-width:0;height:26px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.2"></circle><path d="M10.2 10.2L13.5 13.5"></path></svg>Filter</div></div>
+      <div style="padding:0 8px;display:flex;flex-direction:column;gap:2px" role="list">
+        <button class="pl on" role="listitem"><span class="av" style="width:32px;height:32px;background:#8D7BE0;font-size:14px">星</span><span style="display:flex;flex-direction:column;line-height:1.25;flex:1"><b>Hoshimi Kuu</b><span class="hint">24 terms</span></span><span class="chip acc" style="height:18px;padding:0 6px">Live</span></button>
+        <button class="pl" role="listitem"><span class="av" style="width:32px;height:32px;background:#2F8FB8;font-size:14px">天</span><span style="display:flex;flex-direction:column;line-height:1.25"><b>Amane Rio</b><span class="hint">11 terms · 3 sessions</span></span></button>
+        <button class="pl" role="listitem"><span class="av" style="width:32px;height:32px;background:#C2571A;font-size:14px">黒</span><span style="display:flex;flex-direction:column;line-height:1.25"><b>Kurogane Mei</b><span class="hint">6 terms · 1 session</span></span></button>
+        <button class="pl" role="listitem"><span class="av" style="width:32px;height:32px;background:var(--fill2);color:var(--label2);font-size:14px">?</span><span style="display:flex;flex-direction:column;line-height:1.25"><b>No profile</b><span class="hint">generic VTuber context</span></span></button>
+      </div>
+    </div>
+    <!-- detail -->
+    <div class="main">
+      <div class="tb" style="padding-left:18px">
+        <span class="av" style="width:28px;height:28px;background:#8D7BE0;font-size:13px">星</span>
+        <div style="display:flex;flex-direction:column"><span class="ttl">Hoshimi Kuu</span><span class="sub jp">星見くう</span></div>
+        <span class="sp"></span>
+        <button class="btn sm" disabled style="opacity:.55">In Use This Session</button>
+        <div class="tbg"><button class="tbb" aria-label="Import or export"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M5 5l3-3 3 3"></path><path d="M4.5 7.5H3.5v6h9v-6h-1"></path></svg></button><button class="tbb" aria-label="More"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="8" r="1.2" fill="currentColor"></circle><circle cx="8" cy="8" r="1.2" fill="currentColor"></circle><circle cx="12.5" cy="8" r="1.2" fill="currentColor"></circle></svg></button></div>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:4px 18px 14px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+          <label style="display:flex;flex-direction:column;gap:4px"><span class="hint" style="font-weight:600">Name (English)</span><span class="tf">Hoshimi Kuu</span></label>
+          <label style="display:flex;flex-direction:column;gap:4px"><span class="hint" style="font-weight:600">Name (Japanese)</span><span class="tf jp">星見くう</span></label>
+          <div style="display:flex;flex-direction:column;gap:4px"><span class="hint" style="font-weight:600">Colour</span><span style="display:flex;gap:6px;height:28px;align-items:center"><button aria-label="Wisteria, selected" style="width:20px;height:20px;border-radius:10px;border:0;background:#8D7BE0;box-shadow:0 0 0 2px var(--win),0 0 0 4px #8D7BE0"></button><button aria-label="Blue" style="width:20px;height:20px;border-radius:10px;border:0;background:#2F8FB8"></button><button aria-label="Orange" style="width:20px;height:20px;border-radius:10px;border:0;background:#C2571A"></button><button aria-label="Pink" style="width:20px;height:20px;border-radius:10px;border:0;background:#C23A7A"></button><button aria-label="Green" style="width:20px;height:20px;border-radius:10px;border:0;background:#3C8D5A"></button></span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px"><b>Glossary</b><span class="hint">24 terms</span><span class="sp" style="flex:1"></span><button class="btn sm"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>Add Term</button></div>
+        <div style="border-radius:10px;box-shadow:inset 0 0 0 .5px var(--sep2);overflow:hidden;background:var(--grp)">
+          <table class="tbl gl" aria-label="Glossary">
+            <thead><tr><th style="width:96px">Term</th><th style="width:96px">Reading</th><th>Meaning</th><th style="width:150px">Translate as</th></tr></thead>
+            <tbody>
+              <tr><td class="jp">くうばんは</td><td class="jp mut">くうばんは</td><td>Kuu’s greeting: くう + こんばんは</td><td>Kuubanwa</td></tr>
+              <tr><td class="jp">おつくう</td><td class="jp mut">おつくう</td><td>Sign-off: おつかれ + くう</td><td>Otsukuu</td></tr>
+              <tr class="edit"><td class="jp"><span class="tf focus jp" style="height:24px">星屑</span></td><td class="jp"><span class="tf jp" style="height:24px">ほしくず</span></td><td><span class="tf" style="height:24px">Fan name (“stardust”)</span></td><td><span class="tf" style="height:24px">Stardust</span></td></tr>
+              <tr><td class="jp">天音リオ</td><td class="jp mut">あまね りお</td><td>Amane Rio, frequent collab partner</td><td>Rio</td></tr>
+              <tr><td class="jp">マネちゃん</td><td class="jp mut">まねちゃん</td><td>Her manager (affectionate)</td><td>my manager</td></tr>
+              <tr><td class="jp">ポンコツ</td><td class="jp mut">ぽんこつ</td><td>Running joke: lovable airhead</td><td>airhead</td></tr>
+              <tr><td class="jp">空城</td><td class="jp mut">そらしろ</td><td>“Sky Castle”, the Minecraft build series</td><td>Sky Castle</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:4px"><b>Notes for the translator</b>
+          <span class="tf" style="height:auto;min-height:70px;align-items:flex-start;padding:7px 9px;line-height:1.45;display:block">Cheerful, teasing, talks fast when excited. Refers to herself as くう: translate as “I”. Castle stream #2 ended with the castle burning down (lava). Chat ships her with Rio (てぇてぇ).</span>
+        </label>
+        <div class="hint">Sent to Claude with every chunk: names, glossary and notes, about 1,400 tokens. It is prompt-cached, so it adds little to the cost.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2392,"height":830}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { themes: [ { cls: 'kk kl', name: 'Light' }, { cls: 'kk kd', name: 'Dark' } ] };
+  }
+}
+</script>
+</body>
+</html>

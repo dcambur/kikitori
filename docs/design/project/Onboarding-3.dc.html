@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Onboarding: speech model</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.mdl{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:var(--grp);box-shadow:inset 0 0 0 1px var(--sep2)}
+.mdl.on{box-shadow:inset 0 0 0 2px var(--accf);background:var(--accsoft)}
+.mdl.off{opacity:.5}
+.pips{display:flex;gap:3px}
+.pips i{display:block;width:6px;height:6px;border-radius:3px;background:var(--fill2)}
+.pips i.f{background:var(--acc)}
+.mm{display:grid;grid-template-columns:58px auto;gap:2px 6px;align-items:center;font-size:11px;color:var(--label2)}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2112px;height:1300px;padding:48px;display:grid;grid-template-columns:repeat(3,640px);row-gap:40px;column-gap:48px;align-content:start">
+
+  <!-- 1 Choose -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">10 · Choose a speech model</div><div class="capn">Default selection: Balanced. Sizes and names are placeholders until the WhisperKit benchmark (bench/) settles them.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 3 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:2px 48px 0;gap:10px">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:700;line-height:1.15">Choose a speech model</div><div style="font-size:13px;color:var(--label2);margin-top:6px">Japanese speech is recognised on your Mac. Larger models handle fast talk and game noise better.</div></div>
+        <div role="radiogroup" aria-label="Speech model" style="display:flex;flex-direction:column;gap:8px">
+          <div class="mdl"><button class="radio" role="radio" aria-checked="false" aria-label="Apple Speech"></button><div style="flex:1"><b>Apple Speech</b><div class="hint">Built into macOS · no download</div></div><div class="mm"><span>Speed</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></span><span>Accuracy</span><span class="pips"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span></div></div>
+          <div class="mdl"><button class="radio" role="radio" aria-checked="false" aria-label="Light"></button><div style="flex:1"><b>Light</b> <span class="mut">Whisper Small</span><div class="hint">0.6 GB</div></div><div class="mm"><span>Speed</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></span><span>Accuracy</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></span></div></div>
+          <div class="mdl on"><button class="radio on" role="radio" aria-checked="true" aria-label="Balanced, recommended"></button><div style="flex:1"><b>Balanced</b> <span class="mut">Whisper Large v3 Turbo</span> <span class="chip acc" style="height:18px">Recommended</span><div class="hint">1.6 GB</div></div><div class="mm"><span>Speed</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></span><span>Accuracy</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></span></div></div>
+          <div class="mdl"><button class="radio" role="radio" aria-checked="false" aria-label="Best"></button><div style="flex:1"><b>Best</b> <span class="mut">Whisper Large v3</span><div class="hint">3.1 GB · adds about 1 s of delay on M1</div></div><div class="mm"><span>Speed</span><span class="pips"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span><span>Accuracy</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></span></div></div>
+        </div>
+        <div class="hint" style="text-align:center">182 GB free on Macintosh HD · You can switch models later in Settings › Speech.</div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri">Download 1.6 GB</button></div>
+    </div>
+  </div>
+
+  <!-- 2 Downloading -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">11 · Downloading</div><div class="capn">Background URLSession; survives window close and relaunch. Progress also in the Dock icon and menu bar. Continue unlocks after verify.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 3 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 64px 0;gap:14px;text-align:center">
+        <div style="width:56px;height:56px;border-radius:14px;background:var(--accsoft);display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M5 7.5l3 3 3-3M3 13.5h10"></path></svg></div>
+        <div style="font-size:24px;font-weight:700;line-height:1.15">Downloading Balanced</div>
+        <div style="width:440px;display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <div class="meter" style="height:8px;border-radius:4px" role="progressbar" aria-valuenow="47" aria-valuemin="0" aria-valuemax="100" aria-label="Download progress"><i style="width:47%;background:var(--accf)"></i></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--label2)" class="num"><span>760 MB of 1.6 GB</span><span>About 2 minutes left</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px"><button class="btn">Pause</button><button class="btn">Cancel</button></div>
+        <div class="hint" style="margin-top:16px;max-width:420px">After downloading, the model is checked and prepared for the Neural Engine. This takes up to a minute the first time.</div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri dis" disabled>Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 3 Paused -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">12 · Paused, and preparing</div><div class="capn">Paused keeps resume data. After 100 %: “Checking…” then “Preparing for this Mac…” (Core ML compile) with an indeterminate bar.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 3 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 64px 0;gap:14px;text-align:center">
+        <div style="width:56px;height:56px;border-radius:14px;background:var(--fill);display:grid;place-items:center"><svg width="26" height="26" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.6" height="10" rx="1" fill="var(--label2)"></rect><rect x="9.4" y="3" width="2.6" height="10" rx="1" fill="var(--label2)"></rect></svg></div>
+        <div style="font-size:24px;font-weight:700;line-height:1.15">Download paused</div>
+        <div style="width:440px;display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <div class="meter" style="height:8px;border-radius:4px" role="progressbar" aria-valuenow="47" aria-valuemin="0" aria-valuemax="100" aria-label="Download progress, paused"><i style="width:47%;background:var(--label3)"></i></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--label2)" class="num"><span>760 MB of 1.6 GB</span><span>Paused</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px"><button class="btn pri">Resume</button><button class="btn">Cancel</button></div>
+        <div class="hsep" style="width:440px;margin-top:22px"></div>
+        <div style="width:440px;display:flex;flex-direction:column;gap:8px;text-align:left">
+          <div style="font-size:12px;font-weight:600">Later: preparing for this Mac…</div>
+          <div class="meter" style="height:8px;border-radius:4px"><i style="width:30%;margin-left:35%;background:var(--accf);border-radius:4px"></i></div>
+          <div class="hint">Indeterminate. Reduce Motion: static bar with “Preparing…” text only.</div>
+        </div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri dis" disabled>Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 4 Failed -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">13 · Download failed</div><div class="capn">Network drop: Resume from resume data. Checksum mismatch: “The download was damaged.” with Download Again (starts over).</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 3 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 64px 0;gap:14px;text-align:center">
+        <div style="width:56px;height:56px;border-radius:14px;background:var(--errbg);display:grid;place-items:center"><svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="var(--err)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8v3.8M8 11v.2"></path></svg></div>
+        <div style="font-size:24px;font-weight:700;line-height:1.15">Download stopped</div>
+        <div style="font-size:14px;color:var(--label2);max-width:440px">The connection was lost at 1.1 GB of 1.6 GB. Nothing is lost: kikitori picks up where it stopped.</div>
+        <div style="width:440px;margin-top:4px"><div class="meter" style="height:8px;border-radius:4px"><i style="width:69%;background:var(--err)"></i></div></div>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn pri">Resume Download</button><button class="btn">Choose Another Model</button></div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri dis" disabled>Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 5 Low disk -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">14 · Not enough disk space</div><div class="capn">Need = model size + 0.5 GB working room. Models that don’t fit are dimmed with the shortfall; selection moves to the largest that fits.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 3 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:2px 48px 0;gap:10px">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:700;line-height:1.15">Choose a speech model</div></div>
+        <div class="ban"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="4" width="11" height="8" rx="1.5"></rect><path d="M5 9.5h.1M11 9.5h-3" stroke-linecap="round"></path></svg><div><b>Only 2.4 GB free on Macintosh HD.</b> Best needs 3.6 GB. Free up space, or choose a smaller model.</div></div>
+        <div role="radiogroup" aria-label="Speech model" style="display:flex;flex-direction:column;gap:8px">
+          <div class="mdl"><button class="radio" role="radio" aria-checked="false" aria-label="Apple Speech"></button><div style="flex:1"><b>Apple Speech</b><div class="hint">Built into macOS · no download</div></div></div>
+          <div class="mdl"><button class="radio" role="radio" aria-checked="false" aria-label="Light"></button><div style="flex:1"><b>Light</b> <span class="mut">Whisper Small</span><div class="hint">0.6 GB</div></div></div>
+          <div class="mdl on"><button class="radio on" role="radio" aria-checked="true" aria-label="Balanced"></button><div style="flex:1"><b>Balanced</b> <span class="mut">Whisper Large v3 Turbo</span><div class="hint">1.6 GB · fits</div></div></div>
+          <div class="mdl off"><button class="radio" role="radio" aria-checked="false" aria-disabled="true" aria-label="Best, needs 1.2 GB more space"></button><div style="flex:1"><b>Best</b> <span class="mut">Whisper Large v3</span><div class="hint">3.1 GB · needs 1.2 GB more</div></div></div>
+        </div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn">Open Storage Settings</button><button class="btn pri">Download 1.6 GB</button></div>
+    </div>
+  </div>
+
+  <!-- 6 Choose dark -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">10 · Choose a speech model, dark</div><div class="capn">Selected card: 2 pt accent ring + accent-soft fill. Arrow keys move the selection; Space selects.</div></div>
+    <div class="kk kd" style="border-radius:16px">
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 3 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--fill2)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:2px 48px 0;gap:10px">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:700;line-height:1.15">Choose a speech model</div><div style="font-size:13px;color:var(--label2);margin-top:6px">Japanese speech is recognised on your Mac. Larger models handle fast talk and game noise better.</div></div>
+        <div role="radiogroup" aria-label="Speech model" style="display:flex;flex-direction:column;gap:8px">
+          <div class="mdl"><button class="radio" role="radio" aria-checked="false" aria-label="Apple Speech"></button><div style="flex:1"><b>Apple Speech</b><div class="hint">Built into macOS · no download</div></div><div class="mm"><span>Speed</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></span><span>Accuracy</span><span class="pips"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span></div></div>
+          <div class="mdl"><button class="radio" role="radio" aria-checked="false" aria-label="Light"></button><div style="flex:1"><b>Light</b> <span class="mut">Whisper Small</span><div class="hint">0.6 GB</div></div><div class="mm"><span>Speed</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></span><span>Accuracy</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></span></div></div>
+          <div class="mdl on"><button class="radio on" role="radio" aria-checked="true" aria-label="Balanced, recommended"></button><div style="flex:1"><b>Balanced</b> <span class="mut">Whisper Large v3 Turbo</span> <span class="chip acc" style="height:18px">Recommended</span><div class="hint">1.6 GB</div></div><div class="mm"><span>Speed</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></span><span>Accuracy</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i></span></div></div>
+          <div class="mdl"><button class="radio" role="radio" aria-checked="false" aria-label="Best"></button><div style="flex:1"><b>Best</b> <span class="mut">Whisper Large v3</span><div class="hint">3.1 GB · adds about 1 s of delay on M1</div></div><div class="mm"><span>Speed</span><span class="pips"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></span><span>Accuracy</span><span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></span></div></div>
+        </div>
+        <div class="hint" style="text-align:center">182 GB free on Macintosh HD · You can switch models later in Settings › Speech.</div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri">Download 1.6 GB</button></div>
+    </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2112,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

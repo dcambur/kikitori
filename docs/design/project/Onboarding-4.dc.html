@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Onboarding: quick test and done</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.appt{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;flex:none}
+.prev{height:150px;border-radius:12px;background:#151226;position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:center;padding:14px}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2112px;height:1300px;padding:48px;display:grid;grid-template-columns:repeat(3,640px);row-gap:40px;column-gap:48px;align-content:start">
+
+  <!-- 1 Waiting -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">15 · Quick test: waiting for sound</div><div class="capn">Source defaults to the frontmost app that is playing audio, else Safari. Skip is allowed: the test is not required.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 4 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:4px 56px 0;gap:14px">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:700;line-height:1.15">Try it</div><div style="font-size:13px;color:var(--label2);margin-top:6px">Play any Japanese video or stream. Subtitles appear here, about 2–5 seconds behind the voice.</div></div>
+        <div class="card inset" style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+          <span style="font-weight:600">Listen to</span>
+          <button class="pop"><span class="appt" style="background:#1E88E5">S</span>Safari<span class="chev"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button>
+          <div class="sp"></div>
+          <span class="lvl" aria-label="Input level: silent"><i class="off" style="height:4px"></i><i class="off" style="height:6px"></i><i class="off" style="height:8px"></i><i class="off" style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span>
+          <span class="hint">No sound yet</span>
+        </div>
+        <div class="prev"><div class="ovst" style="position:absolute;left:12px;top:12px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4.5 6.5a3.5 3.5 0 0 1 7 0c0 2.2-2.3 2.6-2.3 4.8a2.2 2.2 0 0 1-4 1.2"></path></svg>Listening</div><div class="ov s" style="padding:10px 18px"><div class="oe" style="color:rgba(255,255,255,.7);font-weight:500">Waiting for Japanese speech…</div></div></div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn plain">Skip</button><button class="btn pri dis" disabled>Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 2 Working -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">16 · Quick test: it works</div><div class="capn">First translated line turns Continue on and shows the measured delay. Preview uses the real overlay view at S size.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 4 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:4px 56px 0;gap:14px">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:700;line-height:1.15">Try it</div><div style="font-size:13px;color:var(--label2);margin-top:6px">Play any Japanese video or stream. Subtitles appear here, about 2–5 seconds behind the voice.</div></div>
+        <div class="card inset" style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+          <span style="font-weight:600">Listen to</span>
+          <button class="pop"><span class="appt" style="background:#1E88E5">S</span>Safari<span class="chev"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button>
+          <div class="sp"></div>
+          <span class="lvl" aria-label="Input level: high"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span>
+          <span class="chip ok"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg>It works · 2.8 s behind</span>
+        </div>
+        <div class="prev"><div class="ovst" style="position:absolute;left:12px;top:12px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C3B6FF" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h7v5h-4l-3 2.5z"></path><path d="M11.5 6h2v5.5h-1.5v2l-2.5-2h-3v-1.5"></path></svg>Translating</div><div class="ov s" style="padding:8px 18px 10px;text-align:center"><div class="oj">今日はね、お城の屋根を完成させたいと思います！</div><div class="oe">Today I want to finish the castle roof!</div></div></div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri">Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 3 No audio -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">17 · Quick test: no sound after 20 s</div><div class="capn">Also: sound but no speech for 20 s → “Hearing music or game sound, but no speech yet.”</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 4 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:4px 56px 0;gap:14px">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:700;line-height:1.15">Try it</div><div style="font-size:13px;color:var(--label2);margin-top:6px">Play any Japanese video or stream. Subtitles appear here, about 2–5 seconds behind the voice.</div></div>
+        <div class="card inset" style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+          <span style="font-weight:600">Listen to</span>
+          <button class="pop"><span class="appt" style="background:#1E88E5">S</span>Safari<span class="chev"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button>
+          <div class="sp"></div>
+          <span class="lvl" aria-label="Input level: silent"><i class="off" style="height:4px"></i><i class="off" style="height:6px"></i><i class="off" style="height:8px"></i><i class="off" style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span>
+          <span class="hint">No sound</span>
+        </div>
+        <div class="ban info"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--info)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 7.3v3.7M8 5v.2"></path></svg><div style="display:flex;flex-direction:column;gap:6px"><div><b>No sound from Safari yet.</b> Is the video playing and not muted? If it plays in another app, pick that app.</div><div style="display:flex;gap:8px"><button class="btn sm">Choose Another App…</button></div></div></div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn plain">Skip</button><button class="btn pri dis" disabled>Continue</button></div>
+    </div>
+  </div>
+
+  <!-- 4 Done -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">18 · Done</div><div class="capn">“Start Listening” closes onboarding, starts a session on the tested source and shows the overlay. Window never shows again unless reset.</div></div>
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:0 64px;gap:12px;text-align:center">
+        <div class="appicon" style="width:64px;height:64px;gap:4px"><span class="k" style="font-size:30px">聞</span><span class="bars" style="gap:3px"><i style="width:30px;height:3.5px"></i><i style="width:18px;height:3.5px;opacity:.7"></i></span></div>
+        <div style="font-size:26px;font-weight:700;line-height:1.15">You’re all set</div>
+        <div class="form" style="width:460px;text-align:left;box-shadow:inset 0 0 0 .5px var(--sep2)">
+          <div class="row" style="min-height:34px"><span class="mut">Listening to</span><span>Safari</span></div>
+          <div class="row" style="min-height:34px"><span class="mut">Speech model</span><span>Balanced, on this Mac</span></div>
+          <div class="row" style="min-height:34px"><span class="mut">Translation</span><span>Claude Haiku 5.5 → English</span></div>
+          <div class="row" style="min-height:34px"><span class="mut">Monthly budget</span><span>$100 credit · warn at 80 %</span></div>
+        </div>
+        <div style="display:flex;gap:18px;font-size:12px;color:var(--label2);margin-top:4px">
+          <span style="display:flex;gap:6px;align-items:center"><span class="kbd">⌃⌥S</span>Show or hide subtitles</span>
+          <span style="display:flex;gap:6px;align-items:center"><span class="kbd">⌃⌥E</span>Explain the last line</span>
+        </div>
+        <div class="hint" style="display:flex;gap:6px;align-items:center">kikitori lives in the menu bar <svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-label="menu bar icon"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke-linecap="round"></path></svg> · <a class="lnk" href="#">Add a streamer profile</a> for better names and slang.</div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Open Settings</button><div class="sp"></div><button class="btn pri lg">Start Listening</button></div>
+    </div>
+  </div>
+
+  <!-- 5 Working dark -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">16 · It works, dark</div><div class="capn">Level meter: 6 bars, 20 Hz update, green; Reduce Motion: 4 Hz.</div></div>
+    <div class="kk kd" style="border-radius:16px">
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px;gap:12px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div><div class="sp"></div><div style="display:flex;gap:4px" aria-label="Step 4 of 4"><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i><i style="display:block;width:32px;height:4px;border-radius:2px;background:var(--accf)"></i></div><div class="sp"></div><div style="width:52px"></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;padding:4px 56px 0;gap:14px">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:700;line-height:1.15">Try it</div><div style="font-size:13px;color:var(--label2);margin-top:6px">Play any Japanese video or stream. Subtitles appear here, about 2–5 seconds behind the voice.</div></div>
+        <div class="card inset" style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+          <span style="font-weight:600">Listen to</span>
+          <button class="pop"><span class="appt" style="background:#1E88E5">S</span>Safari<span class="chev"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 6L8 3.5 10.5 6M5.5 10L8 12.5 10.5 10"></path></svg></span></button>
+          <div class="sp"></div>
+          <span class="lvl" aria-label="Input level: medium"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i class="off" style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span>
+          <span class="chip ok"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg>It works · 2.8 s behind</span>
+        </div>
+        <div class="prev"><div class="ovst" style="position:absolute;left:12px;top:12px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#C3B6FF" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3h7v5h-4l-3 2.5z"></path><path d="M11.5 6h2v5.5h-1.5v2l-2.5-2h-3v-1.5"></path></svg>Translating</div><div class="ov s" style="padding:8px 18px 10px;text-align:center"><div class="oj">今日はね、お城の屋根を完成させたいと思います！</div><div class="oe">Today I want to finish the castle roof!</div></div></div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Back</button><div class="sp"></div><button class="btn pri">Continue</button></div>
+    </div>
+    </div>
+  </div>
+
+  <!-- 6 Done dark -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div><div class="cap">18 · Done, dark</div><div class="capn">If the test was skipped, the summary reads “Listening to: choose when you start”.</div></div>
+    <div class="kk kd" style="border-radius:16px">
+    <div class="win" style="width:640px;height:520px;flex-direction:column">
+      <div style="display:flex;align-items:center;height:44px;padding:0 16px"><div class="lights"><i></i><i style="background:var(--fill2)"></i><i style="background:var(--fill2)"></i></div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:0 64px;gap:12px;text-align:center">
+        <div class="appicon" style="width:64px;height:64px;gap:4px"><span class="k" style="font-size:30px">聞</span><span class="bars" style="gap:3px"><i style="width:30px;height:3.5px"></i><i style="width:18px;height:3.5px;opacity:.7"></i></span></div>
+        <div style="font-size:26px;font-weight:700;line-height:1.15">You’re all set</div>
+        <div class="form" style="width:460px;text-align:left;box-shadow:inset 0 0 0 .5px var(--sep2)">
+          <div class="row" style="min-height:34px"><span class="mut">Listening to</span><span>Safari</span></div>
+          <div class="row" style="min-height:34px"><span class="mut">Speech model</span><span>Balanced, on this Mac</span></div>
+          <div class="row" style="min-height:34px"><span class="mut">Translation</span><span>Claude Haiku 5.5 → English</span></div>
+          <div class="row" style="min-height:34px"><span class="mut">Monthly budget</span><span>$100 credit · warn at 80 %</span></div>
+        </div>
+        <div style="display:flex;gap:18px;font-size:12px;color:var(--label2);margin-top:4px">
+          <span style="display:flex;gap:6px;align-items:center"><span class="kbd">⌃⌥S</span>Show or hide subtitles</span>
+          <span style="display:flex;gap:6px;align-items:center"><span class="kbd">⌃⌥E</span>Explain the last line</span>
+        </div>
+        <div class="hint" style="display:flex;gap:6px;align-items:center">kikitori lives in the menu bar <svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-label="menu bar icon"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke-linecap="round"></path></svg> · <a class="lnk" href="#">Add a streamer profile</a> for better names and slang.</div>
+      </div>
+      <div style="height:68px;display:flex;align-items:center;gap:10px;padding:0 20px"><button class="btn">Open Settings</button><div class="sp"></div><button class="btn pri lg">Start Listening</button></div>
+    </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2112,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

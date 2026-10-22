@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Menu bar extra</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.wall{position:relative;width:440px;height:580px;border-radius:14px;overflow:hidden}
+.mb{height:26px;display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:0 12px;font-size:13px}
+.mbi{height:22px;padding:0 6px;border-radius:6px;display:flex;align-items:center}
+.mbx{position:absolute;right:56px;top:32px;width:320px}
+.tog{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;border:0;background:none;font-size:11px;color:var(--label)}
+.tog span.c{width:36px;height:36px;border-radius:18px;background:var(--fill2);display:grid;place-items:center;color:var(--label)}
+.tog.on span.c{background:var(--accf);color:#fff}
+.mrow2{display:flex;align-items:center;gap:8px;height:30px;padding:0 9px;border-radius:8px;font-size:13px;border:0;background:none;width:100%;text-align:left}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2000px;height:760px;padding:48px;display:flex;gap:40px;align-items:flex-start">
+
+  <!-- Live light -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Live, light</div><div class="capn" style="max-width:440px">MenuBarExtra(.window). Click the icon; Esc or click outside closes. Right-click the icon: Start/Stop, Show Subtitles, Quit.</div></div>
+    <div class="wall" style="background:#C9D3E6">
+      <div class="mb" style="color:#1D1D1F"><span class="mbi" style="background:rgba(0,0,0,.12)"><svg width="18" height="16" viewBox="0 0 18 16" aria-label="kikitori, live"><rect x="1" y="1.5" width="16" height="13" rx="3.2" fill="#1D1D1F"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke="#C9D3E6" stroke-width="1.6" stroke-linecap="round"></path></svg></span><span>Thu 22 Oct 21:14</span></div>
+      <div class="mbx menu" style="padding:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 10px">
+          <div class="appicon" style="width:32px;height:32px;gap:2px"><span class="k" style="font-size:15px">聞</span><span class="bars"><i style="width:15px;height:2px"></i></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;line-height:1.25"><b>Listening to Safari</b><span class="hint">Translating · ≈ 2.9 s behind · 1:12:40</span></div>
+          <button class="btn sm">Stop</button>
+        </div>
+        <div style="display:flex;gap:4px;padding:2px 4px 8px">
+          <button class="tog on" aria-pressed="true"><span class="c"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="2" y="3.5" width="12" height="9" rx="2"></rect><path d="M4.5 9.5h4M10 9.5h1.5"></path></svg></span>Subtitles</button>
+          <button class="tog on" aria-pressed="true"><span class="c jp" style="font-size:13px;font-weight:700">あ</span>Japanese</button>
+          <button class="tog" aria-pressed="false"><span class="c"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5l8 5-3.6.9 2 3.8-1.6.8-2-3.8L4 11.5z"></path></svg></span>Click-through</button>
+          <button class="tog" aria-pressed="false"><span class="c"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.6" height="10" rx="1" fill="currentColor"></rect><rect x="9.4" y="3" width="2.6" height="10" rx="1" fill="currentColor"></rect></svg></span>Pause</button>
+        </div>
+        <div class="msep"></div>
+        <button class="mrow2"><span class="mut" style="width:64px">Source</span><span style="width:16px;height:16px;border-radius:4px;background:#1E88E5;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center">S</span>Safari<span class="sp" style="flex:1"></span><span class="mut">›</span></button>
+        <button class="mrow2"><span class="mut" style="width:64px">Profile</span><span style="width:16px;height:16px;border-radius:8px;background:#8D7BE0;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center" class="jp">星</span>Hoshimi Kuu<span class="sp" style="flex:1"></span><span class="mut">›</span></button>
+        <div class="msep"></div>
+        <div style="padding:6px 9px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;font-size:12px"><span class="mut">Today</span><span class="sp" style="flex:1"></span><b class="num">$0.14</b></div>
+          <div style="display:flex;font-size:12px"><span class="mut">This cycle</span><span class="sp" style="flex:1"></span><span class="num"><b>$6.12</b> <span class="mut">of $100</span></span></div>
+          <div class="meter" aria-hidden="true"><i style="width:6.1%;background:var(--accf)"></i></div>
+        </div>
+        <div class="msep"></div>
+        <button class="mi">Open Transcript<span class="kb">⌃⌥T</span></button>
+        <button class="mi hl">Explain Last Line<span class="kb">⌃⌥E</span></button>
+        <button class="mi">Settings…<span class="kb">⌘,</span></button>
+        <div class="msep"></div>
+        <button class="mi">Quit kikitori<span class="kb">⌘Q</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live dark -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Live, dark</div><div class="capn" style="max-width:440px">Spend updates after each chunk. Source and Profile rows open the same pickers as the main window (inline submenu).</div></div>
+    <div class="kk kd" style="border-radius:14px"><div class="wall" style="background:#1F2433">
+      <div class="mb" style="color:#F2F2F5"><span class="mbi" style="background:rgba(255,255,255,.18)"><svg width="18" height="16" viewBox="0 0 18 16" aria-label="kikitori, live"><rect x="1" y="1.5" width="16" height="13" rx="3.2" fill="#F2F2F5"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke="#1F2433" stroke-width="1.6" stroke-linecap="round"></path></svg></span><span>Thu 22 Oct 21:14</span></div>
+      <div class="mbx menu" style="padding:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 10px">
+          <div class="appicon" style="width:32px;height:32px;gap:2px"><span class="k" style="font-size:15px">聞</span><span class="bars"><i style="width:15px;height:2px"></i></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;line-height:1.25"><b>Listening to Safari</b><span class="hint">Translating · ≈ 2.9 s behind · 1:12:40</span></div>
+          <button class="btn sm">Stop</button>
+        </div>
+        <div style="display:flex;gap:4px;padding:2px 4px 8px">
+          <button class="tog on" aria-pressed="true"><span class="c"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="2" y="3.5" width="12" height="9" rx="2"></rect><path d="M4.5 9.5h4M10 9.5h1.5"></path></svg></span>Subtitles</button>
+          <button class="tog on" aria-pressed="true"><span class="c jp" style="font-size:13px;font-weight:700">あ</span>Japanese</button>
+          <button class="tog" aria-pressed="false"><span class="c"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5l8 5-3.6.9 2 3.8-1.6.8-2-3.8L4 11.5z"></path></svg></span>Click-through</button>
+          <button class="tog" aria-pressed="false"><span class="c"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.6" height="10" rx="1" fill="currentColor"></rect><rect x="9.4" y="3" width="2.6" height="10" rx="1" fill="currentColor"></rect></svg></span>Pause</button>
+        </div>
+        <div class="msep"></div>
+        <button class="mrow2"><span class="mut" style="width:64px">Source</span><span style="width:16px;height:16px;border-radius:4px;background:#1E88E5;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center">S</span>Safari<span class="sp" style="flex:1"></span><span class="mut">›</span></button>
+        <button class="mrow2"><span class="mut" style="width:64px">Profile</span><span style="width:16px;height:16px;border-radius:8px;background:#8D7BE0;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center" class="jp">星</span>Hoshimi Kuu<span class="sp" style="flex:1"></span><span class="mut">›</span></button>
+        <div class="msep"></div>
+        <div style="padding:6px 9px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;font-size:12px"><span class="mut">Today</span><span class="sp" style="flex:1"></span><b class="num">$0.14</b></div>
+          <div style="display:flex;font-size:12px"><span class="mut">This cycle</span><span class="sp" style="flex:1"></span><span class="num"><b>$6.12</b> <span class="mut">of $100</span></span></div>
+          <div class="meter" aria-hidden="true"><i style="width:6.1%;background:var(--accf)"></i></div>
+        </div>
+        <div class="msep"></div>
+        <button class="mi">Open Transcript<span class="kb">⌃⌥T</span></button>
+        <button class="mi">Explain Last Line<span class="kb">⌃⌥E</span></button>
+        <button class="mi">Settings…<span class="kb">⌘,</span></button>
+        <div class="msep"></div>
+        <button class="mi">Quit kikitori<span class="kb">⌘Q</span></button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Idle -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Idle</div><div class="capn" style="max-width:440px">Not listening. Start Listening uses the source shown; change it first if needed. A Start/Stop hotkey exists but has no default.</div></div>
+    <div class="wall" style="background:#C9D3E6">
+      <div class="mb" style="color:#1D1D1F"><span class="mbi" style="background:rgba(0,0,0,.12)"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="#1D1D1F" stroke-width="1.4" aria-label="kikitori, idle"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke-linecap="round"></path></svg></span><span>Thu 22 Oct 19:58</span></div>
+      <div class="mbx menu" style="padding:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 10px">
+          <div class="appicon" style="width:32px;height:32px;gap:2px;filter:saturate(.3)"><span class="k" style="font-size:15px">聞</span><span class="bars"><i style="width:15px;height:2px"></i></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;line-height:1.25"><b>Not listening</b><span class="hint">Last: Hoshimi Kuu, yesterday, 3 h 40 min</span></div>
+        </div>
+        <div style="padding:0 6px 8px"><button class="btn pri" style="width:100%;height:32px">Start Listening</button></div>
+        <div class="msep"></div>
+        <button class="mrow2"><span class="mut" style="width:64px">Source</span><span style="width:16px;height:16px;border-radius:4px;background:#1E88E5;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center">S</span>Safari<span class="hint" style="margin-left:4px">playing</span><span class="sp" style="flex:1"></span><span class="mut">›</span></button>
+        <button class="mrow2"><span class="mut" style="width:64px">Profile</span><span style="width:16px;height:16px;border-radius:8px;background:#8D7BE0;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center" class="jp">星</span>Hoshimi Kuu<span class="sp" style="flex:1"></span><span class="mut">›</span></button>
+        <div class="msep"></div>
+        <div style="padding:6px 9px;display:flex;font-size:12px"><span class="mut">This cycle</span><span class="sp" style="flex:1"></span><span class="num"><b>$5.98</b> <span class="mut">of $100</span></span></div>
+        <div class="msep"></div>
+        <button class="mi">Open kikitori</button>
+        <button class="mi">Settings…<span class="kb">⌘,</span></button>
+        <div class="msep"></div>
+        <button class="mi">Quit kikitori<span class="kb">⌘Q</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attention dark -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Needs attention, dark</div><div class="capn" style="max-width:440px">Orange dot on the icon. The panel leads with the problem and one fix. Same pattern for offline, key invalid, model missing, source quit.</div></div>
+    <div class="kk kd" style="border-radius:14px"><div class="wall" style="background:#1F2433">
+      <div class="mb" style="color:#F2F2F5"><span class="mbi" style="background:rgba(255,255,255,.18)"><svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="#F2F2F5" stroke-width="1.4" aria-label="kikitori, needs attention"><rect x="1.5" y="2" width="15" height="12" rx="3"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke-linecap="round"></path><circle cx="16.5" cy="3.5" r="3" fill="#FFB547" stroke="#1F2433" stroke-width="1.2"></circle></svg></span><span>Tue 11 Nov 22:40</span></div>
+      <div class="mbx menu" style="padding:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 10px">
+          <div class="appicon" style="width:32px;height:32px;gap:2px"><span class="k" style="font-size:15px">聞</span><span class="bars"><i style="width:15px;height:2px"></i></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;line-height:1.25"><b>Listening to Chrome</b><span class="hint">Japanese only · 0:48:02</span></div>
+          <button class="btn sm">Stop</button>
+        </div>
+        <div class="ban" style="margin:0 4px 8px"><svg class="bi" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 1 1 11 0"></path><path d="M8 11.5l3-3.5"></path></svg><div style="display:flex;flex-direction:column;gap:6px;font-size:12px"><div><b>Monthly cap reached.</b> Translation is paused until Nov 15.</div><div style="display:flex;gap:6px"><button class="btn sm">Open Usage</button><button class="btn sm">Translate Anyway</button></div></div></div>
+        <div class="msep"></div>
+        <button class="mrow2"><span class="mut" style="width:64px">Source</span><span style="width:16px;height:16px;border-radius:4px;background:#3C8D5A;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center">C</span>Chrome<span class="sp" style="flex:1"></span><span class="mut">›</span></button>
+        <button class="mrow2"><span class="mut" style="width:64px">Profile</span><span style="width:16px;height:16px;border-radius:8px;background:#2F8FB8;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center" class="jp">天</span>Amane Rio<span class="sp" style="flex:1"></span><span class="mut">›</span></button>
+        <div class="msep"></div>
+        <div style="padding:6px 9px;display:flex;font-size:12px"><span class="mut">This cycle</span><span class="sp" style="flex:1"></span><span class="num"><b>$100.02</b> <span class="mut">of $100</span></span></div>
+        <div class="msep"></div>
+        <button class="mi">Open Transcript<span class="kb">⌃⌥T</span></button>
+        <button class="mi">Settings…<span class="kb">⌘,</span></button>
+        <div class="msep"></div>
+        <button class="mi">Quit kikitori<span class="kb">⌘Q</span></button>
+      </div>
+    </div></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

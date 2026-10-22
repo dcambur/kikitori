@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Overlay over a bright video</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.scene{position:absolute;inset:0;background:#BFE3FF;overflow:hidden}
+.scene i{position:absolute;display:block}
+.oj rt{font-size:.5em;color:rgba(255,255,255,.75)}
+.mini{position:relative;height:184px;border-radius:12px;overflow:hidden;background:#BFE3FF;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.mini i{position:absolute;display:block}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:1600px;height:1500px;padding:48px;display:flex;flex-direction:column;gap:14px">
+  <div><div class="cap">Overlay at rest over a bright daytime stream · L text (34 pt) · Japanese with furigana</div><div class="capn" style="max-width:1400px">The dark glass stays dark over bright frames; a 1 pt text shadow plus the 72 % fill keep 4.5:1. Furigana (ruby) appears above kanji only when “Show furigana” is on; readings come from the tokenizer, profile glossary readings win.</div></div>
+
+  <div style="position:relative;width:1504px;height:846px;border-radius:14px;overflow:hidden;background:#C9D6E8">
+    <div style="position:absolute;left:0;right:0;top:0;height:26px;display:flex;align-items:center;gap:18px;padding:0 14px;color:#1D1D1F;font-size:13px;background:rgba(255,255,255,.35)">
+      <b>Chrome</b><span>File</span><span>Edit</span><span>View</span><span>Window</span><span style="flex:1"></span>
+      <svg width="18" height="16" viewBox="0 0 18 16" aria-label="kikitori, live"><rect x="1" y="1.5" width="16" height="13" rx="3.2" fill="#1D1D1F"></rect><path d="M5 7.5h8M6.5 10.5h5" stroke="#C9D6E8" stroke-width="1.6" stroke-linecap="round"></path></svg>
+      <span>Sat 24 Oct 14:02</span>
+    </div>
+    <div class="kk kl" style="position:absolute;left:40px;top:44px;width:1424px;height:782px">
+      <div class="win" style="width:1424px;height:782px;flex-direction:column">
+        <div class="tb" style="gap:14px;background:#F2F2F5"><div class="lights"><i></i><i></i><i></i></div><div class="sp"></div><div class="search" style="width:520px;justify-content:center;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)">streams.example/hoshimi-kuu/live</div><div class="sp"></div></div>
+        <div style="flex:1;position:relative;background:#000">
+          <div class="scene">
+            <i style="left:120px;top:80px;width:180px;height:50px;border-radius:25px;background:#fff"></i>
+            <i style="left:820px;top:130px;width:240px;height:60px;border-radius:30px;background:#fff"></i>
+            <i style="left:1180px;top:60px;width:90px;height:90px;border-radius:50%;background:#FFE45C"></i>
+            <i style="left:0;bottom:0;width:100%;height:190px;background:#7BC96F"></i>
+            <i style="left:0;bottom:170px;width:100%;height:20px;background:#5FAE52"></i>
+            <i style="left:320px;bottom:190px;width:420px;height:230px;background:#F5F1E6"></i>
+            <i style="left:360px;bottom:420px;width:90px;height:110px;background:#F5F1E6"></i>
+            <i style="left:610px;bottom:420px;width:90px;height:140px;background:#F5F1E6"></i>
+            <i style="left:350px;bottom:530px;width:110px;height:30px;background:#E2574C"></i>
+            <i style="left:600px;bottom:560px;width:110px;height:30px;background:#E2574C"></i>
+            <i style="left:500px;bottom:190px;width:60px;height:90px;background:#9C6B3F"></i>
+            <i style="left:1110px;bottom:0;width:170px;height:330px;border-radius:85px 85px 0 0;background:#8D7BE0"></i>
+            <i style="left:1140px;bottom:220px;width:110px;height:120px;border-radius:50%;background:#F4DCE6"></i>
+            <i style="left:1125px;bottom:300px;width:140px;height:64px;border-radius:70px 70px 10px 10px;background:#B9A8FF"></i>
+          </div>
+          <div class="ov l" style="position:absolute;left:150px;right:330px;bottom:48px;text-align:center;padding:14px 28px 18px">
+            <div class="oj"><ruby>今日<rt>きょう</rt></ruby>は<ruby>空<rt>そら</rt></ruby>に<ruby>浮<rt>う</rt></ruby>かぶ<ruby>城<rt>しろ</rt></ruby>を<ruby>完成<rt>かんせい</rt></ruby>させます！</div>
+            <div class="oe">Today I’m finishing the castle in the sky!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="margin-top:12px">Styles and modes over the same bright frame</div>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="mini"><i style="left:0;bottom:0;width:100%;height:80px;background:#7BC96F"></i><i style="left:60px;top:40px;width:120px;height:36px;border-radius:18px;background:#fff"></i>
+        <div class="ov light" style="text-align:center;width:100%;padding:10px 16px 12px"><div class="oj" style="font-size:14px">くうばんは～！星屑のみんな、今日も来てくれてありがと！</div><div class="oe" style="font-size:20px"><span class="onu" style="text-decoration-color:#B25E00">Kuubanwa</span>~! Thanks for coming again, Stardust!<span class="onm">注</span></div></div>
+      </div>
+      <div class="capn">Style: Light glass. Dark text on rgba(250,250,252,.80). For viewers who prefer it on bright content.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="mini"><i style="left:0;bottom:0;width:100%;height:80px;background:#7BC96F"></i><i style="left:60px;top:40px;width:120px;height:36px;border-radius:18px;background:#fff"></i>
+        <div class="ov bare" style="text-align:center;width:100%;padding:10px 8px"><div class="oe" style="font-size:22px">Kuubanwa~! Thanks for coming again, Stardust!</div></div>
+      </div>
+      <div class="capn">Style: Outline (no background). White text with a 3 px black stroke shadow, like TV captions.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="mini"><i style="left:0;bottom:0;width:100%;height:80px;background:#7BC96F"></i><i style="left:60px;top:40px;width:120px;height:36px;border-radius:18px;background:#fff"></i>
+        <div class="ov solid" style="text-align:center;width:100%;padding:10px 16px 12px"><div class="oe" style="font-size:20px">Kuubanwa~! Thanks for coming again, Stardust!</div></div>
+      </div>
+      <div class="capn">Reduce Transparency (system) or opacity 100 %: solid #121216, 1.5 pt light edge with Increase Contrast.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="mini"><i style="left:0;bottom:0;width:100%;height:80px;background:#7BC96F"></i><i style="left:60px;top:40px;width:120px;height:36px;border-radius:18px;background:#fff"></i>
+        <div style="width:100%;position:relative">
+          <span class="ovst" style="position:absolute;right:0;top:-30px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5l8 5-3.6.9 2 3.8-1.6.8-2-3.8L4 11.5z"></path><path d="M2 2l12 12" stroke-linecap="round"></path></svg>Click-through on · ⌃⌥C to turn off</span>
+          <div class="ov s" style="text-align:center;width:100%;opacity:.92"><div class="oe">Kuubanwa~! Thanks for coming again, Stardust!</div></div>
+        </div>
+      </div>
+      <div class="capn">Click-through on: clicks reach the video. Hover shows only this pill (after 0.6 s dwell); controls stay hidden. Toggle from the hotkey or menu bar.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

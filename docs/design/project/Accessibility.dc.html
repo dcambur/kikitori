@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Accessibility</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.blk2{background:#FFFFFF;border-radius:14px;box-shadow:0 0 0 .5px rgba(0,0,0,.12);padding:18px;display:flex;flex-direction:column;gap:12px}
+.vo{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.5;background:#1D1D1F;color:#F2F2F5;border-radius:8px;padding:10px 12px}
+.num2{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:10px;background:#6A4FD8;color:#fff;font-size:11px;font-weight:700;flex:none}
+.kt{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 12px;font-size:12px;align-items:center}
+.rm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 16px;font-size:12px}
+.rm b{font-weight:600}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:1800px;height:1080px;padding:48px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-content:start">
+
+  <section class="blk2" style="grid-row:span 2">
+    <div class="cap">VoiceOver</div>
+    <div style="height:110px;border-radius:10px;background:#1B1830;display:flex;align-items:center;justify-content:center;padding:0 18px">
+      <div class="ov s" style="text-align:center;width:100%;box-shadow:0 0 0 3px #A894FF"><div class="oe">Wait, is that a creeper!? Oh no oh no oh no</div></div>
+    </div>
+    <div class="vo">Subtitles, Hoshimi Kuu. “Wait, is that a creeper!? Oh no oh no oh no.” Translating, about 3 seconds behind. Actions available.</div>
+    <div class="capn">Overlay is one accessibility element (.isSummaryElement) with custom actions: Pause, Explain Last Line, Open Transcript, Click-Through. New lines are NOT announced by default (would talk over the stream); Settings › Overlay › “Announce new lines” posts .announcement with low priority.</div>
+    <div class="tr sel" style="box-shadow:0 0 0 3px var(--ring)"><span class="t">1:11:30</span><div><div class="ja">リオちゃんとのコラボ、てぇてぇって言われてて…</div><div class="en">People keep calling my collab with Rio “tee-tee”… <span class="nm"><b>注</b> てぇてぇ</span></div></div></div>
+    <div class="vo">1 hour 11 minutes 30. People keep calling my collab with Rio tee-tee. Japanese: リオちゃんとのコラボ… Has a note: tee-tee. Actions: Explain, Copy English, Copy Japanese.</div>
+    <div class="capn">Japanese text carries .accessibilityTextLanguage("ja") so VoiceOver switches voice. The 注 marker is read as “has a note”, never “chu”. Status pills read as their words. Speaker tags: “Speaker A, Kuu”.</div>
+    <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+      <b>Labels for icon-only controls</b>
+      <div class="kt"><span class="mut">Pause</span><span>“Pause listening” / “Resume listening”</span><span class="mut">Explain</span><span>“Explain last line”</span><span class="mut">Overlay</span><span>“Show subtitles” (toggle, value on/off)</span><span class="mut">Latency</span><span>“About 2.9 seconds behind”</span><span class="mut">Level meter</span><span>“Input level: medium” (updates at most 1×/s)</span><span class="mut">Usage bar</span><span>“6 percent of monthly credit used, 23 percent projected”</span></div>
+    </div>
+  </section>
+
+  <section class="blk2">
+    <div class="cap">Keyboard</div>
+    <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
+      <div style="display:flex;gap:8px;align-items:center"><span class="num2">1</span>Sidebar (⌘1 Live, ⌘2 Sessions, ⌘3 Profiles, ⌘4 Usage)</div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="num2">2</span>Toolbar: status, Pause, Overlay, Search, Export, Inspector</div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="num2">3</span>Session header: Source, Profile, stream info</div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="num2">4</span>Transcript list</div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="num2">5</span>Inspector actions</div>
+    </div>
+    <div class="kt"><span class="kbd" style="justify-self:start">↑ ↓</span><span>Move between lines (stops auto-scroll)</span><span class="kbd" style="justify-self:start">↩</span><span>Explain selected line</span><span class="kbd" style="justify-self:start">⌘C</span><span>Copy English (⌥⌘C Japanese)</span><span class="kbd" style="justify-self:start">⌘F</span><span>Search; Esc clears</span><span class="kbd" style="justify-self:start">⌘↓ / End</span><span>Jump to live</span><span class="kbd" style="justify-self:start">⌘+ ⌘−</span><span>Transcript text size</span><span class="kbd" style="justify-self:start">⌥⌘I</span><span>Show/hide inspector</span></div>
+    <div class="capn">Full Keyboard Access: every control reachable with Tab; focus ring = system accent ring (3 pt). Overlay is never key (non-activating); it is reached through hotkeys and the menu bar.</div>
+  </section>
+
+  <section class="blk2">
+    <div class="cap">Reduce Motion</div>
+    <div class="rm">
+      <b>Default</b><b>With Reduce Motion</b>
+      <span>New line slides up 8 pt + fade 180 ms</span><span>Crossfade 120 ms</span>
+      <span>Overlay controls fade out 1.5 s after hover</span><span>Hide instantly</span>
+      <span>Speech glyph pulses with level</span><span>Static glyph</span>
+      <span>Skeleton shimmer</span><span>Static grey bars</span>
+      <span>Level meter 20 Hz</span><span>4 Hz</span>
+      <span>Translating dots bounce</span><span>Dots fill one by one, no movement</span>
+      <span>Jump to Live scrolls smoothly</span><span>Jumps</span>
+    </div>
+  </section>
+
+  <section class="blk2">
+    <div class="cap">Reduce Transparency and Increase Contrast</div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:90px;border-radius:10px;background:#BFE3FF;display:flex;align-items:flex-end;padding:10px;position:relative;overflow:hidden"><i style="position:absolute;left:0;bottom:0;width:100%;height:36px;background:#7BC96F;display:block"></i><div class="ov s" style="width:100%;text-align:center;padding:8px 12px"><div class="oe" style="font-size:15px">Default glass</div></div></div><span class="capn">72 % fill, blur 24</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><div style="height:90px;border-radius:10px;background:#BFE3FF;display:flex;align-items:flex-end;padding:10px;position:relative;overflow:hidden"><i style="position:absolute;left:0;bottom:0;width:100%;height:36px;background:#7BC96F;display:block"></i><div class="ov s solid" style="width:100%;text-align:center;padding:8px 12px"><div class="oe" style="font-size:15px">Solid, 1.5 pt edge</div></div></div><span class="capn">#121216, no blur</span></div>
+    </div>
+    <div class="capn">Reduce Transparency: overlay, menu bar panel and sidebar become opaque (system does sidebar/panel; overlay switches to the solid style). Increase Contrast: separators 1 pt at 30 %, note marker gets a 1 pt outline, secondary text uses .primary at 80 %, older overlay line 80 % instead of 62 %.</div>
+  </section>
+
+  <section class="blk2">
+    <div class="cap">Colour is never the only signal</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+      <div style="display:flex;gap:8px;align-items:center"><span class="nm"><b>注</b> てぇてぇ</span>Note = glyph + term + dotted underline</div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="spk spA">A</span><span class="spk spB">B</span>Speakers = letter (and name) + colour</div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="chip warn">Offline · Japanese only</span>States = icon + words</div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="chip ok">It works</span><span class="chip err">Invalid</span>Results = icon + words + colour</div>
+    </div>
+    <div class="capn">Computed contrast (WCAG 2.x), light / dark: label 16.8 / 14.9; secondary 6.1 / 6.9; tertiary 4.8 / 5.1; note on its tint 5.4 / 6.7; white on accent fill 5.6 / 5.2; accent text 6.6 / 6.6. Overlay on the solid fallback: white 18.7, Japanese 80 % 12.1, older line 62 % 7.6, note 7.2.</div>
+  </section>
+
+  <section class="blk2">
+    <div class="cap">Text size</div>
+    <div style="display:flex;align-items:flex-end;gap:14px;background:#1B1830;border-radius:10px;padding:14px">
+      <span class="oe" style="font-size:18px;color:#fff">S</span><span class="oe" style="font-size:24px;color:#fff">M</span><span class="oe" style="font-size:34px;color:#fff">L</span><span class="oe" style="font-size:44px;color:#fff">XL</span>
+    </div>
+    <div class="capn">Overlay: S/M/L/XL plus ⌘+/⌘− in 2 pt steps while hovered (12–60 pt). Main window: transcript text follows ⌘+/⌘− (13–24 pt) and the system Text Size setting where available; all layouts grow vertically, nothing truncates except list titles (full text in tooltip and VoiceOver).</div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1800,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Overlay states and layout</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.tile{height:150px;border-radius:12px;background:#1B1830;display:flex;align-items:flex-end;justify-content:center;padding:14px;position:relative}
+.td{display:flex;flex-direction:column;gap:6px}
+.dots{display:inline-flex;gap:4px;vertical-align:middle}
+.dots i{display:block;width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.7)}
+.scr{position:relative;width:220px;height:138px;border-radius:8px;background:#E4E6EE;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.scr i{position:absolute;display:block;height:12px;border-radius:4px;background:rgba(106,79,216,.35)}
+.scr i.on{background:#6A4FD8}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:1600px;height:1500px;padding:48px;display:flex;flex-direction:column;gap:14px">
+  <div><div class="cap">Pipeline states as the overlay shows them</div><div class="capn" style="max-width:1400px">Normal states (listening, speech, transcribing, translating) show no badge at rest, only subtle in-line cues. Abnormal states pin a pill inside the overlay until resolved. VoiceOver: the overlay posts an announcement for each abnormal state change (not for normal ones).</div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+    <div class="td"><div class="tile"><div class="ov s" style="padding:8px 14px;display:flex;align-items:center;gap:8px"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4.5 6.5a3.5 3.5 0 0 1 7 0c0 2.2-2.3 2.6-2.3 4.8a2.2 2.2 0 0 1-4 1.2"></path></svg><span style="font-size:13px;font-weight:600">Listening</span></div></div><div class="capn"><b>Listening</b> · no speech for 8 s: lines fade out, panel shrinks to this pill (or hides fully if “Hide when idle” is on).</div></div>
+    <div class="td"><div class="tile"><div class="ov s" style="text-align:center;width:100%"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#7CE38B" stroke-width="1.8" stroke-linecap="round" style="position:absolute;left:12px;top:10px" aria-hidden="true"><path d="M2.5 7v2M5 5v6M7.5 2.5v11M10 5.5v5M12.5 6.5v3"></path></svg><div class="oe">Today I want to finish the castle roof!</div></div></div><div class="capn"><b>Speech detected</b> · green waveform glyph in the corner, pulsing with voice level (static with Reduce Motion).</div></div>
+    <div class="td"><div class="tile"><div class="ov s" style="text-align:center;width:100%"><div class="oe old">Today I want to finish the castle roof!</div><div class="oj">ねぇ、マネちゃんに怒られちゃうよ<span style="opacity:.6">…</span></div></div></div><div class="capn"><b>Transcribing</b> · partial Japanese appears (if Japanese is on), refined in place; trailing ellipsis while the segment is open.</div></div>
+    <div class="td"><div class="tile"><div class="ov s" style="text-align:center;width:100%"><div class="oj">ねぇ、マネちゃんに怒られちゃうよ</div><div class="oe"><span class="dots" aria-label="Translating"><i></i><i></i><i></i></span></div></div></div><div class="capn"><b>Translating</b> · three dots hold the English slot (max 1 line height, so the panel doesn’t jump). Then: “Hey, my manager’s going to scold me.”</div></div>
+    <div class="td"><div class="tile"><div class="ov s" style="text-align:center;width:100%;padding-top:10px"><div style="display:flex;justify-content:center;margin-bottom:6px"><span class="ovst"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.6" height="10" rx="1" fill="currentColor"></rect><rect x="9.4" y="3" width="2.6" height="10" rx="1" fill="currentColor"></rect></svg>Paused · ⌃⌥P to resume</span></div><div class="oe old">Today I want to finish the castle roof!</div></div></div><div class="capn"><b>Paused</b> · listening stopped by the user; last line stays dimmed. Nothing is captured or sent.</div></div>
+    <div class="td"><div class="tile"><div class="ov s" style="padding:8px 14px;display:flex;align-items:center;gap:8px"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.5" aria-hidden="true"><path d="M6 12V3.5l7-1.5v8.5"></path><circle cx="4.5" cy="12" r="1.8"></circle><circle cx="11.5" cy="10.5" r="1.8"></circle></svg><span style="font-size:13px;font-weight:600">Music only · no speech</span></div></div><div class="capn"><b>Music only</b> · sound present, VAD finds no voice for 5 s (BGM, singing filtered). Nothing sent to Claude.</div></div>
+    <div class="td"><div class="tile"><div class="ov s" style="text-align:center;width:100%;padding-top:10px"><div style="display:flex;justify-content:center;margin-bottom:6px"><span class="ovst" style="color:#FFCB7A"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 6a9 9 0 0 1 12 0M4.3 8.4a5.6 5.6 0 0 1 7.4 0M6.5 10.8a2.3 2.3 0 0 1 3 0M2.5 2.5l11 11"></path></svg>Offline · Japanese only</span></div><div class="oj" style="font-size:17px;color:#fff">え、待って、クリーパーいる！？</div></div></div><div class="capn"><b>Offline: JP only</b> · no network / API outage / 429 after retries. Japanese moves to the main slot. Missed lines are translated when back (transcript only).</div></div>
+    <div class="td"><div class="tile"><div class="ov s" style="text-align:center;width:100%;padding-top:10px"><div style="display:flex;justify-content:center;margin-bottom:6px"><span class="ovst" style="color:#FFCB7A"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 11.5a5.5 5.5 0 1 1 11 0"></path><path d="M8 11.5l3-3.5"></path></svg>Monthly cap reached · Japanese only</span></div><div class="oj" style="font-size:17px;color:#fff">おつくう～！また明日ね！</div></div></div><div class="capn"><b>Budget cap reached</b> · translation stops at the user’s cap; transcription continues. Pill click opens Usage.</div></div>
+    <div class="td"><div class="tile"><div class="ov s" style="width:100%;padding:12px 16px;display:flex;align-items:center;gap:10px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#FF8A80" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5l6 10.5H2z"></path><path d="M8 6.5v3M8 11.3v.2"></path></svg><div style="flex:1;font-size:13px"><b>Safari quit.</b> <span style="color:rgba(255,255,255,.8)">Listening stopped.</span></div><button class="btn sm" style="background:rgba(255,255,255,.18);color:#fff;box-shadow:none">Choose Source…</button></div></div><div class="capn"><b>Error</b> · red glyph + one-line cause + one action button. Full list on the Errors board.</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:740px minmax(0,1fr);gap:40px;margin-top:22px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="cap">Explain from the overlay (click 注 or the line, or ⌃⌥E)</div>
+      <div style="position:relative;height:420px;border-radius:12px;background:#151226;overflow:hidden">
+        <div class="kk kd" style="position:absolute;left:150px;top:18px;width:440px">
+          <div class="popover" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px"><span class="nm"><b>注</b></span><b style="font-size:14px" class="jp">てぇてぇ</b><span class="mut" style="font-size:12px">tee-tee</span><span class="sp" style="flex:1"></span><span class="chip">Sonnet 5.5</span></div>
+            <div style="font-size:13px;line-height:1.5">A slurred, excited way of saying <span class="jp">尊い</span> (tōtoi, “precious”). Fans say it about sweet or heart-warming moments between two streamers, especially in collabs.</div>
+            <div style="font-size:13px;line-height:1.5;color:var(--label2)">Here Kuu is shyly admitting that chat “ships” her with Amane Rio after their collab last week (profile note).</div>
+            <div style="display:flex;gap:8px;margin-top:2px"><button class="btn sm">Open in Transcript</button><button class="btn sm">Copy</button><span class="sp" style="flex:1"></span><span class="mut" style="font-size:11px;align-self:center">$0.004</span></div>
+          </div>
+          <svg width="20" height="10" viewBox="0 0 20 10" style="display:block;margin-left:210px" aria-hidden="true"><path d="M0 0h20L10 10z" fill="rgba(40,40,44,.9)"></path></svg>
+        </div>
+        <div class="ov s" style="position:absolute;left:110px;bottom:40px;width:520px;text-align:center"><div class="oe old">Today I want to finish the castle roof!</div><div class="oe">People keep calling my collab with Rio <span class="onu">“tee-tee”</span><span class="onm" style="box-shadow:0 0 0 2px #FFCB7A">注</span></div></div>
+      </div>
+      <div class="capn">Popover (NSPopover, .transient, appearance always dark over video) anchored to the clicked line; Esc closes. Loading: 3 skeleton lines + “Asking Claude Sonnet…”. Error: “Couldn’t get an explanation.” + Try Again. Explaining a line without 注 works the same.</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="cap">Latency badge</div>
+        <div style="background:#1B1830;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px"><span class="ovst">≈ 2.8 s behind</span><span style="color:#D8D8E0;font-size:12px">≤ 3.5 s · neutral · shown on hover only</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span class="ovst" style="color:#FFCB7A">≈ 4.6 s behind</span><span style="color:#D8D8E0;font-size:12px">3.5–6 s · amber · shown on hover only</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span class="ovst" style="color:#FF8A80"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6.5 9.5V3.5a1.5 1.5 0 0 1 3 0v6a2.8 2.8 0 1 1-3 0z"></path></svg>≈ 7.9 s behind · Mac is hot</span><span style="color:#D8D8E0;font-size:12px">&gt; 6 s · pinned at rest until &lt; 5 s for 30 s</span></div>
+        </div>
+        <div class="capn">Value = speech-segment end → English on screen, median of the last 5 lines. Click opens a popover with the split: capture 0.3 s · speech-to-text 1.1 s · Claude 1.4 s.</div>
+      </div>
+      <div style="display:flex;gap:24px;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="cap">Right-click menu</div>
+          <div class="kk kd" style="width:250px"><div class="menu">
+            <button class="mi">Pause<span class="kb">⌃⌥P</span></button>
+            <button class="mi hl">Explain Last Line<span class="kb">⌃⌥E</span></button>
+            <button class="mi">Open Transcript<span class="kb">⌃⌥T</span></button>
+            <div class="msep"></div>
+            <button class="mi"><span style="width:12px">✓</span>Show Japanese<span class="kb">⌃⌥J</span></button>
+            <button class="mi"><span style="width:12px"></span>Show Furigana</button>
+            <button class="mi"><span style="width:12px"></span>Lines<span class="kb">›</span></button>
+            <button class="mi"><span style="width:12px"></span>Text Size<span class="kb">›</span></button>
+            <button class="mi"><span style="width:12px"></span>Position<span class="kb">›</span></button>
+            <button class="mi"><span style="width:12px"></span>Click-Through<span class="kb">⌃⌥C</span></button>
+            <div class="msep"></div>
+            <button class="mi">Overlay Settings…</button>
+            <button class="mi">Hide Subtitles<span class="kb">⌃⌥S</span></button>
+          </div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="cap">Position presets</div>
+          <div class="scr" aria-label="Position presets: bottom centre selected">
+            <i style="left:10px;top:12px;width:56px"></i><i style="left:82px;top:12px;width:56px"></i><i style="left:154px;top:12px;width:56px"></i>
+            <i style="left:10px;bottom:14px;width:56px"></i><i class="on" style="left:82px;bottom:14px;width:56px"></i><i style="left:154px;bottom:14px;width:56px"></i>
+          </div>
+          <div class="capn" style="max-width:230px">Top / bottom × left / centre / right; default bottom centre, 64 pt above the Dock. Drag snaps to these within 24 pt; anywhere else becomes “Custom”. Position is saved per display.</div>
+          <div class="cap" style="margin-top:6px">Lines and size</div>
+          <div class="capn" style="max-width:230px">Lines 1–4 (default 2). Width: drag the grip, 360 pt to screen width − 80. Height follows lines. Text S / M / L / XL (18 / 24 / 34 / 44), ⌘+ ⌘− while hovered.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

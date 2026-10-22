@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Session history</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.av{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+.ses{display:flex;gap:10px;padding:8px 10px;border-radius:9px;align-items:flex-start;border:0;background:none;width:100%;text-align:left}
+.ses.on{background:var(--selbg)}
+.grp{font-size:11px;font-weight:600;color:var(--label2);padding:10px 10px 4px}
+</style>
+</helmet>
+<div style="width:2392px;height:830px;display:flex">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width:1196px;height:830px">
+<div class="desk" style="width:1196px;height:830px;padding:44px 48px;display:flex;flex-direction:column;gap:10px">
+  <div class="cap">{{t.name}} · Sessions: past sessions, reopened transcript</div>
+  <div class="win" style="width:1100px;height:700px">
+    <nav class="sb" style="width:200px" aria-label="Sections">
+      <div class="lights" style="padding:0 6px 10px"><i></i><i></i><i></i></div>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="1.6" fill="currentColor"></circle><path d="M5 5a4.2 4.2 0 0 0 0 6M11 5a4.2 4.2 0 0 1 0 6M3 3a7 7 0 0 0 0 10M13 3a7 7 0 0 1 0 10"></path></svg>Live<span class="badge">Idle</span></button>
+      <button class="si on"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.5V8l2.5 1.5"></path></svg>Sessions<span class="badge">38</span></button>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="5.5" r="2.6"></circle><path d="M3 13.5a5 5 0 0 1 10 0"></path></svg>Profiles</button>
+      <button class="si"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 13V8M6.5 13V4M10 13V9.5M13.5 13V6"></path></svg>Usage</button>
+    </nav>
+    <div style="width:270px;flex:none;display:flex;flex-direction:column;border-right:.5px solid var(--sep)">
+      <div class="tb" style="padding:0 10px 0 14px"><span class="ttl">Sessions</span></div>
+      <div style="padding:0 10px 4px"><div class="search" style="min-width:0;height:26px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.2"></circle><path d="M10.2 10.2L13.5 13.5"></path></svg>Search all transcripts</div></div>
+      <div style="padding:0 8px;display:flex;flex-direction:column;gap:1px" role="list">
+        <div class="grp">Today</div>
+        <button class="ses" role="listitem"><span class="av" style="width:28px;height:28px;background:#8D7BE0;font-size:12px">星</span><span style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><b class="jp" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">【Minecraft】空に浮かぶ城をつくる！#3</b><span class="hint">Hoshimi Kuu · 1 h 13 min · $0.14</span></span></button>
+        <div class="grp">Yesterday</div>
+        <button class="ses on" role="listitem" aria-selected="true"><span class="av" style="width:28px;height:28px;background:#2F8FB8;font-size:12px">天</span><span style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><b class="jp" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">【雑談】初見さん歓迎！</b><span class="hint">Amane Rio · 2 h 05 min · $0.29</span></span></button>
+        <button class="ses" role="listitem"><span class="av" style="width:28px;height:28px;background:#8D7BE0;font-size:12px">星</span><span style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><b class="jp" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">【ホラー】リオちゃんとコラボ</b><span class="hint">Hoshimi Kuu, Amane Rio · 3 h 40 min · $0.51</span></span></button>
+        <div class="grp">Earlier this month</div>
+        <button class="ses" role="listitem"><span class="av" style="width:28px;height:28px;background:#C2571A;font-size:12px">黒</span><span style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><b class="jp" style="font-size:12px">【歌枠】まったり</b><span class="hint">Kurogane Mei · 1 h 30 min · $0.06</span></span></button>
+        <button class="ses" role="listitem"><span class="av" style="width:28px;height:28px;background:var(--fill2);color:var(--label2);font-size:12px">?</span><span style="display:flex;flex-direction:column;line-height:1.3"><b style="font-size:12px">Untitled session</b><span class="hint">No profile · 22 min · $0.03</span></span></button>
+      </div>
+    </div>
+    <div class="main">
+      <div class="tb" style="padding-left:18px">
+        <div style="display:flex;flex-direction:column;min-width:0"><span class="ttl jp">【雑談】初見さん歓迎！</span><span class="sub">Amane Rio · Wed 21 Oct, 21:00–23:05</span></div>
+        <span class="sp"></span>
+        <div class="tbg">
+          <button class="tbb" aria-label="Search in session"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.2"></circle><path d="M10.2 10.2L13.5 13.5"></path></svg></button>
+          <button class="tbb" aria-label="Export"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M5 5l3-3 3 3"></path><path d="M4.5 7.5H3.5v6h9v-6h-1"></path></svg></button>
+          <button class="tbb" aria-label="Delete session"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9"></path></svg></button>
+        </div>
+      </div>
+      <div class="hdr"><span>Source <b>Chrome</b></span><span>Profile <b>Amane Rio</b></span><span>Lines <b>1,912</b></span><span>Notes <b>23</b></span><span class="sp" style="flex:1"></span><span>Cost <b>$0.29</b></span></div>
+      <div style="flex:1;overflow:hidden;padding:6px 8px">
+        <div class="tr"><span class="t">0:00:41</span><div><div class="ja">はい、こんリオ～！今日は雑談枠です</div><div class="en"><span class="nu">Konrio</span>~! Today is a just-chatting stream. <span class="nm"><b>注</b> こんリオ</span></div></div></div>
+        <div class="tr"><span class="t">0:00:52</span><div><div class="ja">初見さんもいらっしゃい、ゆっくりしていってね</div><div class="en">Welcome to anyone new, too. Make yourselves at home.</div></div></div>
+        <div class="tr"><span class="t">0:01:10</span><div><div class="ja">昨日くうちゃんとホラゲーやったんだけど、ずっと叫んでたｗ</div><div class="en">I played a horror game with Kuu yesterday and she screamed the whole time, lol.</div></div></div>
+        <div class="tr"><span class="t">0:01:24</span><div><div class="ja">スパチャありがとう！「切り抜き見てきました」嬉しい～</div><div class="en">Thanks for the <span class="nu">superchat</span>! “I came from a clip,” yay, that makes me happy. <span class="nm"><b>注</b> 切り抜き</span></div></div></div>
+        <div class="tr"><span class="t">0:01:40</span><div><div class="ja">そうそう、来週は3Dライブの告知があります</div><div class="en">Oh right, I have an announcement about a 3D live show next week.</div></div></div>
+        <div class="tr"><span class="t">0:01:58</span><div><div class="ja">詳しくはまた明日のお知らせで！</div><div class="en">Details in tomorrow’s announcement!</div></div></div>
+      </div>
+      <div class="hint" style="padding:8px 18px;border-top:.5px solid var(--sep)">Saved on this Mac only. Kept for 1 year (Settings › General).</div>
+    </div>
+  </div>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2392,"height":830}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { themes: [ { cls: 'kk kl', name: 'Light' }, { cls: 'kk kd', name: 'Dark' } ] };
+  }
+}
+</script>
+</body>
+</html>

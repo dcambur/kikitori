@@ -1,0 +1,51 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-22T20:05:00Z"},
+  "title": "kikitori design",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1680, "h": 1000, "title": "00 Foundations: mark, tokens, type, status"},
+    "Onboarding-1.dc.html": {"x": 0, "y": 1400, "w": 2112, "h": 1300, "title": "01 Onboarding: welcome, audio permission"},
+    "Onboarding-2.dc.html": {"x": 2192, "y": 1400, "w": 2112, "h": 1300, "title": "02 Onboarding: Claude API key"},
+    "Onboarding-3.dc.html": {"x": 4384, "y": 1400, "w": 2112, "h": 1300, "title": "03 Onboarding: speech model"},
+    "Onboarding-4.dc.html": {"x": 6576, "y": 1400, "w": 2112, "h": 1300, "title": "04 Onboarding: quick test, done"},
+    "Overlay-Dark.dc.html": {"x": 0, "y": 3100, "w": 1600, "h": 1500, "title": "05 Overlay over a dark video, small text"},
+    "Overlay-Bright.dc.html": {"x": 1680, "y": 3100, "w": 1600, "h": 1500, "title": "06 Overlay over a bright video, large text"},
+    "Overlay-States.dc.html": {"x": 3360, "y": 3100, "w": 1600, "h": 1500, "title": "07 Overlay: status, latency, explain, layout"},
+    "Transcript.dc.html": {"x": 0, "y": 5000, "w": 2392, "h": 830, "title": "08 Main window: Live transcript (light, dark)"},
+    "Transcript-States.dc.html": {"x": 2472, "y": 5000, "w": 2200, "h": 1260, "title": "09 Transcript: jump to live, search, collab, explain states, export"},
+    "SourcePicker.dc.html": {"x": 0, "y": 6660, "w": 2300, "h": 560, "title": "10 Source picker"},
+    "Profiles.dc.html": {"x": 2380, "y": 6660, "w": 2392, "h": 830, "title": "11 Streamer profiles (light, dark)"},
+    "Profiles-States.dc.html": {"x": 4852, "y": 6660, "w": 2200, "h": 700, "title": "12 Profiles: empty, new, import, session pick, delete"},
+    "Usage.dc.html": {"x": 0, "y": 7890, "w": 2392, "h": 830, "title": "13 Usage and budget (light, dark)"},
+    "Usage-States.dc.html": {"x": 2472, "y": 7890, "w": 2120, "h": 480, "title": "14 Budget: 80 %, cap reached, notifications"},
+    "History.dc.html": {"x": 4672, "y": 7890, "w": 2392, "h": 830, "title": "15 Session history (light, dark)"},
+    "History-States.dc.html": {"x": 7144, "y": 7890, "w": 1440, "h": 700, "title": "16 History: empty, delete, retention"},
+    "Settings-1.dc.html": {"x": 0, "y": 9120, "w": 1504, "h": 1500, "title": "17 Settings: General, Audio, Speech, Translation"},
+    "Settings-2.dc.html": {"x": 1584, "y": 9120, "w": 2232, "h": 1780, "title": "18 Settings: Overlay, Hotkeys, Account and Privacy (light, dark)"},
+    "MenuBar.dc.html": {"x": 0, "y": 11240, "w": 2000, "h": 760, "title": "19 Menu bar extra"},
+    "Errors.dc.html": {"x": 2080, "y": 11240, "w": 2100, "h": 1150, "title": "20 Errors and edge cases"},
+    "Accessibility.dc.html": {"x": 4260, "y": 11240, "w": 1800, "h": 1080, "title": "21 Accessibility"}
+  },
+  "order": [
+    "Main.dc.html",
+    "Onboarding-1.dc.html", "Onboarding-2.dc.html", "Onboarding-3.dc.html", "Onboarding-4.dc.html",
+    "Overlay-Dark.dc.html", "Overlay-Bright.dc.html", "Overlay-States.dc.html",
+    "Transcript.dc.html", "Transcript-States.dc.html",
+    "SourcePicker.dc.html", "Profiles.dc.html", "Profiles-States.dc.html",
+    "Usage.dc.html", "Usage-States.dc.html", "History.dc.html", "History-States.dc.html",
+    "Settings-1.dc.html", "Settings-2.dc.html",
+    "MenuBar.dc.html", "Errors.dc.html", "Accessibility.dc.html"
+  ],
+  "notes": {
+    "t_onb": {"x": 0, "y": 1100, "text": "Onboarding (first run)", "kind": "title1", "maxW": 8688},
+    "t_ovl": {"x": 0, "y": 2800, "text": "Floating subtitle overlay", "kind": "title1", "maxW": 4960},
+    "t_win": {"x": 0, "y": 4700, "text": "Main window: Live transcript", "kind": "title1", "maxW": 4672},
+    "t_src": {"x": 0, "y": 6360, "text": "Source picker and streamer profiles", "kind": "title1", "maxW": 7052},
+    "t_use": {"x": 0, "y": 7590, "text": "Usage, budget and session history", "kind": "title1", "maxW": 8584},
+    "t_set": {"x": 0, "y": 8820, "text": "Settings", "kind": "title1", "maxW": 3816},
+    "t_mbx": {"x": 0, "y": 10940, "text": "Menu bar, errors, accessibility", "kind": "title1", "maxW": 6060}
+  },
+  "designSystems": []
+}

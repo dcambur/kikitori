@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Source picker</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./kk.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5E43CF}a:hover{color:#4A32AE}
+.sp-pop{width:380px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.src{display:flex;align-items:center;gap:10px;height:44px;padding:0 10px;border-radius:10px;border:0;background:none;width:100%;text-align:left}
+.src.on{background:var(--selbg)}
+.src .ic{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;flex:none}
+.src .nm2{flex:1;display:flex;flex-direction:column;line-height:1.25}
+.src .st{font-size:11px;color:var(--label2)}
+.src.dim .nm2 b{font-weight:500;color:var(--label2)}
+.sec{font-size:11px;font-weight:600;color:var(--label2);padding:6px 10px 2px}
+</style>
+</helmet>
+<div class="kk kl desk" style="width:2300px;height:560px;padding:48px;display:flex;gap:40px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Apps (default tab)</div><div class="capn" style="max-width:380px">Popover from the toolbar Source button, the menu bar, or ⌃⌥O. Lists running GUI apps via NSWorkspace; level from a 1 s probe tap per app.</div></div>
+    <div class="popover sp-pop">
+      <div class="seg" style="align-self:center"><button class="on">Apps</button><button>Input Devices</button></div>
+      <div class="sec">Playing sound</div>
+      <button class="src on" aria-label="Safari, playing sound, selected"><span class="ic" style="background:#1E88E5">S</span><span class="nm2"><b>Safari</b><span class="st">streams.example · playing</span></span><span class="lvl" aria-hidden="true"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></button>
+      <button class="src" aria-label="Discord, playing sound"><span class="ic" style="background:#5865F2">D</span><span class="nm2"><b>Discord</b><span class="st">playing</span></span><span class="lvl" aria-hidden="true"><i style="height:4px"></i><i style="height:6px"></i><i class="off" style="height:8px"></i><i class="off" style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span><span style="width:14px"></span></button>
+      <div class="sec">Other apps</div>
+      <button class="src dim" aria-label="Chrome, silent"><span class="ic" style="background:#3C8D5A">C</span><span class="nm2"><b>Chrome</b><span class="st">silent</span></span></button>
+      <button class="src dim" aria-label="Firefox, silent"><span class="ic" style="background:#E66000">F</span><span class="nm2"><b>Firefox</b><span class="st">silent</span></span></button>
+      <button class="src dim" aria-label="Music, silent"><span class="ic" style="background:#FA2D48">M</span><span class="nm2"><b>Music</b><span class="st">silent</span></span></button>
+      <div class="hsep" style="margin:4px 0"></div>
+      <div class="hint" style="padding:0 6px">Only this app’s sound is heard. Other apps, notifications and your voice are ignored.</div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Apps, dark</div><div class="capn" style="max-width:380px">Switching source mid-session keeps the session; the transcript gets a divider “Source changed to Discord”.</div></div>
+    <div class="kk kd" style="border-radius:16px"><div class="popover sp-pop">
+      <div class="seg" style="align-self:center"><button class="on">Apps</button><button>Input Devices</button></div>
+      <div class="sec">Playing sound</div>
+      <button class="src on"><span class="ic" style="background:#1E88E5">S</span><span class="nm2"><b>Safari</b><span class="st">streams.example · playing</span></span><span class="lvl" aria-hidden="true"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></button>
+      <button class="src"><span class="ic" style="background:#5865F2">D</span><span class="nm2"><b>Discord</b><span class="st">playing</span></span><span class="lvl" aria-hidden="true"><i style="height:4px"></i><i style="height:6px"></i><i class="off" style="height:8px"></i><i class="off" style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span><span style="width:14px"></span></button>
+      <div class="sec">Other apps</div>
+      <button class="src dim"><span class="ic" style="background:#3C8D5A">C</span><span class="nm2"><b>Chrome</b><span class="st">silent</span></span></button>
+      <button class="src dim"><span class="ic" style="background:#E66000">F</span><span class="nm2"><b>Firefox</b><span class="st">silent</span></span></button>
+      <button class="src dim"><span class="ic" style="background:#FA2D48">M</span><span class="nm2"><b>Music</b><span class="st">silent</span></span></button>
+      <div class="hsep" style="margin:4px 0"></div>
+      <div class="hint" style="padding:0 6px">Only this app’s sound is heard. Other apps, notifications and your voice are ignored.</div>
+    </div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Input devices</div><div class="capn" style="max-width:380px">For a stream on another device, or a loopback interface. First pick triggers the macOS microphone prompt.</div></div>
+    <div class="popover sp-pop">
+      <div class="seg" style="align-self:center"><button>Apps</button><button class="on">Input Devices</button></div>
+      <button class="src on"><span class="ic" style="background:var(--fill2);color:var(--label)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="6" y="2" width="4" height="7.5" rx="2"></rect><path d="M3.8 7.8a4.2 4.2 0 0 0 8.4 0M8 12v2"></path></svg></span><span class="nm2"><b>USB Audio Interface</b><span class="st">2 channels · 48 kHz</span></span><span class="lvl" aria-hidden="true"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i class="off" style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"></path></svg></button>
+      <button class="src"><span class="ic" style="background:var(--fill2);color:var(--label)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="6" y="2" width="4" height="7.5" rx="2"></rect><path d="M3.8 7.8a4.2 4.2 0 0 0 8.4 0M8 12v2"></path></svg></span><span class="nm2"><b>MacBook Pro Microphone</b><span class="st">built in</span></span><span class="lvl" aria-hidden="true"><i style="height:4px"></i><i class="off" style="height:6px"></i><i class="off" style="height:8px"></i><i class="off" style="height:10px"></i><i class="off" style="height:12px"></i><i class="off" style="height:14px"></i></span><span style="width:14px"></span></button>
+      <button class="src"><span class="ic" style="background:var(--fill2);color:var(--label)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="6" y="2" width="4" height="7.5" rx="2"></rect><path d="M3.8 7.8a4.2 4.2 0 0 0 8.4 0M8 12v2"></path></svg></span><span class="nm2"><b>AirPods Pro</b><span class="st">Bluetooth · lower quality while in use</span></span><span style="width:14px"></span></button>
+      <div class="hsep" style="margin:4px 0"></div>
+      <div class="ban info" style="padding:8px 10px"><svg class="bi" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--info)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 7.3v3.7M8 5v.2"></path></svg><span class="hint" style="color:var(--label)">A microphone also hears your room. App audio is cleaner when the stream plays on this Mac.</span></div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Empty: nothing is playing</div><div class="capn" style="max-width:380px">Shown when no app has played sound in the last 10 s. The list refreshes live; the first app that starts playing appears on top.</div></div>
+    <div class="popover sp-pop">
+      <div class="seg" style="align-self:center"><button class="on">Apps</button><button>Input Devices</button></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 12px 18px;text-align:center">
+        <svg width="40" height="40" viewBox="0 0 16 16" fill="none" stroke="var(--label3)" stroke-width="1" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h2.5l3.5-3v10L5 10H2.5z"></path><path d="M11 6l3 4M14 6l-3 4" stroke-linecap="round"></path></svg>
+        <b>No app is playing sound</b>
+        <div class="hint" style="font-size:12px;max-width:280px">Start the stream, then pick its app here. You can also choose an app now and kikitori waits for it.</div>
+      </div>
+      <div class="sec">All apps</div>
+      <button class="src dim"><span class="ic" style="background:#1E88E5">S</span><span class="nm2"><b>Safari</b><span class="st">silent</span></span></button>
+      <button class="src dim"><span class="ic" style="background:#3C8D5A">C</span><span class="nm2"><b>Chrome</b><span class="st">silent</span></span></button>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div><div class="cap">Audio access missing</div><div class="capn" style="max-width:380px">Same fix-it path as onboarding step 4. Input Devices stays usable.</div></div>
+    <div class="popover sp-pop">
+      <div class="seg" style="align-self:center"><button class="on">Apps</button><button>Input Devices</button></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 12px 18px;text-align:center">
+        <svg width="40" height="40" viewBox="0 0 16 16" fill="none" stroke="var(--warn)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5l6 10.5H2z"></path><path d="M8 6.5v3M8 11.3v.2"></path></svg>
+        <b>kikitori can’t hear apps</b>
+        <div class="hint" style="font-size:12px;max-width:290px">Turn on kikitori in System Settings › Privacy &amp; Security › Screen &amp; System Audio Recording.</div>
+        <button class="btn pri" style="margin-top:6px">Open System Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2300,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
