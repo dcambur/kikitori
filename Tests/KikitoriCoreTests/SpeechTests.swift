@@ -10,41 +10,42 @@ func signal(_ parts: [(speech: Bool, seconds: Double)]) -> [Float] {
 }
 
 @Suite struct ChunkerTests {
-    @Test func cutsAtPausesAndDropsSilence() {
+    @Test func cutsAtPausesAndDropsSilence() async {
         var c = Chunker(vad: EnergyVAD())
-        let chunks = c.append(signal([(false, 3), (true, 3), (false, 1), (true, 2.5), (false, 4)])) + c.finish()
+        let chunks = await c.append(signal([(false, 3), (true, 3), (false, 1), (true, 2.5), (false, 4)])) + c.finish()
         #expect(chunks.count == 2)
         #expect(abs(chunks[0].start - 2.8) < 0.1)          // 0.2 s of padding before speech
         #expect(abs(chunks[0].speechSeconds - 3) < 0.1)
         #expect(chunks.allSatisfy { $0.duration < 4.5 })
     }
 
-    @Test func forcesACutAtMaxLengthInsideLongSpeech() {
+    @Test func forcesACutAtMaxLengthInsideLongSpeech() async {
         var c = Chunker(vad: EnergyVAD())
-        let chunks = c.append(signal([(true, 40)])) + c.finish()
+        let chunks = await c.append(signal([(true, 40)])) + c.finish()
         #expect(chunks.count == 3)
         #expect(chunks.allSatisfy { $0.duration <= 15.01 })
         #expect(abs(chunks.map(\.duration).reduce(0, +) - 40) < 0.05)   // nothing lost or doubled
     }
 
-    @Test func pureSilenceNeverReachesTheEngine() {
+    @Test func pureSilenceNeverReachesTheEngine() async {
         var c = Chunker(vad: EnergyVAD())
-        #expect((c.append(signal([(false, 60)])) + c.finish()).isEmpty)
+        let none = await c.append(signal([(false, 60)])) + c.finish()
+        #expect(none.isEmpty)
     }
 
-    @Test func clicksShorterThanMinSpeechAreDropped() {
+    @Test func clicksShorterThanMinSpeechAreDropped() async {
         var c = Chunker(vad: EnergyVAD())
-        let chunks = c.append(signal([(false, 2), (true, 0.1), (false, 3)])) + c.finish()
+        let chunks = await c.append(signal([(false, 2), (true, 0.1), (false, 3)])) + c.finish()
         #expect(chunks.isEmpty)
     }
 
-    @Test func feedingInSmallPiecesGivesTheSameChunks() {
+    @Test func feedingInSmallPiecesGivesTheSameChunks() async {
         let audio = signal([(false, 1), (true, 4), (false, 1), (true, 3), (false, 2)])
         var whole = Chunker(vad: EnergyVAD())
-        let a = whole.append(audio) + whole.finish()
+        let a = await whole.append(audio) + whole.finish()
         var pieces = Chunker(vad: EnergyVAD())
         var b: [Chunker<EnergyVAD>.Chunk] = []
-        for i in stride(from: 0, to: audio.count, by: 441) { b += pieces.append(Array(audio[i..<min(i + 441, audio.count)])) }
+        for i in stride(from: 0, to: audio.count, by: 441) { b += await pieces.append(Array(audio[i..<min(i + 441, audio.count)])) }
         b += pieces.finish()
         #expect(a == b)
     }

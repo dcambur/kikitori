@@ -4,7 +4,7 @@ import Foundation
 public protocol VoiceActivityDetector: Sendable {
     var frameSize: Int { get }
     /// Probability of speech in this frame, 0…1. Called in order; may keep state.
-    mutating func probability(_ frame: ArraySlice<Float>) -> Float
+    mutating func probability(_ frame: ArraySlice<Float>) async -> Float
 }
 
 /// Loudness-based stand-in used in tests and as a fallback when no model is available.
@@ -12,7 +12,7 @@ public struct EnergyVAD: VoiceActivityDetector {
     public let frameSize = 512
     public var threshold: Float
     public init(threshold: Float = 0.01) { self.threshold = threshold }
-    public mutating func probability(_ frame: ArraySlice<Float>) -> Float {
+    public mutating func probability(_ frame: ArraySlice<Float>) async -> Float {
         let rms = (frame.reduce(0) { $0 + $1 * $1 } / Float(max(frame.count, 1))).squareRoot()
         return min(rms / threshold, 1) * 0.99
     }
@@ -52,13 +52,13 @@ public struct Chunker<VAD: VoiceActivityDetector>: Sendable {
     public init(vad: VAD) { self.vad = vad }
 
     /// Feed samples; returns any chunks that completed.
-    public mutating func append(_ samples: [Float]) -> [Chunk] {
+    public mutating func append(_ samples: [Float]) async -> [Chunk] {
         pending += samples
         var out: [Chunk] = []
         let n = vad.frameSize
         while pending.count >= n {
             let frame = pending[0..<n]
-            probs.append(vad.probability(frame))
+            probs.append(await vad.probability(frame))
             if buffer.isEmpty { bufferStart = consumed }
             buffer += frame
             pending.removeFirst(n)

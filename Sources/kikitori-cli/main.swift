@@ -5,6 +5,8 @@ import KikitoriCore
 //   sources                          list apps that have audio, playing first
 //   translate <chunks.jsonl> [n]     translate the first n chunks ({"hyp": "..."} per line) with
 //                                    Haiku 5.5, then explain the first line that got a note
+//   run <audio file> [--realtime]    the whole live pipeline on a file: chunker → Apple Speech
+//                                    → filter → Haiku 5.5, printing events as they happen
 let args = Array(CommandLine.arguments.dropFirst())
 
 func translate(_ path: String, limit: Int) async throws {
@@ -43,6 +45,32 @@ func translate(_ path: String, limit: Int) async throws {
     }
 }
 
+func runFile(_ path: String, realTime: Bool) async throws {
+    let engine = AppleSpeechEngine()
+    try await engine.prepare()
+    let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? KeychainStore.apiKey()
+    let translator = key.map { LiveTranslator(client: ClaudeClient(apiKey: $0), profile: nil) }
+    var pipeline = LivePipeline(engine: engine, translator: translator, vad: try await SileroVAD.load())
+    pipeline.maxChunk = Double(ProcessInfo.processInfo.environment["KIKITORI_MAX_CHUNK"] ?? "") ?? 6
+    let began = Date()
+    var cost = 0.0
+    for await event in pipeline.run(try FileAudioSource.stream(URL(fileURLWithPath: path), realTime: realTime)) {
+        let wall = Date().timeIntervalSince(began)
+        switch event {
+        case let .heard(time, ja, asr):
+            print(String(format: "[%6.1f] JA (asr %.2fs, wall %.1fs): %@", time, asr, wall, ja))
+        case let .translated(time, lines, c, seconds):
+            cost += c
+            for l in lines {
+                print(String(format: "[%6.1f] EN (+%.1fs): %@%@", time, seconds, l.en ?? "", l.note.map { "  [注 \($0)]" } ?? ""))
+            }
+        case let .translationFailed(time, failure):
+            print(String(format: "[%6.1f] translation failed: %@", time, "\(failure)"))
+        }
+    }
+    print(String(format: "done in %.1fs, translation cost $%.4f", Date().timeIntervalSince(began), cost))
+}
+
 switch args.first {
 case "sources":
     for s in try AudioSources.list() {
@@ -50,6 +78,8 @@ case "sources":
     }
 case "translate" where args.count >= 2:
     try await translate(args[1], limit: args.count > 2 ? Int(args[2]) ?? 8 : 8)
+case "run" where args.count >= 2:
+    try await runFile(args[1], realTime: args.contains("--realtime"))
 default:
-    print("usage: kikitori-cli sources | translate <chunks.jsonl> [n]")
+    print("usage: kikitori-cli sources | translate <chunks.jsonl> [n] | run <audio> [--realtime]")
 }
