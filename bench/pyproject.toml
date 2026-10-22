@@ -1,0 +1,17 @@
+[project]
+name = "kikitori-bench"
+version = "0.1.0"
+description = "On-device Japanese speech-to-text benchmark for kikitori"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "huggingface-hub>=2.2.0",
+    "jiwer>=4.0.0",
+    "mlx-whisper>=0.4.3",
+    "numpy>=2.5.4",
+    "pandas>=3.1.0",
+    "pyarrow>=26.0.0",
+    "pykakasi>=2.3.0",
+    "soundfile>=0.14.0",
+]
+
