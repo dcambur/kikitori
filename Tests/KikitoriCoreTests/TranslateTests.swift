@@ -93,6 +93,18 @@ func messageJSON(text: String, model: String = "claude-haiku-5-5", stop: String 
         #expect(LiveTranslator.groundNote(line("草", "Japanese 草 misheard, left as-is"), heard: "草生える").note == "")
     }
 
+    @Test func contextUpdateKeepsTheConversation() async throws {
+        let stub = StubTransport([(200, messageJSON(text: answer), [:]), (200, messageJSON(text: answer), [:])])
+        let t = LiveTranslator(client: ClaudeClient(apiKey: "k", transport: stub), profile: nil)
+        _ = try await t.translate("一つ目")
+        await t.updateContext(profile: Profile(name: "Amane Rio"), streamInfo: "Horror collab", settings: .init())
+        _ = try await t.translate("二つ目")
+        let system = try #require(try stub.body(1)["system"] as? [[String: Any]])
+        let context = try #require(system[1]["text"] as? String)
+        #expect(context.contains("Amane Rio") && context.contains("Horror collab"))
+        #expect((try stub.body(1)["messages"] as? [[String: Any]])?.count == 3)
+    }
+
     @Test func emptyChunkCostsNothing() async throws {
         let stub = StubTransport([])
         let t = LiveTranslator(client: ClaudeClient(apiKey: "k", transport: stub), profile: nil)

@@ -53,6 +53,15 @@ public actor LiveTranslator {
         system = [.init(Self.instructions(echoJapanese: echoJapanese)), .init(context)]
     }
 
+    /// New profile, stream info or settings mid-session. The conversation so far is kept; the
+    /// next request rewrites the prompt cache once.
+    public func updateContext(profile: Profile?, streamInfo: String?, settings: TranslationSettings) {
+        var context = settings.promptBlock
+        if let profile { context += "\n\n" + profile.promptBlock }
+        if let streamInfo, !streamInfo.isEmpty { context += "\n\nThis stream: \(streamInfo)" }
+        system[1] = .init(context)
+    }
+
     /// Translate one chunk. An empty chunk returns no lines without calling the API.
     public func translate(_ japanese: String) async throws -> Result {
         let ja = japanese.trimmingCharacters(in: .whitespacesAndNewlines)

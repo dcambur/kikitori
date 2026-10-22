@@ -1,4 +1,6 @@
 import AppKit
+import AVFoundation
+import CoreAudio
 import Foundation
 import KikitoriCore
 import Observation
@@ -63,7 +65,7 @@ final class AppModel {
     var state: SessionState = .idle
     var session: SessionRecord?
     var source: AudioSource?
-    var activeProfileID: UUID?
+    var activeProfileID: UUID? { didSet { if oldValue != activeProfileID { contextChanged() } } }
     var issues: [Issue] = []
     var latencies: [Double] = []
     var capOverride = false
@@ -71,13 +73,17 @@ final class AppModel {
     var hasAPIKey = KeychainStore.apiKey() != nil
     var overlayRevision = 0
 
-    private var capture: ProcessTapCapture?
+    private var capture: (any AudioCapture)?
     private var pipelineTask: Task<Void, Never>?
     private var translator: LiveTranslator?
     private var pendingEnds: [Double: Date] = [:]   // chunk start → when its speech ended (wall clock)
     private var saveTimer: Timer?
     private var explainTasks: [UUID: Task<Void, Never>] = [:]
     private var consecutiveFailures = 0
+    private var watchdog: Timer?
+    private var sourceQuitAt: Date?
+    @ObservationIgnored nonisolated(unsafe) private var lastSoundAt = Date.now
+    private var warned80Cycle: Date?
 
     init(storage: URL = URL.applicationSupportDirectory.appending(path: "kikitori")) {
         supportURL = storage
@@ -89,6 +95,11 @@ final class AppModel {
         profiles = Self.load([Profile].self, from: supportURL.appending(path: "profiles.json")) ?? []
         sessions = sessionStore.summaries()
         applyRetention()
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didLaunchApplicationNotification,
+                                                          object: nil, queue: .main) { [weak self] note in
+            let id = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+            MainActor.assumeIsolated { self?.sourceRelaunched(bundleID: id) }
+        }
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didTerminateApplicationNotification,
                                                           object: nil, queue: .main) { [weak self] note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
@@ -169,6 +180,9 @@ final class AppModel {
             saveTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated { self?.saveSession() }
             }
+            watchdog = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.checkSession() }
+            }
         } catch {
             state = .idle
             raise(.permissionRevoked)
@@ -190,6 +204,8 @@ final class AppModel {
         guard isLive || state == .starting else { return }
         stopCapture()
         saveTimer?.invalidate()
+        watchdog?.invalidate()
+        sourceQuitAt = nil
         session?.end = .now
         saveSession()
         session = nil
@@ -203,20 +219,89 @@ final class AppModel {
         guard let source else { return }
         let engine = AppleSpeechEngine()
         try await engine.prepare()
-        // Refresh the process list: helpers come and go (a new tab may play from a new process).
-        let fresh = (try? AudioSources.list().first { $0.id == source.id }) ?? source
-        let capture = ProcessTapCapture()
-        try capture.start(processObjects: fresh.processObjects)
+        let capture: any AudioCapture
+        if source.id.hasPrefix("mic:") {
+            guard await AVCaptureDevice.requestAccess(for: .audio) else { throw CocoaError(.userCancelled) }
+            let mic = MicrophoneCapture()
+            try mic.start(device: AudioDeviceID(source.id.dropFirst(4)))
+            capture = mic
+        } else {
+            // Refresh the process list: helpers come and go (a new tab may play from a new process).
+            let fresh = (try? AudioSources.list().first { $0.id == source.id }) ?? source
+            let tap = ProcessTapCapture()
+            try tap.start(processObjects: fresh.processObjects)
+            capture = tap
+        }
         self.capture = capture
+        lastSoundAt = .now
         var pipeline = LivePipeline(engine: engine, translator: translator, vad: try await SileroVAD.load(),
                                     contextTerms: [])
         pipeline.maxChunk = prefs.maxChunk
         pipeline.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
         let offset = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
-        let events = pipeline.run(capture.samples)
+        let events = pipeline.run(metered(capture.samples))
         pipelineTask = Task { [weak self] in
             for await event in events { self?.handle(event, offset: offset) }
         }
+    }
+
+    /// Passes audio through and notes when it was last audible (at most one store per second).
+    private func metered(_ input: AsyncStream<[Float]>) -> AsyncStream<[Float]> {
+        let (output, feed) = AsyncStream.makeStream(of: [Float].self, bufferingPolicy: .bufferingNewest(400))
+        Task.detached { [weak self] in
+            var lastStore = Date.distantPast
+            for await samples in input {
+                feed.yield(samples)
+                if Date.now.timeIntervalSince(lastStore) > 1, samples.contains(where: { abs($0) > 0.003 }) {
+                    lastStore = .now
+                    self?.lastSoundAt = .now
+                }
+            }
+            feed.finish()
+        }
+        return output
+    }
+
+    /// Every 5 s: silence, source gone, budget warnings (spec §5.10, §5.6).
+    private func checkSession() {
+        guard isLive else { return }
+        if let quit = sourceQuitAt, Date.now.timeIntervalSince(quit) > 600 {
+            let name = activeProfile?.name ?? source?.name ?? "kikitori"
+            let duration = session.map { TimeText.format($0.duration) } ?? ""
+            stop()
+            Notifier.post("Session saved: \(name), \(duration)", body: "The source app didn’t come back within 10 minutes.")
+            return
+        }
+        guard state == .listening else { return }
+        let silent = Date.now.timeIntervalSince(lastSoundAt)
+        if silent > 60 { raise(.noAudio(name: source?.name ?? "the source")) } else { clear(.noAudio(name: source?.name ?? "the source")) }
+        if prefs.endAfterSilenceMinutes > 0, silent > Double(prefs.endAfterSilenceMinutes * 60) {
+            stop()
+            return
+        }
+        let cycle = ledger.cycle()
+        if prefs.warnAt80, warned80Cycle != cycle.start, spentThisCycle >= prefs.monthlyCap * 0.8, spentThisCycle < prefs.monthlyCap {
+            warned80Cycle = cycle.start
+            Notifier.post("80 % of your monthly cap used",
+                          body: "\(Money.format(spentThisCycle)) of \(Money.format(prefs.monthlyCap)).")
+        }
+    }
+
+    private func sourceRelaunched(bundleID: String?) {
+        guard state == .paused, let source, source.id == bundleID, issues.contains(.sourceQuit(name: source.name)) else { return }
+        clear(.sourceQuit(name: source.name))
+        sourceQuitAt = nil
+        Task {
+            try? await Task.sleep(for: .seconds(3))   // let the app start its audio helpers
+            await togglePause()
+        }
+    }
+
+    /// Push the current profile and stream info to the live translator.
+    func contextChanged() {
+        let profile = activeProfile, info = streamInfo, settings = prefs.translation
+        session?.profileName = profile?.name
+        Task { await translator?.updateContext(profile: profile, streamInfo: info, settings: settings) }
     }
 
     private func stopCapture() {
@@ -228,7 +313,11 @@ final class AppModel {
 
     private func translationAllowed() -> Bool {
         if capReached && prefs.capAction != .noExplain {
+            if !issues.contains(.capReached) {
+                Notifier.post("Monthly cap reached", body: "Translation is paused. Japanese subtitles keep working.")
+            }
             raise(.capReached)
+            if prefs.capAction == .stop { Task { stop() } }
             return false
         }
         clear(.capReached)
@@ -279,6 +368,7 @@ final class AppModel {
         guard isLive, let source, source.id == bundleID else { return }
         stopCapture()
         state = .paused
+        sourceQuitAt = .now
         raise(.sourceQuit(name: source.name))
     }
 

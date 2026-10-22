@@ -7,11 +7,32 @@ struct SourcePickerView: View {
     @Environment(\.dismiss) var dismiss
     @State private var sources: [AudioSource] = []
     @State private var failed = false
+    @State private var tab = 0
+    @State private var devices: [InputDevice] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Listen to").font(.headline)
-            if failed {
+            Picker("", selection: $tab) { Text("Apps").tag(0); Text("Input Devices").tag(1) }
+                .pickerStyle(.segmented).labelsHidden()
+            if tab == 1 {
+                Label("A microphone also hears your room. App audio is cleaner when the stream plays on this Mac.", systemImage: "info.circle")
+                    .font(.callout).foregroundStyle(.secondary)
+                ForEach(devices) { device in
+                    Button { pick(AudioSource(id: "mic:\(device.id)", name: device.name, pid: 0, processObjects: [], isPlaying: true)) } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "mic").frame(width: 28)
+                            VStack(alignment: .leading) {
+                                Text(device.name)
+                                Text(device.detail).font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if model.source?.id == "mic:\(device.id)" { Image(systemName: "checkmark").foregroundStyle(Color.kkAccent) }
+                        }
+                        .frame(height: 44).contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else if failed {
                 Label("kikitori can’t list apps", systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color.kkDanger)
                 Text("Turn on kikitori in System Settings › Privacy & Security › Screen & System Audio Recording.")
                     .font(.callout).foregroundStyle(.secondary)
@@ -36,6 +57,7 @@ struct SourcePickerView: View {
         .padding(14)
         .frame(width: 380)
         .task {
+            devices = InputDevice.list()
             while !Task.isCancelled {
                 do { sources = try AudioSources.list(); failed = false } catch { failed = true }
                 try? await Task.sleep(for: .seconds(1))

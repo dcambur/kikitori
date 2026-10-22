@@ -224,9 +224,11 @@ struct StreamInfoForm: View {
             TextField("Stream title", text: Binding(get: { model.session?.streamTitle ?? "" },
                                                     set: { model.session?.streamTitle = $0 }))
             TextField("Game or topic", text: Binding(get: { model.session?.game ?? "" }, set: { model.session?.game = $0 }))
-            Text("Sent to Claude as context from the next session. Type it or paste it from the stream page.")
+            Text("Sent to Claude as context. Type it or paste it from the stream page.")
                 .font(.caption).foregroundStyle(.secondary)
         }
+        .onSubmit { model.contextChanged() }
+        .onDisappear { model.contextChanged() }
     }
 }
 
