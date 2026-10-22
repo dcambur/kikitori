@@ -1,0 +1,31 @@
+| run | segments | CER | of which insertions | ×RT |
+|---|---|---|---|---|
+| anime-oracle | oracle | 29.8% | 10.5% | 19× |
+| apple-fixed15 | fixed15 | 38.3% | 17.5% | 74× |
+| apple-oracle+demucs | oracle+demucs | 26.9% | 8.3% | 62× |
+| apple-oracle | oracle | 26.6% | 8.4% | 23× |
+| apple-vad+demucs | vad+demucs | 38.8% | 18.8% | 65× |
+| apple-vad | vad | 38.8% | 18.3% | 65× |
+| apple-vad6 | vad6 | 39.4% | 18.9% | 48× |
+| cohere-ja-oracle | oracle | 35.7% | 4.9% | 7× |
+| k2-fixed15 | fixed15 | 49.1% | 5.0% | 132× |
+| k2-oracle+demucs | oracle+demucs | 40.9% | 2.9% | 119× |
+| k2-oracle | oracle | 40.0% | 2.8% | 113× |
+| k2-vad+demucs | vad+demucs | 45.8% | 4.4% | 125× |
+| k2-vad | vad | 45.1% | 4.4% | 123× |
+| k2-vad6 | vad6 | 43.3% | 4.3% | 101× |
+| kotoba-oracle | oracle | 33.6% | 4.7% | 19× |
+| large-v3-mlx-oracle | oracle | 24.4% | 13.6% | 6× |
+| nemotron-ja-oracle | oracle | 33.7% | 6.7% | 61× |
+| parakeet-ja-oracle | oracle | 33.6% | 7.1% | 124× |
+| turbo-mlx-gloss-oracle | oracle | 27.1% | 23.0% | 7× |
+| turbo-mlx-oracle | oracle | 24.6% | 9.1% | 10× |
+| turbo-mlx-prev-oracle | oracle | 24.9% | 9.1% | 11× |
+| wcpp-beam5-fixed15 | fixed15 | 42.7% | 15.7% | 22× |
+| wcpp-beam5-oracle+demucs | oracle+demucs | 26.1% | 7.6% | 15× |
+| wcpp-beam5-oracle | oracle | 25.3% | 7.1% | 15× |
+| wcpp-beam5-vad+demucs | vad+demucs | 39.4% | 18.0% | 16× |
+| wcpp-beam5-vad | vad | 39.0% | 16.8% | 16× |
+| wcpp-beam5-vad6 | vad6 | 39.2% | 18.3% | 8× |
+| wcpp-greedy-oracle | oracle | 25.5% | 7.7% | 10× |
+| whisperkit-turbo-oracle | oracle | 27.0% | 7.2% | 8× |

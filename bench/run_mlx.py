@@ -1,6 +1,6 @@
 """Transcribe every manifest clip with one MLX Whisper model.
 
-usage: uv run python run_mlx.py <hf-repo> <label>
+usage: uv run python run_mlx.py <hf-repo> <label> [manifest.jsonl]
 Writes results/raw/<label>.jsonl: {"id", "hyp", "sec"} per clip, plus a summary line
 with model load time and peak GPU memory.
 """
@@ -17,7 +17,8 @@ import numpy as np
 import soundfile as sf
 
 repo, label = sys.argv[1], sys.argv[2]
-clips = [json.loads(l) for l in open("data/samples/manifest.jsonl")]
+manifest = sys.argv[3] if len(sys.argv) > 3 else "data/samples/manifest.jsonl"
+clips = [json.loads(l) for l in open(manifest)]
 out = Path("results/raw") / f"{label}.jsonl"
 out.parent.mkdir(parents=True, exist_ok=True)
 
