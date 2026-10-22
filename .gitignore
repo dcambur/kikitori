@@ -3,3 +3,4 @@
 *.xcodeproj/
 build/
 .DS_Store
+bench/results/vtcc/

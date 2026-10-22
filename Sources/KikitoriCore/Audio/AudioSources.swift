@@ -12,6 +12,10 @@ public struct AudioSource: Sendable, Identifiable, Hashable {
     public var processObjects: [AudioObjectID]
     /// True when any of those processes is producing output right now.
     public var isPlaying: Bool
+
+    public init(id: String, name: String, pid: pid_t, processObjects: [AudioObjectID], isPlaying: Bool) {
+        self.id = id; self.name = name; self.pid = pid; self.processObjects = processObjects; self.isPlaying = isPlaying
+    }
 }
 
 public enum AudioSources {

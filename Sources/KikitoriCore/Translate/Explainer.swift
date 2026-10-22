@@ -8,6 +8,11 @@ public struct Explainer: Sendable {
         public var meaning: String
         public var inThisLine: String
         public var fanSlang: String
+
+        public init(term: String, reading: String, meaning: String, inThisLine: String, fanSlang: String) {
+            self.term = term; self.reading = reading; self.meaning = meaning
+            self.inThisLine = inThisLine; self.fanSlang = fanSlang
+        }
     }
 
     public struct Result: Sendable {

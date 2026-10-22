@@ -57,9 +57,9 @@ func runFile(_ path: String, realTime: Bool) async throws {
     for await event in pipeline.run(try FileAudioSource.stream(URL(fileURLWithPath: path), realTime: realTime)) {
         let wall = Date().timeIntervalSince(began)
         switch event {
-        case let .heard(time, ja, asr):
+        case let .heard(time, _, ja, asr):
             print(String(format: "[%6.1f] JA (asr %.2fs, wall %.1fs): %@", time, asr, wall, ja))
-        case let .translated(time, lines, c, seconds):
+        case let .translated(time, lines, c, seconds, _):
             cost += c
             for l in lines {
                 print(String(format: "[%6.1f] EN (+%.1fs): %@%@", time, seconds, l.en ?? "", l.note.map { "  [注 \($0)]" } ?? ""))

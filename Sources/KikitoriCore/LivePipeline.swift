@@ -8,9 +8,10 @@ import Foundation
 /// Without a translator (no key, offline, budget cap) it still emits the Japanese.
 public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
     public enum Event: Sendable {
-        /// Japanese for the chunk that started at `time` (seconds since the session began).
-        case heard(time: Double, ja: String, asrSeconds: Double)
-        case translated(time: Double, lines: [TranscriptLine], cost: Double, seconds: Double)
+        /// Japanese for the chunk that started at `time` and lasted `duration` (seconds since the
+        /// session began).
+        case heard(time: Double, duration: Double, ja: String, asrSeconds: Double)
+        case translated(time: Double, lines: [TranscriptLine], cost: Double, seconds: Double, tokens: Int)
         case translationFailed(time: Double, ClaudeClient.Failure)
     }
 
@@ -21,6 +22,8 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
     public var contextTerms: [String]
     /// Longest chunk before a forced cut: shorter means subtitles sooner, with less context.
     public var maxChunk = 6.0
+    /// Asked before each translation; false means Japanese only (budget cap, user choice).
+    public var shouldTranslate: @Sendable () async -> Bool = { true }
 
     public init(engine: any SpeechEngine, translator: LiveTranslator?, vad: VAD, contextTerms: [String] = []) {
         self.engine = engine; self.translator = translator; self.vad = vad; self.contextTerms = contextTerms
@@ -29,6 +32,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
     public func run(_ audio: AsyncStream<[Float]>) -> AsyncStream<Event> {
         let (events, emit) = AsyncStream.makeStream(of: Event.self)
         let (heard, toTranslate) = AsyncStream.makeStream(of: (Double, String).self)
+        let shouldTranslate = shouldTranslate
         let recognize = Task { [engine, vad, contextTerms, maxChunk] in
             var chunker = Chunker(vad: vad)
             chunker.maxChunk = maxChunk
@@ -37,7 +41,8 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                 let raw = (try? await engine.transcribe(chunk.samples, context: contextTerms)) ?? ""
                 let ja = TranscriptFilter.clean(raw)
                 guard !ja.isEmpty else { return }
-                emit.yield(.heard(time: chunk.start, ja: ja, asrSeconds: Date().timeIntervalSince(start)))
+                emit.yield(.heard(time: chunk.start, duration: chunk.duration, ja: ja,
+                                  asrSeconds: Date().timeIntervalSince(start)))
                 toTranslate.yield((chunk.start, ja))
             }
             for await samples in audio {
@@ -48,7 +53,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         let translate = Task { [translator] in
             for await (time, ja) in heard {
-                guard let translator else { continue }
+                guard let translator, await shouldTranslate() else { continue }
                 let start = Date()
                 do {
                     let r = try await translator.translate(ja)
@@ -56,7 +61,10 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                         TranscriptLine(time: time, ja: $0.ja.isEmpty ? ja : $0.ja, en: $0.en,
                                        note: $0.note.isEmpty ? nil : $0.note, term: $0.term.isEmpty ? nil : $0.term)
                     }
-                    emit.yield(.translated(time: time, lines: lines, cost: r.cost, seconds: Date().timeIntervalSince(start)))
+                    let u = r.usage
+                    let tokens = u.inputTokens + u.outputTokens + (u.cacheReadInputTokens ?? 0) + (u.cacheCreationInputTokens ?? 0)
+                    emit.yield(.translated(time: time, lines: lines, cost: r.cost,
+                                           seconds: Date().timeIntervalSince(start), tokens: tokens))
                 } catch let failure as ClaudeClient.Failure {
                     emit.yield(.translationFailed(time: time, failure))
                 } catch {

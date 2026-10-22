@@ -36,7 +36,9 @@ public struct Profile: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-public struct GlossaryTerm: Codable, Sendable, Equatable, Hashable {
+public struct GlossaryTerm: Codable, Sendable, Hashable, Identifiable {
+    /// Stable identity for editing; not saved in profile files and not part of equality.
+    public var id = UUID()
     public var term: String
     public var reading: String
     public var meaning: String
@@ -45,6 +47,13 @@ public struct GlossaryTerm: Codable, Sendable, Equatable, Hashable {
     public init(term: String, reading: String = "", meaning: String = "", translateAs: String = "") {
         self.term = term; self.reading = reading; self.meaning = meaning; self.translateAs = translateAs
     }
+
+    enum CodingKeys: String, CodingKey { case term, reading, meaning, translateAs }
+
+    public static func == (a: GlossaryTerm, b: GlossaryTerm) -> Bool {
+        (a.term, a.reading, a.meaning, a.translateAs) == (b.term, b.reading, b.meaning, b.translateAs)
+    }
+    public func hash(into h: inout Hasher) { h.combine(term); h.combine(reading); h.combine(meaning); h.combine(translateAs) }
 }
 
 /// Settings › Translation (spec §5.8).
