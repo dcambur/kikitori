@@ -181,7 +181,8 @@ struct SessionHeader: View {
     @Binding var showStreamInfo: Bool
 
     var body: some View {
-        HStack(spacing: 16) {
+        // Wraps instead of squeezing (see FlowLayout): too narrow a row crashed the app.
+        FlowLayout(spacing: 16, lineSpacing: 6) {
             field("Source") {
                 Button { showSourcePicker = true } label: {
                     HStack(spacing: 4) {
@@ -195,12 +196,11 @@ struct SessionHeader: View {
             field("Profile") { ProfileMenu() }
             Button { showStreamInfo = true } label: {
                 Text(model.session?.streamTitle.isEmpty == false ? model.session!.streamTitle : "Add stream info…")
-                    .lineLimit(1)
+                    .lineLimit(1).truncationMode(.tail).frame(maxWidth: 260, alignment: .leading)
             }
             .buttonStyle(.borderless)
-            .layoutPriority(-1)   // the stream title truncates first; labels and values never do
+            .fixedSize()
             .popover(isPresented: $showStreamInfo) { StreamInfoForm().padding().frame(width: 320) }
-            Spacer()
             if let s = model.session {
                 TimelineView(.periodic(from: .now, by: 1)) { _ in
                     field("Duration") { Text(TranscriptExport.clock(s.duration)).monospacedDigit().bold() }
@@ -209,11 +209,12 @@ struct SessionHeader: View {
             }
         }
         .font(.callout)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 18).padding(.vertical, 8)
     }
 
     func field<V: View>(_ label: String, @ViewBuilder value: () -> V) -> some View {
-        HStack(spacing: 6) { Text(label).foregroundStyle(.secondary).fixedSize(); value() }.lineLimit(1)
+        HStack(spacing: 6) { Text(label).foregroundStyle(.secondary); value() }.lineLimit(1).fixedSize()
     }
 }
 

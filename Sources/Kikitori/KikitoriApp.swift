@@ -15,6 +15,12 @@ enum Main {
             NSApplication.shared.run()
             return
         }
+        if let i = args.firstIndex(of: "--overlay-stress") {
+            NSApplication.shared.setActivationPolicy(.prohibited)
+            let seconds = args.count > i + 1 ? Double(args[i + 1]) ?? 8 : 8
+            MainActor.assumeIsolated { Snapshots.overlayStress(seconds: seconds) }
+            return
+        }
         if let i = args.firstIndex(of: "--snapshots"), args.count > i + 1 {
             let folder = URL(fileURLWithPath: args[i + 1])
             NSApplication.shared.setActivationPolicy(.prohibited)

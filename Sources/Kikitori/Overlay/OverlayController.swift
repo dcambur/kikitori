@@ -12,11 +12,13 @@ final class OverlayController {
     static let shared = OverlayController()
     private var panel: OverlayPanel?
     private let model = AppModel.shared
+    /// The stress test keeps the panel far off any screen.
+    var offscreen = false
 
     func setUp() {
         guard panel == nil else { return }
         let panel = OverlayPanel(contentRect: NSRect(x: 0, y: 0, width: 760, height: 140),
-                                 styleMask: [.nonactivatingPanel, .borderless, .resizable],
+                                 styleMask: [.nonactivatingPanel, .borderless],
                                  backing: .buffered, defer: false)
         panel.isFloatingPanel = true
         panel.level = .floating
@@ -27,9 +29,18 @@ final class OverlayController {
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
-        panel.minSize = NSSize(width: 360, height: 60)
-        let host = NSHostingView(rootView: OverlayView().environment(model))
-        host.sizingOptions = [.intrinsicContentSize]
+        // The panel must not size itself from the view (`.intrinsicContentSize`): subtitle text
+        // wraps by width, so window size and content size chase each other until AppKit throws
+        // "more Update Constraints passes than views". The view reports its natural size instead,
+        // and the panel is resized once, outside the layout pass.
+        let root = OverlayView()
+            .fixedSize()
+            .onGeometryChange(for: CGSize.self, of: { $0.size }) { size in
+                DispatchQueue.main.async { OverlayController.shared.fit(size) }
+            }
+            .environment(model)
+        let host = NSHostingView(rootView: root)
+        host.sizingOptions = []
         panel.contentView = host
         self.panel = panel
         place()
@@ -59,6 +70,7 @@ final class OverlayController {
 
     func place() {
         guard let panel, let screen = NSScreen.main else { return }
+        if offscreen { panel.setFrameOrigin(NSPoint(x: -6000, y: -6000)); return }
         let frame = screen.visibleFrame
         let size = panel.frame.size
         let x: CGFloat, y: CGFloat
@@ -72,6 +84,25 @@ final class OverlayController {
         default: y = frame.minY + 64
         }
         panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    /// Resize to the subtitles' natural size, keeping the edge the panel is anchored to in place
+    /// (bottom presets keep the bottom edge, top presets the top; left, centre or right likewise).
+    func fit(_ size: CGSize) {
+        guard let panel, size.width > 1, size.height > 1 else { return }
+        let old = panel.frame
+        guard abs(old.width - size.width) > 0.5 || abs(old.height - size.height) > 0.5 else { return }
+        let position = model.prefs.position
+        let x: CGFloat = switch position {
+        case .topLeft, .bottomLeft: old.minX
+        case .topRight, .bottomRight: old.maxX - size.width
+        default: old.midX - size.width / 2
+        }
+        let y: CGFloat = switch position {
+        case .topLeft, .topCenter, .topRight: old.maxY - size.height
+        default: old.minY
+        }
+        panel.setFrame(NSRect(x: x, y: y, width: size.width, height: size.height), display: true)
     }
 
     func toggle() { model.prefs.overlayVisible.toggle() }

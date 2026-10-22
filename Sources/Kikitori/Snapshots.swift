@@ -22,6 +22,13 @@ enum Snapshots {
                 render(MainView(forced: section), size: CGSize(width: 1180, height: 720), appearance: appearance,
                        model: model, to: folder.appending(path: "main-\(section.rawValue.lowercased())-\(suffix).png"))
             }
+            // The smallest the main window can be (regression: header layout loop when narrow).
+            for width in [860.0, 980.0] {
+                for section in SidebarSection.allCases {
+                    render(MainView(forced: section), size: CGSize(width: width, height: 520), appearance: appearance,
+                           model: model, to: folder.appending(path: "main-\(section.rawValue.lowercased())-\(Int(width))-\(suffix).png"))
+                }
+            }
             render(MenuBarPanel(), size: CGSize(width: 320, height: 520), appearance: appearance, model: model,
                    to: folder.appending(path: "menubar-\(suffix).png"))
             for (name, view) in [("general", AnyView(GeneralTab())), ("translation", AnyView(TranslationTab())),
@@ -45,6 +52,36 @@ enum Snapshots {
         render(ZStack { Color(hex: 0x1B1B2F); OverlayView() }, size: CGSize(width: 900, height: 300), appearance: .darkAqua,
                model: model, to: folder.appending(path: "overlay-offline.png"))
         print("snapshots written to \(folder.path)")
+    }
+
+    /// The real overlay panel, offscreen, fed lines of varying length every 150 ms for `seconds`.
+    /// Regression check for the panel/content sizing loop that crashed the app on its first line.
+    static func overlayStress(seconds: Double) {
+        let storage = FileManager.default.temporaryDirectory.appending(path: "kikitori-stress-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: storage) }
+        KeychainStore.previewKey = "sk-ant-sample-key-0000"
+        let model = AppModel(storage: storage)
+        AppModel.shared = model
+        loadSample(into: model)
+        model.prefs.overlayVisible = true
+        OverlayController.shared.offscreen = true
+        OverlayController.shared.setUp()
+        let texts = ["Hi!", "Wait, is that a creeper!? Oh no oh no oh no",
+                     "The whole castle burned down last stream, so today is revenge, and this time we build it out of stone so nothing can burn it",
+                     "LOL", "People keep calling my collab with Rio “tee-tee”…"]
+        var i = 0
+        let end = Date().addingTimeInterval(seconds)
+        while Date() < end {
+            i += 1
+            var line = TranscriptLine(time: Double(i), ja: String(repeating: "あ", count: 3 + (i * 7) % 40),
+                                      en: texts[i % texts.count])
+            if i % 3 == 0 { line.note = "note"; line.term = "あ" }
+            model.session?.lines.append(line)
+            if i % 4 == 0 { model.pendingLines.insert(line.id) }
+            model.overlayRevision += 1
+            RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+        }
+        print("overlay stress ok: \(i) lines")
     }
 
     static func render<V: View>(_ view: V, size: CGSize, appearance: NSAppearance.Name, model: AppModel, to url: URL) {
