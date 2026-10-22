@@ -1,0 +1,81 @@
+# kikitori 聞き取り
+
+Live English subtitles for Japanese VTuber streams on your Mac, with the context behind the jokes.
+
+kikitori listens to the one app playing the stream (Safari, Chrome, Firefox, the YouTube app…),
+recognises the Japanese speech on-device, and translates it with Claude into subtitles that float
+over the video. Click a line marked 注 to learn the slang, meme or reference behind it.
+
+- **Hears only the stream:** per-app capture with a Core Audio process tap. No virtual audio
+  driver; other apps, notifications and your voice are ignored. A microphone works too.
+- **Transcribes on your Mac:** Apple's on-device Japanese speech model, cut at natural pauses by
+  Silero VAD on the Neural Engine. Audio never leaves the Mac.
+- **Translates with Claude:** Claude Haiku 5.5 writes the live lines (≈ $0.04–0.15 per stream
+  hour), Claude Sonnet 5.5 explains a line on demand. Streamer profiles teach it names, fan names
+  and running jokes.
+- **Honest about delay and money:** subtitles land about 2.5–4 s after a sentence ends; spend is
+  tracked against your monthly budget, with a cap that falls back to Japanese only.
+
+## Requirements
+
+- macOS 26 or later, Apple Silicon
+- A Claude API key. Claude Max plans include monthly API credits: claim them in the
+  [Claude Console](https://console.anthropic.com) and create a key there.
+
+## Build and run
+
+```bash
+swift test                      # core tests
+scripts/bundle.sh               # builds build/Kikitori.app (release, ad-hoc signed)
+open build/Kikitori.app
+```
+
+On first launch, setup asks for the System Audio Recording permission and your API key (stored
+in the macOS Keychain). Headless tools:
+
+```bash
+swift run kikitori-cli sources                          # apps that are playing sound
+swift run kikitori-cli run some-stream.wav --realtime   # the whole pipeline on a file
+swift run Kikitori --snapshots /tmp/kk                  # render every screen to PNGs (sample data)
+```
+
+## How it works
+
+```
+app audio ──process tap──▶ 16 kHz mono ──Silero VAD──▶ speech chunks (≤ 6 s, cut at pauses)
+   ──Apple SpeechTranscriber──▶ Japanese ──filter──▶ Claude Haiku 5.5 ──▶ overlay + transcript
+                                                                 └─ Claude Sonnet 5.5 on “Explain”
+```
+
+| Path | What |
+|---|---|
+| `Sources/KikitoriCore` | Capture, VAD chunker, speech engine, Claude client and translator, usage ledger, storage, export. Tested in `Tests/`. |
+| `Sources/Kikitori` | The SwiftUI app: main window, floating overlay (`NSPanel`), menu bar, settings, onboarding. |
+| `Sources/kikitori-cli` | Headless checks of the pipeline. |
+| `docs/design` | The approved design: every screen and state, plus the implementation spec (`spec.md`). |
+| `bench` | The speech-model benchmark behind the engine choice. |
+
+### Why Apple's speech model
+
+`bench/` compares Whisper large-v3, large-v3-turbo (MLX, whisper.cpp, WhisperKit), kotoba-whisper,
+anime-whisper, ReazonSpeech-k2, Parakeet, Nemotron, Cohere Transcribe and Apple SpeechTranscriber,
+on public Japanese test sets and on 13 hololive clips with human captions. On real stream audio
+Apple's model ties Whisper turbo in the full pipeline (38.8 % vs 39.0 % character error, scored
+against edited captions) while running about 3× faster with no download; large-v3 adds nothing
+over turbo, and the transducer models drop fast reactions. Details: [bench/README.md](bench/README.md).
+
+## Privacy
+
+Sent to Anthropic: the Japanese text of each chunk, the streamer profile, the stream title, and
+for Explain the line with its neighbours. Never sent: audio, your screen, past sessions. There is
+no kikitori server. Transcripts, profiles and usage stay in `~/Library/Application Support/kikitori`.
+
+## Status
+
+Version 0.1: the full pipeline runs end to end on real stream audio, and every screen of the design
+exists. Not yet done: a stable signing identity (ad-hoc builds re-ask for the audio permission
+after each rebuild), Whisper turbo as an optional engine, speaker labels for collabs.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
