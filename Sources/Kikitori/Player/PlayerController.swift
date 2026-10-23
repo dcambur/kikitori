@@ -4,9 +4,9 @@ import Observation
 import WebKit
 import os
 
-/// The built-in player: a WKWebView showing the real site, with our script injected.
-/// It is an audio source for the pipeline (no system-audio permission needed) and the place
-/// where subtitles are drawn, on the video itself.
+/// The built-in player: a WKWebView showing the real site, with our script injected, shown in the
+/// main window's Watch section. It is an audio source for the pipeline (a tap on our own WebKit
+/// process) and the place where subtitles are drawn, on the video itself.
 @MainActor @Observable
 final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
     static let shared = PlayerController()
@@ -17,10 +17,16 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     var url: URL?
     var paused = true
     var hasVideo = false
+    /// True while the web view is in a window (the Watch section is showing, or full screen).
+    /// Off screen during a player session, the floating overlay shows the subtitles instead.
+    var isOnScreen = false
 
     @ObservationIgnored private let log = Logger(subsystem: "app.kikitori", category: "player")
     @ObservationIgnored private var lastStateLog = Date.distantPast
     @ObservationIgnored private var lastShown = ""
+    /// The view hosting the web view now; WebKit's full screen gives the web view back to it.
+    @ObservationIgnored weak var host: WebViewHost.HostView?
+    @ObservationIgnored private var fullscreenObservation: NSKeyValueObservation?
 
     override init() {
         let config = WKWebViewConfiguration()
@@ -40,6 +46,15 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         webView.navigationDelegate = self
         load("https://www.youtube.com")
         observeSubtitles()
+        observePlayback()
+        fullscreenObservation = webView.observe(\.fullscreenState) { [weak self] web, _ in
+            // Leaving full screen puts the web view back where it was; if the Watch section was
+            // rebuilt meanwhile, that is an old host: move it to the current one.
+            MainActor.assumeIsolated {
+                guard let self, web.fullscreenState == .notInFullscreen else { return }
+                if let host = self.host, host.window != nil { host.adopt() } else { self.isOnScreen = web.window != nil }
+            }
+        }
     }
 
     /// A link, a video id or search words.
@@ -71,9 +86,10 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
 
     nonisolated func userContentController(_ userContentController: WKUserContentController,
                                            didReceive message: WKScriptMessage) {
-        let name = message.name
-        let body = message.body as? [String: Any] ?? (message.body as? String).map { ["message": $0] } ?? [:]
-        MainActor.assumeIsolated { handle(name, body) }
+        MainActor.assumeIsolated {   // WebKit delivers script messages on the main thread
+            let body = message.body as? [String: Any] ?? (message.body as? String).map { ["message": $0] } ?? [:]
+            handle(message.name, body)
+        }
     }
 
     private func handle(_ name: String, _ body: [String: Any]) {
@@ -98,10 +114,30 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
             let model = AppModel.shared
             if let id = (body["id"] as? String).flatMap(UUID.init(uuidString:)),
                let line = model.session?.lines.first(where: { $0.id == id }) {
-                model.explain(line)
-                openMainWindow()
+                // The explanation shows beside the video, which full screen would hide.
+                if webView.fullscreenState != .notInFullscreen { webView.closeAllMediaPresentations(completionHandler: nil) }
+                model.focusExplanation(line)
             }
         default: break
+        }
+    }
+
+    /// Pause the video when nobody can see or hear it on purpose: off screen (another section, or
+    /// the window closed) with no player session. Checked a moment after a change, so a view that
+    /// is only being rebuilt doesn't count.
+    private func observePlayback() {
+        withObservationTracking {
+            _ = isOnScreen
+            _ = AppModel.shared.state
+            _ = AppModel.shared.source
+        } onChange: {
+            Task { @MainActor in
+                self.observePlayback()
+                try? await Task.sleep(for: .milliseconds(500))
+                let model = AppModel.shared
+                let session = model.state != .idle && model.source?.id == Self.sourceID
+                if !self.isOnScreen, !(self.webView.window?.isVisible ?? false), !session { self.webView.pauseAllMediaPlayback(completionHandler: nil) }
+            }
         }
     }
 

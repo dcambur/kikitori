@@ -2,11 +2,13 @@ import KikitoriCore
 import SwiftUI
 
 enum SidebarSection: String, CaseIterable, Identifiable {
-    case live = "Live", sessions = "Sessions", profiles = "Profiles", usage = "Usage"
+    // Watch is last so Live · Sessions · Profiles · Usage keep ⌘1–4 (spec §3).
+    case live = "Live", sessions = "Sessions", profiles = "Profiles", usage = "Usage", watch = "Watch"
     var id: String { rawValue }
     var symbol: String {
         switch self {
         case .live: "dot.radiowaves.left.and.right"
+        case .watch: "play.rectangle"
         case .sessions: "clock"
         case .profiles: "person.crop.circle"
         case .usage: "chart.bar"
@@ -14,7 +16,7 @@ enum SidebarSection: String, CaseIterable, Identifiable {
     }
 }
 
-/// The single main window (spec §3): sidebar Live · Sessions · Profiles · Usage.
+/// The single main window (spec §3): sidebar Live · Sessions · Profiles · Usage · Watch.
 struct MainView: View {
     @Environment(AppModel.self) var model
     @AppStorage("section") var section: SidebarSection = .live
@@ -35,6 +37,7 @@ struct MainView: View {
         } detail: {
             switch forced ?? section {
             case .live: LiveView()
+            case .watch: PlayerView()
             case .sessions: SessionsView()
             case .profiles: ProfilesView()
             case .usage: UsageView()
@@ -42,7 +45,7 @@ struct MainView: View {
         }
         .frame(minWidth: 860, minHeight: 520)
         .background {
-            // ⌘1–4 switch sections (spec §3 commands).
+            // ⌘1–5 switch sections (spec §3 commands).
             ForEach(Array(SidebarSection.allCases.enumerated()), id: \.element) { i, s in
                 Button("") { section = s }.keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: .command).hidden()
             }
@@ -58,6 +61,29 @@ struct MainView: View {
         default: return nil
         }
     }
+}
+
+/// Show the built-in player: the Watch section of the main window (opened if it was closed).
+@MainActor func openWatch(_ openWindow: OpenWindowAction) {
+    selectSection(.watch)
+    NSApp.activate()
+    openWindow(id: "main")
+}
+
+/// Explain the newest translated line where the viewer is looking: beside the video while the
+/// player is on screen, otherwise in Live. `open` brings the main window forward.
+@MainActor func explainLastLine(open: () -> Void = { openMainWindow() }) {
+    let model = AppModel.shared
+    guard let line = model.lastLine else { return }
+    let watching = model.source?.id == PlayerController.sourceID && PlayerController.shared.isOnScreen
+    if !watching { selectSection(.live) }
+    model.focusExplanation(line)
+    open()
+}
+
+/// Select a section of the main window (what MainView's `@AppStorage("section")` reads).
+@MainActor func selectSection(_ section: SidebarSection) {
+    UserDefaults.standard.set(section.rawValue, forKey: "section")
 }
 
 /// Sidebar footer: “This cycle $6.12 of $100” + meter + reset date.

@@ -70,6 +70,10 @@ final class AppModel {
     var latencies: [Double] = []
     var capOverride = false
     var explain: [UUID: ExplainState] = [:]
+    /// The line an Explain action points at (hotkey, menu, a 注 chip on the video), shown by the
+    /// Live and Watch inspectors; `focusRequests` counts requests, so asking again reopens it.
+    var explainFocus: UUID?
+    var focusRequests = 0
     /// Lines whose English is still on its way (everything else without English stays Japanese only).
     var pendingLines: Set<UUID> = []
     var hasAPIKey = KeychainStore.apiKey() != nil
@@ -497,6 +501,13 @@ final class AppModel {
                 explain[line.id] = .failed(message)
             }
         }
+    }
+
+    /// Explain `line` and bring its explanation into view.
+    func focusExplanation(_ line: TranscriptLine) {
+        explain(line)
+        explainFocus = line.id
+        focusRequests += 1
     }
 
     func cancelExplain(_ id: UUID) {

@@ -54,13 +54,16 @@ struct MenuBarPanel: View {
             }
             .font(.callout)
             Divider()
-            menuItem(model.isLive ? "Open Transcript" : "Open kikitori", "⌃⌥T") { show() }
+            menuItem(model.isLive ? "Open Transcript" : "Open kikitori", "⌃⌥T") {
+                if model.isLive { selectSection(.live) }
+                show()
+            }
             if model.isLive {
                 menuItem("Explain Last Line", "⌃⌥E") {
-                    show(); if let l = model.lastLine { model.explain(l) }
+                    explainLastLine(open: show)
                 }
             }
-            menuItem("Watch in kikitori", "⇧⌘W") { NSApp.activate(); openWindow(id: "player") }
+            menuItem("Watch in kikitori", "⇧⌘W") { openWatch(openWindow) }
             menuItem("Settings…", "⌘,") { NSApp.activate(); openSettings() }
             Divider()
             menuItem("Quit kikitori", "⌘Q") { model.stop(); NSApp.terminate(nil) }

@@ -39,6 +39,10 @@ struct LiveView: View {
                 .background(Color.kkInspector)
                 .inspectorColumnWidth(min: 280, ideal: 310, max: 400)
         }
+        .onChange(of: model.focusRequests) {   // Explain Last Line (hotkey, menus): show it here
+            selection = model.explainFocus
+            showInspector = true
+        }
         .sheet(isPresented: $showExport) {
             ExportSheet(lines: lines, explanations: model.session?.explanations ?? [:],
                         name: [model.activeProfile?.name ?? model.source?.name ?? "kikitori",
@@ -95,13 +99,13 @@ struct LiveView: View {
             Text("Pick the app that plays the stream. kikitori hears only that app.")
                 .foregroundStyle(.secondary)
             HStack {
-                Button("Watch YouTube in kikitori") { openWindow(id: "player") }
+                Button("Watch YouTube in kikitori") { openWatch(openWindow) }
                     .buttonStyle(.borderedProminent).controlSize(.large)
                 Button("Listen to an App…") { showSourcePicker = true }
                     .controlSize(.large)
                     .popover(isPresented: $showSourcePicker, arrowEdge: .bottom) { SourcePickerView() }
             }
-            Text("The built-in player puts subtitles on the video itself and needs no audio permission.")
+            Text("The built-in player puts subtitles on the video itself.")
                 .font(.callout).foregroundStyle(.secondary)
             if let issue = model.topIssue { Text(AppModel.shortText(issue)).foregroundStyle(Color.kkDanger) }
         }

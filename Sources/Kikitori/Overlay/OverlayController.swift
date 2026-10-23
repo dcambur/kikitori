@@ -55,6 +55,7 @@ final class OverlayController {
             _ = model.prefs.position
             _ = model.state
             _ = model.source
+            if model.source?.id == PlayerController.sourceID { _ = PlayerController.shared.isOnScreen }
         } onChange: {
             Task { @MainActor in self.apply(); self.observe() }
         }
@@ -64,8 +65,10 @@ final class OverlayController {
     private func apply() {
         guard let panel else { return }
         panel.ignoresMouseEvents = model.prefs.clickThrough
-        // The built-in player draws subtitles on the video itself; the floating panel is for other apps.
-        let show = model.prefs.overlayVisible && model.state != .idle && model.source?.id != PlayerController.sourceID
+        // The built-in player draws subtitles on the video itself; the floating panel is for other
+        // apps, and for the player while its video is off screen (another section, window closed).
+        let playerShowsThem = model.source?.id == PlayerController.sourceID && PlayerController.shared.isOnScreen
+        let show = model.prefs.overlayVisible && model.state != .idle && !playerShowsThem
         if show && !panel.isVisible { place(); panel.orderFrontRegardless() }
         if !show && panel.isVisible { panel.orderOut(nil) }
     }

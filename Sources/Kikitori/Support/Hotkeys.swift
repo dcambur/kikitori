@@ -53,11 +53,11 @@ enum Hotkeys {
         switch action {
         case .toggleOverlay: model.prefs.overlayVisible.toggle()
         case .pause: Task { await model.togglePause() }
-        case .explain: if let line = model.lastLine { model.explain(line); openMainWindow() }
-        case .transcript: openMainWindow()
+        case .explain: explainLastLine()
+        case .transcript: openMainWindow(.live)
         case .clickThrough: model.prefs.clickThrough.toggle()
         case .japanese: model.prefs.showJapanese.toggle()
-        case .source: openMainWindow()
+        case .source: openMainWindow(.live)
         }
     }
 }

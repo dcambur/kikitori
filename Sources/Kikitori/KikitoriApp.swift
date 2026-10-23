@@ -15,6 +15,16 @@ enum Main {
             NSApplication.shared.run()
             return
         }
+        if let i = args.firstIndex(of: "--player-test"), args.count > i + 3 {
+            let (input, seconds, log) = (args[i + 1], Double(args[i + 2]) ?? 60, args[i + 3])
+            NSApplication.shared.setActivationPolicy(.accessory)
+            Task { @MainActor in
+                await PlayerTest.run(input: input, seconds: seconds, logPath: log)
+                exit(0)
+            }
+            NSApplication.shared.run()
+            return
+        }
         if let i = args.firstIndex(of: "--overlay-stress") {
             NSApplication.shared.setActivationPolicy(.prohibited)
             let seconds = args.count > i + 1 ? Double(args[i + 1]) ?? 8 : 8
@@ -62,12 +72,6 @@ struct KikitoriApp: App {
         .defaultSize(width: 1100, height: 700)
         .commands { KikitoriCommands(model: model) }
 
-        Window("Watch", id: "player") {
-            PlayerView().environment(model)
-        }
-        .defaultSize(width: 1180, height: 760)
-        .keyboardShortcut("w", modifiers: [.command, .shift])
-
         Window("Welcome to kikitori", id: "onboarding") {
             OnboardingView().environment(model)
         }
@@ -88,13 +92,17 @@ struct KikitoriApp: App {
 
 struct KikitoriCommands: Commands {
     let model: AppModel
+    @Environment(\.openWindow) var openWindow
     var body: some Commands {
         CommandMenu("Session") {
             Button(model.state == .paused ? "Resume" : "Pause") { Task { await model.togglePause() } }
                 .keyboardShortcut("p", modifiers: [.control, .option]).disabled(!model.isLive)
             Button("Stop Listening") { model.stop() }.disabled(!model.isLive)
-            Button("Explain Last Line") { if let l = model.lastLine { model.explain(l) } }
+            Button("Explain Last Line") { explainLastLine() }
                 .keyboardShortcut("e", modifiers: [.control, .option]).disabled(model.lastLine == nil)
+            Divider()
+            Button("Watch in kikitori") { openWatch(openWindow) }
+                .keyboardShortcut("w", modifiers: [.command, .shift])
         }
         CommandGroup(after: .toolbar) {
             Button("Make Text Bigger") { model.prefs.transcriptTextSize = min(model.prefs.transcriptTextSize + 1, 24) }

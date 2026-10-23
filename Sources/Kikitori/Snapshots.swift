@@ -18,13 +18,13 @@ enum Snapshots {
 
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
             let suffix = appearance == .aqua ? "light" : "dark"
-            for section in SidebarSection.allCases {
+            for section in SidebarSection.allCases where section != .watch {   // Watch loads the real site
                 render(MainView(forced: section), size: CGSize(width: 1180, height: 720), appearance: appearance,
                        model: model, to: folder.appending(path: "main-\(section.rawValue.lowercased())-\(suffix).png"))
             }
             // The smallest the main window can be (regression: header layout loop when narrow).
             for width in [860.0, 980.0] {
-                for section in SidebarSection.allCases {
+                for section in SidebarSection.allCases where section != .watch {   // Watch loads the real site
                     render(MainView(forced: section), size: CGSize(width: width, height: 520), appearance: appearance,
                            model: model, to: folder.appending(path: "main-\(section.rawValue.lowercased())-\(Int(width))-\(suffix).png"))
                 }

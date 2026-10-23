@@ -130,7 +130,7 @@ struct OverlayView: View {
                 Task { await model.togglePause() }
             }
             control("text.bubble", "Explain last line") { explainLast() }
-            control("list.bullet", "Open transcript") { openMainWindow() }
+            control("list.bullet", "Open transcript") { openMainWindow(.live) }
             control(prefs.clickThrough ? "cursorarrow.slash" : "cursorarrow", "Click-through") { prefs.clickThrough.toggle() }
         }
         .padding(4)
@@ -154,7 +154,7 @@ struct OverlayView: View {
     @ViewBuilder var menu: some View {
         Button(model.state == .paused ? "Resume" : "Pause") { Task { await model.togglePause() } }
         Button("Explain Last Line") { explainLast() }
-        Button("Open Transcript") { openMainWindow() }
+        Button("Open Transcript") { openMainWindow(.live) }
         Divider()
         Picker("Show", selection: Binding(get: { prefs.subtitleMode }, set: { prefs.subtitleMode = $0 })) {
             ForEach(Preferences.SubtitleMode.allCases, id: \.self) { Text($0.title) }
@@ -208,7 +208,9 @@ struct StatusPill: View {
     }
 }
 
-@MainActor func openMainWindow() {
+/// Bring the main window forward, on `section` if given.
+@MainActor func openMainWindow(_ section: SidebarSection? = nil) {
+    if let section { selectSection(section) }
     NSApp.activate()
     if let w = NSApp.windows.first(where: { $0.identifier?.rawValue.contains("main") == true }) {
         w.makeKeyAndOrderFront(nil)
