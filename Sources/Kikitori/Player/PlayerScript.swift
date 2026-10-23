@@ -51,6 +51,11 @@ enum PlayerScript {
             }
           };
         }
+        // WebKit starts an AudioContext only from a user gesture: create and resume it on the first
+        // click or key press anywhere in the page (the play click itself counts).
+        const wake = () => { try { ctx = ctx || new AudioContext(); if (ctx.state !== 'running') ctx.resume(); } catch (e) {} };
+        document.addEventListener('pointerdown', wake, true);
+        document.addEventListener('keydown', wake, true);
         document.addEventListener('play', e => {
           if (e.target instanceof HTMLVideoElement) { attach(e.target); if (ctx && ctx.state !== 'running') ctx.resume(); }
         }, true);
@@ -60,7 +65,9 @@ enum PlayerScript {
           const v = video();
           const live = !!document.querySelector('.ytp-live') || !!document.querySelector('[data-a-target="player-live-indicator"]');
           post('kkState', { t: v ? v.currentTime : -1, paused: v ? v.paused : true, rate: v ? v.playbackRate : 1,
-                            live, title: document.title, url: location.href, hasVideo: !!v });
+                            live, title: document.title, url: location.href, hasVideo: !!v,
+                            audio: ctx ? ctx.state : 'none', tapped: v ? attached.has(v) : false });
+          if (v && !v.paused && !attached.has(v)) { attach(v); if (ctx && ctx.state !== 'running') ctx.resume(); }
         }, 500);
 
         // ---- subtitles ---------------------------------------------------------

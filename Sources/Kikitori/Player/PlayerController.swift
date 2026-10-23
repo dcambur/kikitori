@@ -18,6 +18,11 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     var paused = true
     var isLive = false
     var hasVideo = false
+    /// Web Audio state in the page ("running", "suspended", "none") and whether the video is tapped.
+    var audioState = "none"
+    var tapped = false
+    /// Seconds of page audio received this session.
+    var heardSeconds: Double = 0
 
     @ObservationIgnored private var capture: PageAudioCapture?
     @ObservationIgnored private var lastShown = ""
@@ -86,6 +91,9 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
             paused = body["paused"] as? Bool ?? true
             isLive = body["live"] as? Bool ?? false
             hasVideo = body["hasVideo"] as? Bool ?? false
+            audioState = body["audio"] as? String ?? "none"
+            tapped = body["tapped"] as? Bool ?? false
+            heardSeconds = capture?.progress.seconds ?? 0
             title = (body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
             url = (body["url"] as? String).flatMap(URL.init(string:))
         case "kkExplain":
