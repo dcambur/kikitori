@@ -21,10 +21,14 @@ enum PlayerScript {
 
         // ---- audio -------------------------------------------------------------
         let ctx = null, pending = [], attached = new WeakSet(), ratio = 3;
+        const log = m => post('kkLog', String(m));
         function attach(v) {
-          if (attached.has(v)) return;
+          // Only into a running context: a suspended one would silence the video and capture nothing.
+          if (attached.has(v) || !ctx || ctx.state !== 'running') return;
+          try { attachNow(v); } catch (e) { log('attach failed: ' + e); }
+        }
+        function attachNow(v) {
           attached.add(v);
-          ctx = ctx || new AudioContext();
           ratio = ctx.sampleRate / 16000;
           const src = ctx.createMediaElementSource(v);
           if (HEAR) src.connect(ctx.destination);
@@ -47,17 +51,24 @@ enum PlayerScript {
               let bin = ''; const bytes = new Uint8Array(pcm.buffer);
               for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
               post('kkAudio', { pcm: btoa(bin), t: v.currentTime });
+              if (!kk.sent) { kk.sent = true; log('first audio packet, rate ' + ctx.sampleRate); }
               pending = [];
             }
           };
         }
         // WebKit starts an AudioContext only from a user gesture: create and resume it on the first
         // click or key press anywhere in the page (the play click itself counts).
-        const wake = () => { try { ctx = ctx || new AudioContext(); if (ctx.state !== 'running') ctx.resume(); } catch (e) {} };
+        const wake = () => {
+          try {
+            if (!ctx) { ctx = new AudioContext(); ctx.onstatechange = () => log('audio ' + ctx.state); }
+            const p = ctx.state !== 'running' ? ctx.resume() : Promise.resolve();
+            p.then(() => { const v = video(); if (v && !v.paused) attach(v); }).catch(e => log('resume failed: ' + e));
+          } catch (e) { log('wake failed: ' + e); }
+        };
         document.addEventListener('pointerdown', wake, true);
         document.addEventListener('keydown', wake, true);
         document.addEventListener('play', e => {
-          if (e.target instanceof HTMLVideoElement) { attach(e.target); if (ctx && ctx.state !== 'running') ctx.resume(); }
+          if (e.target instanceof HTMLVideoElement) attach(e.target);
         }, true);
 
         // ---- state -------------------------------------------------------------
@@ -67,7 +78,7 @@ enum PlayerScript {
           post('kkState', { t: v ? v.currentTime : -1, paused: v ? v.paused : true, rate: v ? v.playbackRate : 1,
                             live, title: document.title, url: location.href, hasVideo: !!v,
                             audio: ctx ? ctx.state : 'none', tapped: v ? attached.has(v) : false });
-          if (v && !v.paused && !attached.has(v)) { attach(v); if (ctx && ctx.state !== 'running') ctx.resume(); }
+          if (v && !v.paused && !attached.has(v)) attach(v);
         }, 500);
 
         // ---- subtitles ---------------------------------------------------------

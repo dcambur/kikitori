@@ -2,6 +2,7 @@ import AppKit
 import KikitoriCore
 import Observation
 import WebKit
+import os
 
 /// The built-in player: a WKWebView showing the real site, with our script injected.
 /// It is an audio source for the pipeline (no system-audio permission needed) and the place
@@ -25,6 +26,8 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     var heardSeconds: Double = 0
 
     @ObservationIgnored private var capture: PageAudioCapture?
+    @ObservationIgnored private let log = Logger(subsystem: "app.kikitori", category: "player")
+    @ObservationIgnored private var lastStateLog = Date.distantPast
     @ObservationIgnored private var lastShown = ""
 
     override init() {
@@ -41,7 +44,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
         webView.allowsBackForwardNavigationGestures = true
         super.init()
-        for name in ["kkAudio", "kkState", "kkExplain"] { controller.add(self, contentWorld: .page, name: name) }
+        for name in ["kkAudio", "kkState", "kkExplain", "kkLog"] { controller.add(self, contentWorld: .page, name: name) }
         webView.navigationDelegate = self
         load("https://www.youtube.com")
         observeSubtitles()
@@ -78,7 +81,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     nonisolated func userContentController(_ userContentController: WKUserContentController,
                                            didReceive message: WKScriptMessage) {
         let name = message.name
-        let body = message.body as? [String: Any] ?? [:]
+        let body = message.body as? [String: Any] ?? (message.body as? String).map { ["message": $0] } ?? [:]
         MainActor.assumeIsolated { handle(name, body) }
     }
 
@@ -94,8 +97,14 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
             audioState = body["audio"] as? String ?? "none"
             tapped = body["tapped"] as? Bool ?? false
             heardSeconds = capture?.progress.seconds ?? 0
+            if Date.now.timeIntervalSince(lastStateLog) > 5 {
+                lastStateLog = .now
+                log.notice("state video=\(self.hasVideo) paused=\(self.paused) audio=\(self.audioState, privacy: .public) tapped=\(self.tapped) heard=\(Int(self.heardSeconds))s capturing=\(self.capture != nil)")
+            }
             title = (body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
             url = (body["url"] as? String).flatMap(URL.init(string:))
+        case "kkLog":
+            log.notice("page: \(body["message"] as? String ?? "", privacy: .public)")
         case "kkExplain":
             let model = AppModel.shared
             if let id = (body["id"] as? String).flatMap(UUID.init(uuidString:)),

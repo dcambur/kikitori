@@ -13,6 +13,15 @@ struct PlayerView: View {
     var body: some View {
         WebViewHost(webView: player.webView)
             .frame(minWidth: 640, minHeight: 400)
+            .overlay(alignment: .topTrailing) {
+                if listening {
+                    Label(status, systemImage: player.heardSeconds > 0 ? "waveform" : "exclamationmark.circle")
+                        .font(.callout.weight(.medium)).monospacedDigit()
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(.black.opacity(0.75), in: .capsule).foregroundStyle(.white)
+                        .padding(12).allowsHitTesting(false)
+                }
+            }
             .navigationTitle(player.title.isEmpty ? "Watch" : player.title)
             .toolbar {
                 ToolbarItemGroup(placement: .navigation) {
@@ -32,7 +41,6 @@ struct PlayerView: View {
                         .onSubmit { player.load(address) }
                 }
                 ToolbarItemGroup {
-                    Text(status).font(.caption).foregroundStyle(.secondary).monospacedDigit().fixedSize()
                     Menu {
                         Picker("Show", selection: Binding(get: { model.prefs.subtitleMode }, set: { model.prefs.subtitleMode = $0 })) {
                             ForEach(Preferences.SubtitleMode.allCases, id: \.self) { Text($0.title) }
