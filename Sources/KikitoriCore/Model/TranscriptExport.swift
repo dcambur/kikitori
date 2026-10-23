@@ -19,10 +19,21 @@ public struct TranscriptExport: Sendable {
 
     public func render(_ lines: [TranscriptLine], explanations: [UUID: [Explainer.Explanation]] = [:],
                        title: String = "") -> String {
-        let cues = lines.enumerated().map { i, line -> (TranscriptLine, Double, Double) in
-            let start = line.time + offset
-            let next = i + 1 < lines.count ? lines[i + 1].time + offset : start + 4
-            return (line, start, min(max(next, start + 1), start + 7))
+        // Lines translated from one chunk share its start time: they follow each other across the
+        // chunk (1–7 s each) instead of all appearing at once.
+        var cues: [(TranscriptLine, Double, Double)] = []
+        var i = 0
+        while i < lines.count {
+            var j = i
+            while j < lines.count, lines[j].time == lines[i].time { j += 1 }
+            let count = Double(j - i), start = lines[i].time + offset
+            let next = j < lines.count ? lines[j].time + offset : start + 4 * count
+            let span = min(max(next - start, count), 7 * count)
+            for k in i..<j {
+                let n = Double(k - i)
+                cues.append((lines[k], start + span * n / count, start + span * (n + 1) / count))
+            }
+            i = j
         }
         switch format {
         case .srt:

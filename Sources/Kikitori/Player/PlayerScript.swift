@@ -8,11 +8,9 @@
 /// - Subtitles: `__kikitori.show(lines)` draws them in a layer inside the player element, so
 ///   they follow theatre mode and full screen.
 enum PlayerScript {
-    static func source(hear: Bool) -> String {
-        """
+    static let source = """
         (() => {
         if (window.__kikitori) return;
-        const HEAR = \(hear ? "true" : "false");
         const kk = window.__kikitori = {};
         const post = (name, body) => { try { window.webkit.messageHandlers[name].postMessage(body); } catch (e) {} };
         const video = () => document.querySelector('video.html5-main-video') || document.querySelector('video');
@@ -78,5 +76,4 @@ enum PlayerScript {
         }, true);
         })();
         """
-    }
 }

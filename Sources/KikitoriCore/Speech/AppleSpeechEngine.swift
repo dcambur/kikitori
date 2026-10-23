@@ -39,8 +39,13 @@ public struct AppleSpeechEngine: SpeechEngine {
         let (input, feed) = AsyncStream.makeStream(of: AnalyzerInput.self)
         feed.yield(AnalyzerInput(buffer: buffer))
         feed.finish()
-        try await analyzer.start(inputSequence: input)
-        try await analyzer.finalizeAndFinishThroughEndOfInput()
+        do {
+            try await analyzer.start(inputSequence: input)
+            try await analyzer.finalizeAndFinishThroughEndOfInput()
+        } catch {
+            collect.cancel()   // the results may never finish after a failed analysis
+            throw error
+        }
         return try await collect.value
     }
 

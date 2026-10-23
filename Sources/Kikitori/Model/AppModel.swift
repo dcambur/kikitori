@@ -189,10 +189,20 @@ final class AppModel {
         } catch is CancellationError {
             // Stopped while starting: stop() already reset everything.
         } catch {
-            state = .idle
-            raise(.permissionRevoked)
             stopCapture()
+            session = nil
+            self.source = nil
+            translator = nil
+            state = .idle
+            raiseStartFailure(error)
         }
+    }
+
+    /// A speech model that could not be installed or loaded (not an audio permission problem).
+    private struct ModelUnavailable: Error { var message: String }
+
+    private func raiseStartFailure(_ error: Error) {
+        if let model = error as? ModelUnavailable { raise(.modelUnavailable(model.message)) } else { raise(.permissionRevoked) }
     }
 
     /// Pause = stop capturing (nothing captured or sent); the session stays open.
@@ -214,7 +224,7 @@ final class AppModel {
         } catch is CancellationError {
             // Another resume won, or the session stopped or paused again meanwhile.
         } catch {
-            raise(.permissionRevoked)
+            raiseStartFailure(error)
         }
     }
 
@@ -239,8 +249,13 @@ final class AppModel {
         guard let source else { return }
         let generation = captureGeneration
         let engine = AppleSpeechEngine()
-        try await engine.prepare()
-        let vad = try await SileroVAD.load()
+        let vad: SileroVAD
+        do {
+            try await engine.prepare()
+            vad = try await SileroVAD.load()
+        } catch {
+            throw ModelUnavailable(message: error.localizedDescription)
+        }
         if source.id.hasPrefix("mic:"), !(await AVCaptureDevice.requestAccess(for: .audio)) {
             throw CocoaError(.userCancelled)
         }
@@ -328,7 +343,7 @@ final class AppModel {
     func restartPlayerCapture() async {
         guard state == .listening, source?.id == PlayerController.sourceID else { return }
         stopCapture()
-        do { try await startCapture() } catch is CancellationError {} catch { raise(.permissionRevoked) }
+        do { try await startCapture() } catch is CancellationError {} catch { raiseStartFailure(error) }
     }
 
     /// Push the current profile and stream info to the live translator.
@@ -344,6 +359,9 @@ final class AppModel {
         capture = nil
         pipelineTask?.cancel()
         pipelineTask = nil
+        // Translations still in flight were cancelled with the pipeline: their lines stay Japanese only.
+        pendingLines.removeAll()
+        pendingEnds.removeAll()
     }
 
     private func translationAllowed() -> Bool {
@@ -380,7 +398,7 @@ final class AppModel {
             }
             if let end = pendingEnds.removeValue(forKey: t) { latencies.append(Date.now.timeIntervalSince(end)) }
             record.cost += cost
-            ledger.entries.append(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live,
+            ledger.add(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live,
                                              cost: cost, tokens: tokens))
             consecutiveFailures = 0
             for issue in [Issue.offline, .apiOutage, .rateLimited, .keyInvalid, .creditsExhausted] { clear(issue) }
@@ -391,7 +409,7 @@ final class AppModel {
             settle(time + offset, in: &record)
             if tokens > 0 {   // billed even though there is nothing to show: it still counts toward the cap
                 record.cost += cost
-                ledger.entries.append(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live,
+                ledger.add(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live,
                                                  cost: cost, tokens: tokens))
                 saveLedgerSoon()
             }
@@ -439,7 +457,12 @@ final class AppModel {
             return
         }
         if case .result = explain[line.id], !again { return }
-        explainTasks.values.forEach { $0.cancel() }
+        // One explanation at a time: the others go back to their Explain button instead of loading forever.
+        for (id, task) in explainTasks {
+            task.cancel()
+            if id != line.id, case .loading? = explain[id] { explain[id] = nil }
+        }
+        explainTasks = [:]
         let previous: [Explainer.Explanation]
         if case .result(let list, _) = explain[line.id] { previous = list } else { previous = [] }
         explain[line.id] = .loading
@@ -450,14 +473,14 @@ final class AppModel {
                 let r = try await Explainer(client: ClaudeClient(apiKey: key)).explain(line, context: context, profile: profile)
                 guard !Task.isCancelled else { return }
                 explain[line.id] = .result(previous + [r.explanation], cost: r.cost)
-                ledger.entries.append(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
+                ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
                                                  cost: r.cost, tokens: r.usage.inputTokens + r.usage.outputTokens))
                 session?.cost += r.cost
                 if prefs.saveExplanations { session?.explanations[line.id, default: []].append(r.explanation) }
                 saveLedgerSoon()
             } catch {
                 if let billed = error as? ClaudeClient.BilledFailure {   // billed with nothing to show: still counts
-                    ledger.entries.append(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
+                    ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
                                                      cost: billed.cost, tokens: billed.usage.inputTokens + billed.usage.outputTokens))
                     session?.cost += billed.cost
                     saveLedgerSoon()

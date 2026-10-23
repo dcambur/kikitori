@@ -15,17 +15,9 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     let webView: WKWebView
     var title = ""
     var url: URL?
-    var videoTime: Double = -1
     var paused = true
-    var isLive = false
     var hasVideo = false
-    /// Web Audio state in the page ("running", "suspended", "none") and whether the video is tapped.
-    var audioState = "none"
-    var tapped = false
-    /// Seconds of page audio received this session.
-    var heardSeconds: Double = 0
 
-    @ObservationIgnored private var capture: PageAudioCapture?
     @ObservationIgnored private let log = Logger(subsystem: "app.kikitori", category: "player")
     @ObservationIgnored private var lastStateLog = Date.distantPast
     @ObservationIgnored private var lastShown = ""
@@ -36,7 +28,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         config.mediaTypesRequiringUserActionForPlayback = []
         config.preferences.isElementFullscreenEnabled = true
         let controller = WKUserContentController()
-        controller.addUserScript(WKUserScript(source: PlayerScript.source(hear: true), injectionTime: .atDocumentEnd,
+        controller.addUserScript(WKUserScript(source: PlayerScript.source, injectionTime: .atDocumentEnd,
                                               forMainFrameOnly: true, in: .page))
         config.userContentController = controller
         webView = WKWebView(frame: .zero, configuration: config)
@@ -65,7 +57,6 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         if let target { webView.load(URLRequest(url: target)) }
     }
 
-    /// A fresh audio stream for a new listening session.
     /// The capture for a new session: a system audio tap on this app's own WebKit process, which
     /// is where the player's sound plays. The process appears once the page first plays sound,
     /// so the tap starts as soon as it exists.
@@ -78,18 +69,6 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         return deferred
     }
 
-    func makeCapture() -> PageAudioCapture {
-        capture?.stop()
-        let c = PageAudioCapture()
-        capture = c
-        return c
-    }
-
-    func stopCapture() {
-        capture?.stop()
-        capture = nil
-    }
-
     nonisolated func userContentController(_ userContentController: WKUserContentController,
                                            didReceive message: WKScriptMessage) {
         let name = message.name
@@ -100,16 +79,19 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     private func handle(_ name: String, _ body: [String: Any]) {
         switch name {
         case "kkState":
-            videoTime = body["t"] as? Double ?? -1
-            paused = body["paused"] as? Bool ?? true
-            isLive = body["live"] as? Bool ?? false
-            hasVideo = body["hasVideo"] as? Bool ?? false
+            // Sent every 500 ms: assign only what changed, so views redraw only when something did.
+            let paused = body["paused"] as? Bool ?? true
+            let hasVideo = body["hasVideo"] as? Bool ?? false
+            let title = (body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
+            let url = (body["url"] as? String).flatMap(URL.init(string:))
+            if paused != self.paused { self.paused = paused }
+            if hasVideo != self.hasVideo { self.hasVideo = hasVideo }
+            if title != self.title { self.title = title }
+            if url != self.url { self.url = url }
             if Date.now.timeIntervalSince(lastStateLog) > 5 {
                 lastStateLog = .now
-                log.notice("state video=\(self.hasVideo) paused=\(self.paused) lines=\(AppModel.shared.session?.lines.count ?? 0)")
+                log.notice("state video=\(hasVideo) paused=\(paused) lines=\(AppModel.shared.session?.lines.count ?? 0)")
             }
-            title = (body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
-            url = (body["url"] as? String).flatMap(URL.init(string:))
         case "kkLog":
             log.notice("page: \(body["message"] as? String ?? "", privacy: .public)")
         case "kkExplain":

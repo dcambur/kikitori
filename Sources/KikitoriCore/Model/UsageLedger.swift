@@ -24,8 +24,25 @@ public struct UsageLedger: Sendable {
     var calendar = Calendar.current
 
     public init(entries: [UsageEntry] = [], cycleStartDay: Int) {
-        self.entries = entries
+        self.entries = []
         self.cycleStartDay = min(max(cycleStartDay, 1), 28)
+        for entry in entries { add(entry) }   // also compacts ledgers saved one entry per chunk
+    }
+
+    /// Records one request. Live requests of the same session within the same clock hour share one
+    /// entry, so the ledger (and usage.json) grows per session hour, not per subtitle chunk.
+    public mutating func add(_ entry: UsageEntry) {
+        if let last = entries.last, merges(last, entry) {
+            entries[entries.count - 1].cost += entry.cost
+            entries[entries.count - 1].tokens += entry.tokens
+        } else {
+            entries.append(entry)
+        }
+    }
+
+    func merges(_ a: UsageEntry, _ b: UsageEntry) -> Bool {
+        a.kind == .live && b.kind == .live && a.session == b.session && a.model == b.model
+            && calendar.isDate(a.date, equalTo: b.date, toGranularity: .hour)
     }
 
     /// The billing cycle containing `date`: [start, end).

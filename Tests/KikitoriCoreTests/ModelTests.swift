@@ -43,6 +43,23 @@ func day(_ s: String, _ hour: Int = 12) -> Date {
         #expect(reach > now && reach < l.cycle(containing: now).end)
         #expect(l.projectedDate(reaching: 100, now: now) == nil)
     }
+
+    @Test func liveRequestsMergePerSessionHour() {
+        let session = UUID()
+        func live(_ minute: Int, hour: Int = 12, _ s: UUID? = nil) -> UsageEntry {
+            UsageEntry(date: day("2026-10-22", hour).addingTimeInterval(Double(minute * 60)), session: s ?? session,
+                       model: "h", kind: .live, cost: 1, tokens: 10)
+        }
+        var l = UsageLedger(entries: [live(0), live(1), live(2)], cycleStartDay: 15)   // loaded per chunk: compacted
+        #expect(l.entries.count == 1 && l.entries[0].cost == 3 && l.entries[0].tokens == 30)
+        l.add(live(59))
+        l.add(live(0, hour: 13))                // next hour
+        l.add(live(5, hour: 13, UUID()))        // another session
+        l.add(UsageEntry(date: day("2026-10-22", 13), session: session, model: "s", kind: .explain, cost: 1, tokens: 1))
+        l.add(UsageEntry(date: day("2026-10-22", 13), session: session, model: "s", kind: .explain, cost: 1, tokens: 1))
+        #expect(l.entries.map(\.cost) == [4, 1, 1, 1, 1])
+        #expect(l.spentToday(now: day("2026-10-22", 18)) == 8)
+    }
 }
 
 @Suite struct SessionStoreTests {
@@ -82,6 +99,16 @@ func day(_ s: String, _ hour: Int = 12) -> Date {
         e.format = .vtt
         e.includeJapanese = false
         #expect(e.render(lines).hasPrefix("WEBVTT\n\n00:00:01.500 --> 00:00:08.500\nWait, what?\n"))
+    }
+
+    @Test func linesOfOneChunkFollowEachOther() {
+        let chunk = [TranscriptLine(time: 10, ja: "あ", en: "A"), TranscriptLine(time: 10, ja: "い", en: "B"),
+                     TranscriptLine(time: 10, ja: "う", en: "C"), TranscriptLine(time: 16, ja: "え", en: "D")]
+        let srt = TranscriptExport().render(chunk)
+        #expect(srt.contains("00:00:10,000 --> 00:00:12,000\nあ"))
+        #expect(srt.contains("00:00:12,000 --> 00:00:14,000\nい"))
+        #expect(srt.contains("00:00:14,000 --> 00:00:16,000\nう"))
+        #expect(srt.contains("00:00:16,000 --> 00:00:20,000\nえ"))
     }
 
     @Test func markdownHasNotes() {

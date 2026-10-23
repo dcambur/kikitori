@@ -27,7 +27,9 @@ public enum AudioSources {
         let ownPID = ProcessInfo.processInfo.processIdentifier
         for object in objects {
             guard let pid = try? CoreAudioProperty.value(object, kAudioProcessPropertyPID, default: pid_t(0)),
-                  pid > 0, pid != ownPID else { continue }
+                  pid > 0, pid != ownPID,
+                  responsiblePID(of: pid) != ownPID   // our own helpers: the built-in player's WebKit processes
+            else { continue }
             let playing = ((try? CoreAudioProperty.value(object, kAudioProcessPropertyIsRunningOutput,
                                                          default: UInt32(0))) ?? 0) != 0
             let bundleID = (try? CoreAudioProperty.string(object, kAudioProcessPropertyBundleID)) ?? ""
@@ -43,9 +45,14 @@ public enum AudioSources {
     }
 
     /// The user-facing app a process plays sound for: itself if it is a regular app, otherwise
-    /// the nearest regular-app ancestor (Chrome and Firefox helpers). WebKit's shared GPU process
-    /// is an XPC service with no app parent; it is attributed to Safari.
+    /// the nearest regular-app ancestor (Chrome and Firefox helpers). WebKit's XPC services have
+    /// no app parent: they belong to the app macOS holds responsible for them (Safari, or any app
+    /// with a web view), and only to Safari when that is unknown.
     static func owningApp(pid: pid_t, bundleID: String) -> NSRunningApplication? {
+        if let responsible = responsiblePID(of: pid), responsible != pid,
+           let app = NSRunningApplication(processIdentifier: responsible), app.activationPolicy == .regular {
+            return app
+        }
         var current = pid
         for _ in 0..<8 {
             if let app = NSRunningApplication(processIdentifier: current), app.activationPolicy == .regular {
@@ -79,12 +86,17 @@ public enum AudioSources {
 
     /// The app macOS holds responsible for a helper process (libsystem; used by many system tools).
     static func responsiblePID(of pid: pid_t) -> pid_t? {
-        typealias Fn = @convention(c) (pid_t) -> pid_t
-        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "responsibility_get_pid_responsible_for_pid")
-        else { return nil }
-        let result = unsafeBitCast(symbol, to: Fn.self)(pid)
+        guard let responsibleFor else { return nil }
+        let result = responsibleFor(pid)
         return result > 0 ? result : nil
     }
+
+    /// Looked up once: the source list asks for every audio process every second.
+    private static let responsibleFor: (@convention(c) (pid_t) -> pid_t)? = {
+        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "responsibility_get_pid_responsible_for_pid")
+        else { return nil }
+        return unsafeBitCast(symbol, to: (@convention(c) (pid_t) -> pid_t).self)
+    }()
 
     static func parentPID(of pid: pid_t) -> pid_t? {
         var info = kinfo_proc()

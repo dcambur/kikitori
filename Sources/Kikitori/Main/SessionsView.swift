@@ -36,7 +36,15 @@ struct SessionsView: View {
             }
             .frame(minWidth: 240, idealWidth: 260, maxWidth: 320)
             .searchable(text: $query, placement: .sidebar, prompt: "Search all transcripts")
-            .onChange(of: query) { _, q in matches = q.isEmpty ? nil : model.sessionStore.search(q) }
+            .task(id: query) {
+                // Searching reads every saved transcript: wait for a pause in typing, and read off the main thread.
+                guard !query.isEmpty else { matches = nil; return }
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+                let store = model.sessionStore, q = query
+                let found = await Task.detached { store.search(q) }.value
+                if !Task.isCancelled { matches = found }
+            }
 
             detail.frame(minWidth: 380, maxWidth: .infinity, maxHeight: .infinity)
         }
