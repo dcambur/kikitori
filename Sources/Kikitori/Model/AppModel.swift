@@ -70,7 +70,7 @@ final class AppModel {
     var latencies: [Double] = []
     var capOverride = false
     var explain: [UUID: ExplainState] = [:]
-    /// The line an Explain action points at (hotkey, menu, a 注 chip on the video), shown by the
+    /// The line an Explain action points at (hotkey, menu, a row in the Watch panel), shown by the
     /// Live and Watch inspectors; `focusRequests` counts requests, so asking again reopens it.
     var explainFocus: UUID?
     var focusRequests = 0

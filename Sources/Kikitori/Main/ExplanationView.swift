@@ -136,7 +136,7 @@ struct ExplanationCard: View {
             if !e.fanSlang.isEmpty {
                 section("Fan slang") {
                     FlowLayout(spacing: 6, lineSpacing: 6) {
-                        ForEach(e.fanSlang, id: \.self) { slang in
+                        ForEach(Array(e.fanSlang.enumerated()), id: \.offset) { _, slang in
                             Text(slang).font(.callout)
                                 .padding(.horizontal, 8).padding(.vertical, 3)
                                 .background(.quaternary, in: .capsule)

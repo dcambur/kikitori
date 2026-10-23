@@ -177,6 +177,13 @@ struct SlowEngine: SpeechEngine {
         #expect(p.cut(at: 4) == "")
     }
 
+    @Test func dropsStrayMarksAtTheStartOnly() {
+        var p = PreviewText()
+        let words = [PreviewResult.Word(text: "見た。", start: 0, end: 1), .init(text: "やばい！？", start: 1, end: 2)]
+        _ = p.update(.init(start: 0, end: 2, text: "見た。やばい！？", isFinal: true, words: words))
+        #expect(p.cut(at: 0.9) == "やばい！？")   // the 。 left from the line before goes; ！？ stay
+    }
+
     @Test func cutsInsideALongPieceInProportion() {
         var p = PreviewText()
         // Still-changing results come in long pieces: a cut halfway keeps about the second half.

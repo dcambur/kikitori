@@ -4,11 +4,12 @@
 /// - Audio is NOT taken here: WebKit gives Web Audio silence for cross-origin video (YouTube
 ///   streams from googlevideo.com) and a routed element goes quiet. The app taps its own WebKit
 ///   process instead (`AudioSources.ownWebKitProcesses`).
-/// - State: `kkState` every 500 ms (time, paused, rate, live, title, url).
+/// - State: `kkState` every 500 ms (time, paused, rate, live, title, url, channel).
 /// - Audio track: YouTube may play an AI dub in the viewer's language (auto-dubbing); once per
 ///   video, an auto-dubbed track is switched to the original, so we hear the streamers themselves.
-/// - Subtitles: `__kikitori.show(lines)` draws them in a layer inside the player element (so they
-///   follow theatre mode, the miniplayer and full screen), bottom-centre on the picture itself.
+/// - Subtitles: `__kikitori.show(lines, live)` draws the Japanese as heard (the newest lines, then
+///   the words still being heard) in a layer inside the player element (so they follow theatre
+///   mode, the miniplayer and full screen), bottom-centre on the picture itself.
 ///   Built with DOM calls, never HTML strings: YouTube requires Trusted Types, so assigning
 ///   `innerHTML` throws and the layer would stay empty.
 enum PlayerScript {
@@ -82,11 +83,6 @@ enum PlayerScript {
           #kikitori-subs .kk-line.old { opacity: .62; }
           #kikitori-subs .kk-line.live { opacity: .86; }
           #kikitori-subs .kk-main { font: 600 clamp(14px, 3.4cqw, 40px)/1.3 "Hiragino Sans", -apple-system, sans-serif; }
-          #kikitori-subs .kk-sub  { font: 500 clamp(11px, 2.1cqw, 24px)/1.3 -apple-system, "Hiragino Sans", sans-serif;
-                                    color: rgba(255,255,255,.82); }
-          #kikitori-subs .kk-note { pointer-events: auto; cursor: pointer; margin-left: 8px; padding: 0 5px; border-radius: 5px;
-                                    font: 700 .8em -apple-system; color: #FFCB7A; background: rgba(255,190,90,.24); }
-          #kikitori-subs .kk-dots::after { content: '…'; opacity: .7; }
         `;
         document.documentElement.appendChild(style);
 
@@ -139,48 +135,23 @@ enum PlayerScript {
         document.addEventListener('fullscreenchange', place);
         document.addEventListener('webkitfullscreenchange', place);
 
-        const el = (tag, cls, text) => {
-          const e = document.createElement(tag);
-          if (cls) e.className = cls;
-          if (text) e.textContent = text;
-          return e;
+        const line = (cls, text) => {
+          const row = document.createElement('div'), main = document.createElement('div');
+          row.className = cls; main.className = 'kk-main'; main.textContent = text;
+          row.append(main);
+          return row;
         };
-        // lines: [{id, ja, en, term, pending}], mode: japaneseMain | englishMain | englishOnly | japaneseOnly,
-        // live: words still being heard, drawn as the newest line.
-        kk.show = (lines, mode, live) => {
-          lastShow = lines.length || live ? [lines, mode, live] : null;
+        // lines: [{ja}], the newest lines as heard; live: words still being heard, drawn last.
+        kk.show = (lines, live) => {
+          lastShow = lines.length || live ? [lines, live] : null;
           try {
             const l = ensureLayer(); if (!l) return;
-            l.replaceChildren(...lines.map((x, i) => {
-              // English, or dots while it is on its way, or nothing.
-              const en = () => x.en ? el('span', null, x.en) : (x.pending ? el('span', 'kk-dots') : null);
-              const ja = () => el('span', null, x.ja);
-              let main, sub = null;
-              switch (mode) {
-                case 'englishOnly':  main = en() || ja(); break;
-                case 'japaneseOnly': main = ja(); break;
-                case 'englishMain':  main = en() || ja(); if (x.en) sub = ja(); break;
-                default:             main = ja(); sub = en();
-              }
-              const row = el('div', 'kk-line' + (i < lines.length - 1 || live ? ' old' : ''));
-              const top = el('div', 'kk-main');
-              top.append(main);
-              if (x.term) { const chip = el('span', 'kk-note', '注'); chip.dataset.id = x.id; top.append(chip); }
-              row.append(top);
-              if (sub) { const below = el('div', 'kk-sub'); below.append(sub); row.append(below); }
-              return row;
-            }).concat(live ? [(() => {
-              const row = el('div', 'kk-line live'), top = el('div', 'kk-main', live);
-              row.append(top);
-              return row;
-            })()] : []));
+            const rows = lines.map((x, i) => line('kk-line' + (i < lines.length - 1 || live ? ' old' : ''), x.ja));
+            if (live) rows.push(line('kk-line live', live));
+            l.replaceChildren(...rows);
             place();
           } catch (e) { log('show failed: ' + e); }
         };
-        document.addEventListener('click', e => {
-          const t = e.target.closest && e.target.closest('#kikitori-subs .kk-note');
-          if (t) { e.stopPropagation(); e.preventDefault(); post('kkExplain', { id: t.dataset.id }); }
-        }, true);
         })();
         """
 }

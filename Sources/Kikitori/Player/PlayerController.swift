@@ -47,7 +47,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
         webView.allowsBackForwardNavigationGestures = true
         super.init()
-        for name in ["kkState", "kkExplain", "kkLog"] { controller.add(self, contentWorld: .page, name: name) }
+        for name in ["kkState", "kkLog"] { controller.add(self, contentWorld: .page, name: name) }
         webView.navigationDelegate = self
         load("https://www.youtube.com")
         observeSubtitles()
@@ -127,14 +127,6 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
             }
         case "kkLog":
             log.notice("page: \(body["message"] as? String ?? "", privacy: .public)")
-        case "kkExplain":
-            let model = AppModel.shared
-            if let id = (body["id"] as? String).flatMap(UUID.init(uuidString:)),
-               let line = model.session?.lines.first(where: { $0.id == id }) {
-                // The explanation shows beside the video, which full screen would hide.
-                if webView.fullscreenState != .notInFullscreen { webView.closeAllMediaPresentations(completionHandler: nil) }
-                model.focusExplanation(line)
-            }
         default: break
         }
     }
@@ -188,7 +180,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         guard model.source?.id == Self.sourceID, model.isLive else { if !lastShown.isEmpty { show([], live: "") }; return }
         let live = model.hearing
         let count = max(model.prefs.overlayLines - (live.isEmpty ? 0 : 1), live.isEmpty ? 1 : 0)
-        let lines = model.recentHeard.suffix(count).map { ["id": $0.id.uuidString, "ja": $0.ja] }
+        let lines = model.recentHeard.suffix(count).map { ["ja": $0.ja] }
         show(Array(lines), live: live)
     }
 
@@ -197,7 +189,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
               let json = String(data: data, encoding: .utf8),
               let liveData = try? JSONSerialization.data(withJSONObject: [live]),
               let liveJSON = String(data: liveData, encoding: .utf8) else { return }
-        let script = "window.__kikitori && window.__kikitori.show(\(json), 'japaneseOnly', \(liveJSON)[0])"
+        let script = "window.__kikitori && window.__kikitori.show(\(json), \(liveJSON)[0])"
         guard script != lastShown else { return }
         lastShown = lines.isEmpty && live.isEmpty ? "" : script
         webView.evaluateJavaScript(script, in: nil, in: .page)

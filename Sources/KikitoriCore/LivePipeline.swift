@@ -50,12 +50,15 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         let cut = Task { [vad, maxChunk, preview] in
             var chunker = Chunker(vad: vad)
             chunker.maxChunk = maxChunk
-            var heard = 0   // samples so far: the live line's clock, even through silence
+            // Samples fed so far: the live line's clock, which ages its words out even through
+            // silence. A quarter-second step is fine enough for that.
+            var fed = 0, clock = 0.0
             for await samples in audio {
                 if preview != nil {
                     toPreview.yield(samples)
-                    heard += samples.count
-                    await live.advance(to: Double(heard) / 16_000)
+                    fed += samples.count
+                    let time = Double(fed) / 16_000
+                    if time - clock >= 0.25 { clock = time; await live.advance(to: time) }
                 }
                 for chunk in await chunker.append(samples) { toRecognize.yield(chunk) }
             }
@@ -71,6 +74,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
             } catch {
                 Logger(subsystem: "app.kikitori", category: "pipeline").error("live line stopped: \(error, privacy: .public)")
             }
+            toPreview.finish()   // nobody reads it any more: later audio is dropped, not buffered
             await live.clear()
         }
         let recognize = Task { [engine, contextTerms] in

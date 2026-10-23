@@ -85,6 +85,8 @@ struct PlayerView: View {
 /// transcript, which follows the newest line.
 struct WatchInspector: View {
     @Environment(AppModel.self) var model
+    /// True while the end of the transcript is in view: only then do new lines scroll it.
+    @State private var following = true
 
     var lines: [TranscriptLine] { model.session?.lines ?? [] }
     var focused: TranscriptLine? { lines.first { $0.id == model.explainFocus } }
@@ -111,13 +113,16 @@ struct WatchInspector: View {
                         LiveLineSlot(textSize: model.prefs.transcriptTextSize - 1,
                                      placeholder: lines.isEmpty ? (model.isLive ? "Waiting for Japanese speech…"
                                                                   : "Press Start Subtitles to see the transcript here.") : nil,
-                                     proxy: proxy)
+                                     proxy: following ? proxy : nil)
+                        Color.clear.frame(height: 1).id("bottom")
+                            .onAppear { following = true }
+                            .onDisappear { following = false }
                     }
                     .padding(8)
                 }
                 .defaultScrollAnchor(.bottom)
-                .onChange(of: lines.last?.id) { _, id in
-                    if let id { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .bottom) } }
+                .onChange(of: lines.last?.id) {
+                    if following { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) } }
                 }
             }
         }

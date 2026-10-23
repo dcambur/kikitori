@@ -11,9 +11,13 @@ struct OverlayView: View {
     @State private var explaining: TranscriptLine?
 
     var prefs: Preferences { model.prefs }
-    /// The newest lines, unless speech stopped a while ago: then new live words show alone.
+    /// The newest lines, unless speech stopped a while ago: then new live words show alone. Over
+    /// the built-in player in full screen, only lines with English (or on their way to it): the
+    /// video already shows the Japanese.
     var lines: [TranscriptLine] {
-        Date.now.timeIntervalSince(lastLineAt) > 8 ? [] : Array((model.session?.lines ?? []).suffix(prefs.overlayLines))
+        guard Date.now.timeIntervalSince(lastLineAt) <= 8 else { return [] }
+        let recent = Array((model.session?.lines ?? []).suffix(prefs.overlayLines))
+        return englishOverVideo ? recent.filter { $0.en != nil || model.pendingLines.contains($0.id) } : recent
     }
     /// Over the built-in player in full screen, the video already has the Japanese.
     var englishOverVideo: Bool { model.source?.id == PlayerController.sourceID && PlayerController.shared.isFullScreen }
