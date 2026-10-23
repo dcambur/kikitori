@@ -123,7 +123,11 @@ enum PlayerTest {
                 const v = document.querySelector('video.html5-main-video') || document.querySelector('video');
                 const l = document.getElementById('kikitori-subs');
                 const r = e => { if (!e) return null; const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round); };
-                return JSON.stringify({ layer: !!l, parent: l && l.parentElement ? (l.parentElement.id || l.parentElement.className) : null,
+                const mp = document.getElementById('movie_player');
+                const track = mp && mp.getAudioTrack ? mp.getAudioTrack() : null;
+                const info = track && track.getLanguageInfo ? track.getLanguageInfo() : null;
+                return JSON.stringify({ audio: info ? info.getName() + (track.isAutoDubbed() ? ' (auto-dub)' : '') : null,
+                                        layer: !!l, parent: l && l.parentElement ? (l.parentElement.id || l.parentElement.className) : null,
                                         text: l ? l.innerText.slice(0, 60) : '', layerBox: r(l), videoBox: r(v), playing: v ? !v.paused : false });
                 """, contentWorld: .page)
             let lines = model.session?.lines ?? []

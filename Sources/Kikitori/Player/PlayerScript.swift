@@ -5,6 +5,8 @@
 ///   streams from googlevideo.com) and a routed element goes quiet. The app taps its own WebKit
 ///   process instead (`AudioSources.ownWebKitProcesses`).
 /// - State: `kkState` every 500 ms (time, paused, rate, live, title, url).
+/// - Audio track: YouTube may play an AI dub in the viewer's language (auto-dubbing); once per
+///   video, an auto-dubbed track is switched to the original, so we hear the streamers themselves.
 /// - Subtitles: `__kikitori.show(lines)` draws them in a layer inside the player element (so they
 ///   follow theatre mode, the miniplayer and full screen), bottom-centre on the picture itself.
 ///   Built with DOM calls, never HTML strings: YouTube requires Trusted Types, so assigning
@@ -33,7 +35,36 @@ enum PlayerScript {
           // the site rebuilt its player are drawn as soon as the player is there.
           if (lastShow) { const v = video(); if (v && (!layer || layer.parentElement !== playerBox(v))) kk.show(...lastShow); }
           place();
+          keepOriginalAudio();
         }, 500);
+
+        // ---- audio track ---------------------------------------------------------
+        // YouTube's player marks the original track with an id ending in ".4" (e.g. "ja.4"); dubs
+        // say isAutoDubbed(). Decided once per video, so a track the viewer picks later is kept.
+        let audioCheckedFor = null;
+        function keepOriginalAudio() {
+          const p = document.getElementById('movie_player');
+          if (!p || typeof p.getAvailableAudioTracks !== 'function' || typeof p.setAudioTrack !== 'function') return;
+          if (p.classList.contains('ad-showing')) return;          // an ad's tracks are not the video's
+          const data = typeof p.getVideoData === 'function' ? p.getVideoData() : null;
+          const vid = (data && data.video_id) || new URLSearchParams(location.search).get('v');
+          if (!vid || vid === audioCheckedFor) return;
+          const tracks = p.getAvailableAudioTracks() || [];
+          const current = typeof p.getAudioTrack === 'function' ? p.getAudioTrack() : null;
+          // Decide only once the video's own tracks are known: while it loads (or for a single
+          // track) the player reports one placeholder track, which says nothing about dubbing.
+          if (!current || tracks.length < 2) return;
+          audioCheckedFor = vid;
+          const info = t => { try { return t.getLanguageInfo(); } catch (e) { return null; } };
+          const id = t => { const i = info(t); return (i && typeof i.getId === 'function' && i.getId()) || ''; };
+          const name = t => { const i = info(t); return (i && typeof i.getName === 'function' && i.getName()) || id(t); };
+          const dubbed = t => { try { return !!t.isAutoDubbed(); } catch (e) { return false; } };
+          if (!dubbed(current)) return;
+          const original = tracks.find(t => id(t).split('.')[1] === '4') || tracks.find(t => !dubbed(t));
+          if (!original || id(original) === id(current)) return;
+          p.setAudioTrack(original);
+          log('audio: ' + name(current) + ' is an auto-dub; switched to ' + name(original));
+        }
 
         // ---- subtitles ---------------------------------------------------------
         // Sizes are in cqw: a percentage of the layer, which is as wide as the picture.
