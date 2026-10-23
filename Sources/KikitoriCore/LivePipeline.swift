@@ -3,8 +3,10 @@ import Foundation
 
 /// Audio in, subtitle events out: chunker → speech engine → filter → translator.
 ///
-/// Two stages run side by side: speech recognition takes chunks in order, and translation takes
-/// transcripts in order, so a slow translation never delays recognition of the next chunk.
+/// Three stages run side by side: chunking reads audio as it arrives, speech recognition takes
+/// chunks in order, and translation takes transcripts in order. The queues between them are
+/// unbounded, because capture streams keep only their newest buffers: if reading audio waited on
+/// a slow recognition, speech would be lost and every later time would come out early.
 /// Without a translator (no key, offline, budget cap) it still emits the Japanese.
 public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
     public enum Event: Sendable {
@@ -12,7 +14,8 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         /// session began).
         case heard(time: Double, duration: Double, ja: String, asrSeconds: Double)
         case translated(time: Double, lines: [TranscriptLine], cost: Double, seconds: Double, tokens: Int)
-        case translationFailed(time: Double, ClaudeClient.Failure)
+        /// `cost` and `tokens` are what the API billed for an answer that couldn't be used (0 if none).
+        case translationFailed(time: Double, ClaudeClient.Failure, cost: Double, tokens: Int)
         /// The chunk was not sent for translation (no translator, or Japanese only right now).
         case translationSkipped(time: Double)
     }
@@ -33,24 +36,28 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
 
     public func run(_ audio: AsyncStream<[Float]>) -> AsyncStream<Event> {
         let (events, emit) = AsyncStream.makeStream(of: Event.self)
+        let (chunks, toRecognize) = AsyncStream.makeStream(of: Chunker<VAD>.Chunk.self)
         let (heard, toTranslate) = AsyncStream.makeStream(of: (Double, String).self)
         let shouldTranslate = shouldTranslate
-        let recognize = Task { [engine, vad, contextTerms, maxChunk] in
+        let cut = Task { [vad, maxChunk] in
             var chunker = Chunker(vad: vad)
             chunker.maxChunk = maxChunk
-            func handle(_ chunk: Chunker<VAD>.Chunk) async {
+            for await samples in audio {
+                for chunk in await chunker.append(samples) { toRecognize.yield(chunk) }
+            }
+            for chunk in chunker.finish() { toRecognize.yield(chunk) }
+            toRecognize.finish()
+        }
+        let recognize = Task { [engine, contextTerms] in
+            for await chunk in chunks {
                 let start = Date()
                 let raw = (try? await engine.transcribe(chunk.samples, context: contextTerms)) ?? ""
                 let ja = TranscriptFilter.clean(raw)
-                guard !ja.isEmpty else { return }
+                guard !ja.isEmpty else { continue }
                 emit.yield(.heard(time: chunk.start, duration: chunk.duration, ja: ja,
                                   asrSeconds: Date().timeIntervalSince(start)))
                 toTranslate.yield((chunk.start, ja))
             }
-            for await samples in audio {
-                for chunk in await chunker.append(samples) { await handle(chunk) }
-            }
-            for chunk in chunker.finish() { await handle(chunk) }
             toTranslate.finish()
         }
         let translate = Task { [translator] in
@@ -66,22 +73,22 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                         TranscriptLine(time: time, ja: $0.ja.isEmpty ? ja : $0.ja, en: $0.en,
                                        note: $0.note.isEmpty ? nil : $0.note, term: $0.term.isEmpty ? nil : $0.term)
                     }
-                    let u = r.usage
-                    let tokens = u.inputTokens + u.outputTokens + (u.cacheReadInputTokens ?? 0) + (u.cacheCreationInputTokens ?? 0)
                     emit.yield(.translated(time: time, lines: lines, cost: r.cost,
-                                           seconds: Date().timeIntervalSince(start), tokens: tokens))
+                                           seconds: Date().timeIntervalSince(start), tokens: r.usage.total))
+                } catch let billed as ClaudeClient.BilledFailure {
+                    emit.yield(.translationFailed(time: time, billed.failure, cost: billed.cost, tokens: billed.usage.total))
                 } catch let failure as ClaudeClient.Failure {
-                    emit.yield(.translationFailed(time: time, failure))
+                    emit.yield(.translationFailed(time: time, failure, cost: 0, tokens: 0))
                 } catch {
-                    emit.yield(.translationFailed(time: time, .unexpected(status: 0, "\(error)")))
+                    emit.yield(.translationFailed(time: time, .unexpected(status: 0, "\(error)"), cost: 0, tokens: 0))
                 }
             }
         }
         Task {
-            _ = await (recognize.value, translate.value)
+            _ = await (cut.value, recognize.value, translate.value)
             emit.finish()
         }
-        emit.onTermination = { _ in recognize.cancel(); translate.cancel() }
+        emit.onTermination = { _ in cut.cancel(); recognize.cancel(); translate.cancel() }
         return events
     }
 }

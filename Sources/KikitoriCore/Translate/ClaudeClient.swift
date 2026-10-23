@@ -82,6 +82,9 @@ public struct ClaudeClient: Sendable {
             cacheCreationInputTokens = cacheWrite; cacheReadInputTokens = cacheRead
         }
 
+        /// Every token billed, cached or not.
+        public var total: Int { inputTokens + outputTokens + (cacheReadInputTokens ?? 0) + (cacheCreationInputTokens ?? 0) }
+
         enum CodingKeys: String, CodingKey {
             case inputTokens = "input_tokens", outputTokens = "output_tokens"
             case cacheCreationInputTokens = "cache_creation_input_tokens"
@@ -96,8 +99,17 @@ public struct ClaudeClient: Sendable {
         case overloaded                         // 500/529/503
         case offline                            // no network
         case refusal                            // stop_reason "refusal"
+        case truncated                          // stop_reason "max_tokens": the answer was cut off
         case badRequest(String)                 // 400 other than credits: a bug on our side
         case unexpected(status: Int, String)
+    }
+
+    /// An answer the API billed but that can't be used: refused, cut off, or not the JSON asked
+    /// for. Carries the usage and cost so the spend still counts toward the budget.
+    public struct BilledFailure: Error, Sendable {
+        public var failure: Failure
+        public var usage: Usage
+        public var cost: Double
     }
 
     public static let fallbackBeta = "server-side-fallback-2026-07-01"
@@ -111,6 +123,26 @@ public struct ClaudeClient: Sendable {
         self.transport = transport
     }
 
+    /// Sends `request` and decodes its text as the JSON `T`. Anything wrong with an answer the API
+    /// already billed throws `BilledFailure`.
+    public func answer<T: Decodable>(_ request: Request, as type: T.Type, pricing: Pricing) async throws
+        -> (value: T, response: Response, cost: Double) {
+        let response = try await send(request)
+        let cost = pricing.cost(response.usage, model: response.model, requested: request.model)
+        func billed(_ failure: Failure) -> BilledFailure { .init(failure: failure, usage: response.usage, cost: cost) }
+        switch response.stopReason {
+        case "refusal": throw billed(.refusal)
+        case "max_tokens": throw billed(.truncated)
+        default: break
+        }
+        do {
+            return (try JSONDecoder().decode(T.self, from: Data(response.text.utf8)), response, cost)
+        } catch {
+            throw billed(.unexpected(status: 200, "The answer isn’t the JSON asked for: \(error)"))
+        }
+    }
+
+    /// Sends `request`; any 200 answer comes back, whatever its stop reason (`answer` checks it).
     public func send(_ request: Request) async throws -> Response {
         var req = URLRequest(url: baseURL)
         req.httpMethod = "POST"
@@ -132,9 +164,7 @@ public struct ClaudeClient: Sendable {
             throw Failure.offline
         }
         guard http.statusCode == 200 else { throw Self.failure(status: http, body: data) }
-        let response = try JSONDecoder().decode(Response.self, from: data)
-        if response.stopReason == "refusal" { throw Failure.refusal }
-        return response
+        return try JSONDecoder().decode(Response.self, from: data)
     }
 
     static func failure(status http: HTTPURLResponse, body: Data) -> Failure {

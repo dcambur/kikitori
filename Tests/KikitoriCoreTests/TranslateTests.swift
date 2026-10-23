@@ -131,10 +131,49 @@ func messageJSON(text: String, model: String = "claude-haiku-5-5", stop: String 
         #expect(await failure(400, #"{"error":{"message":"bad field"}}"#) == .badRequest("bad field"))
     }
 
-    @Test func refusalIsAnError() async {
-        let client = ClaudeClient(apiKey: "k", transport: StubTransport([(200, messageJSON(text: "", stop: "refusal"), [:])]))
-        let req = ClaudeClient.Request(model: "m", maxTokens: 1, system: [], messages: [.user("x")])
-        await #expect(throws: ClaudeClient.Failure.refusal) { try await client.send(req) }
+    /// What `answer` throws for a 200 with this stop reason and text, as Haiku.
+    func billed(stop: String, text: String) async -> ClaudeClient.BilledFailure? {
+        let stub = StubTransport([(200, messageJSON(text: text, stop: stop, input: 1_000_000, output: 0), [:])])
+        let req = ClaudeClient.Request(model: LiveTranslator.model, maxTokens: 1, system: [], messages: [.user("x")])
+        do { _ = try await ClaudeClient(apiKey: "k", transport: stub).answer(req, as: [String: String].self, pricing: .bundled); return nil }
+        catch { return error as? ClaudeClient.BilledFailure }
+    }
+
+    @Test func unusableAnswersStillCarryTheirCost() async {
+        let refusal = await billed(stop: "refusal", text: "")
+        #expect(refusal?.failure == .refusal)
+        #expect(refusal.map { abs($0.cost - 0.10) < 1e-9 } == true)        // 1M Haiku input tokens
+        #expect(await billed(stop: "max_tokens", text: #"{"a":"#)?.failure == .truncated)
+        let garbled = await billed(stop: "end_turn", text: "not json")
+        #expect(garbled.map { $0.usage.inputTokens == 1_000_000 && $0.cost > 0 } == true)
+    }
+
+    @Test func explainerCutOffByThinkingIsBilled() async {
+        let stub = StubTransport([(200, messageJSON(text: #"{"term":"#, model: "claude-sonnet-5-5", stop: "max_tokens",
+                                                    input: 1000, output: 4096), [:])])
+        do {
+            _ = try await Explainer(client: ClaudeClient(apiKey: "k", transport: stub))
+                .explain(TranscriptLine(time: 0, ja: "草"), context: [], profile: nil)
+            Issue.record("expected a billed failure")
+        } catch let billed as ClaudeClient.BilledFailure {
+            #expect(billed.failure == .truncated)
+            #expect(abs(billed.cost - (1000 * 2.0 + 4096 * 10.0) / 1_000_000) < 1e-9)
+        } catch {
+            Issue.record("unexpected \(error)")
+        }
+    }
+
+    @Test func pipelineReportsTheCostOfAFailedTranslation() async {
+        let stub = StubTransport([(200, messageJSON(text: "", stop: "refusal", input: 500, output: 10), [:])])
+        let translator = LiveTranslator(client: ClaudeClient(apiKey: "k", transport: stub), profile: nil)
+        let pipeline = LivePipeline(engine: FakeEngine(), translator: translator, vad: EnergyVAD())
+        let audio = AsyncStream<[Float]> { c in c.yield(signal([(false, 1), (true, 2), (false, 2)])); c.finish() }
+        var failures: [(ClaudeClient.Failure, Double, Int)] = []
+        for await event in pipeline.run(audio) {
+            if case let .translationFailed(_, failure, cost, tokens) = event { failures.append((failure, cost, tokens)) }
+        }
+        #expect(failures.count == 1)
+        #expect(failures.first.map { $0.0 == .refusal && $0.1 > 0 && $0.2 == 510 } == true)
     }
 
     @Test func sonnetExplainerSendsFallbackBeta() async throws {
@@ -153,5 +192,11 @@ func messageJSON(text: String, model: String = "claude-haiku-5-5", stop: String 
         let usage = ClaudeClient.Usage(input: 1_000_000, output: 1_000_000, cacheWrite: 1_000_000, cacheRead: 1_000_000)
         #expect(abs(Pricing.bundled.cost(usage, model: "claude-haiku-5-5") - (0.10 + 0.50 + 0.125 + 0.01)) < 1e-9)
         #expect(Pricing.bundled.cost(usage, model: "unknown") == 0)
+    }
+
+    @Test func unpricedModelIdsAreNeverFree() {
+        let usage = ClaudeClient.Usage(input: 1_000_000, output: 0)
+        #expect(abs(Pricing.bundled.cost(usage, model: "claude-sonnet-5-5-20261001") - 2.0) < 1e-9)   // dated id
+        #expect(abs(Pricing.bundled.cost(usage, model: "claude-other", requested: "claude-sonnet-5-5") - 2.0) < 1e-9)
     }
 }

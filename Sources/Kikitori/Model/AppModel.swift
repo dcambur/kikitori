@@ -77,6 +77,7 @@ final class AppModel {
 
     private var capture: (any AudioCapture)?
     private var pipelineTask: Task<Void, Never>?
+    private var captureGeneration = 0
     private var translator: LiveTranslator?
     private var pendingEnds: [Double: Date] = [:]   // chunk start → when its speech ended (wall clock)
     private var saveTimer: Timer?
@@ -185,6 +186,8 @@ final class AppModel {
             watchdog = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated { self?.checkSession() }
             }
+        } catch is CancellationError {
+            // Stopped while starting: stop() already reset everything.
         } catch {
             state = .idle
             raise(.permissionRevoked)
@@ -196,9 +199,22 @@ final class AppModel {
     func togglePause() async {
         switch state {
         case .listening: stopCapture(); state = .paused
-        case .paused:
-            do { try await startCapture(); state = .listening } catch { raise(.permissionRevoked) }
+        case .paused: await resume()
         default: break
+        }
+    }
+
+    /// Start capturing again. Only acts when paused, so a second call (double click, hotkey,
+    /// auto-resume after the source relaunched) while one is starting or done changes nothing.
+    func resume() async {
+        guard state == .paused else { return }
+        do {
+            try await startCapture()
+            state = .listening
+        } catch is CancellationError {
+            // Another resume won, or the session stopped or paused again meanwhile.
+        } catch {
+            raise(.permissionRevoked)
         }
     }
 
@@ -217,15 +233,23 @@ final class AppModel {
         state = .idle
     }
 
+    /// Throws `CancellationError` when, during its awaits, capture was stopped (stop, pause, source
+    /// quit) or another start got there first: the newest decision wins and no capture leaks.
     private func startCapture() async throws {
         guard let source else { return }
+        let generation = captureGeneration
         let engine = AppleSpeechEngine()
         try await engine.prepare()
+        let vad = try await SileroVAD.load()
+        if source.id.hasPrefix("mic:"), !(await AVCaptureDevice.requestAccess(for: .audio)) {
+            throw CocoaError(.userCancelled)
+        }
+        // No awaits from here on, so nothing can change between this check and the install.
+        guard generation == captureGeneration, self.capture == nil else { throw CancellationError() }
         let capture: any AudioCapture
         if source.id == PlayerController.sourceID {
             capture = try PlayerController.shared.makeAnyCapture()
         } else if source.id.hasPrefix("mic:") {
-            guard await AVCaptureDevice.requestAccess(for: .audio) else { throw CocoaError(.userCancelled) }
             let mic = MicrophoneCapture()
             try mic.start(device: AudioDeviceID(source.id.dropFirst(4)))
             capture = mic
@@ -238,8 +262,7 @@ final class AppModel {
         }
         self.capture = capture
         lastSoundAt = .now
-        var pipeline = LivePipeline(engine: engine, translator: translator, vad: try await SileroVAD.load(),
-                                    contextTerms: [])
+        var pipeline = LivePipeline(engine: engine, translator: translator, vad: vad, contextTerms: [])
         pipeline.maxChunk = prefs.maxChunk
         pipeline.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
         let offset = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
@@ -297,7 +320,7 @@ final class AppModel {
         sourceQuitAt = nil
         Task {
             try? await Task.sleep(for: .seconds(3))   // let the app start its audio helpers
-            await togglePause()
+            await resume()                            // not a toggle: the user may have resumed already
         }
     }
 
@@ -305,7 +328,7 @@ final class AppModel {
     func restartPlayerCapture() async {
         guard state == .listening, source?.id == PlayerController.sourceID else { return }
         stopCapture()
-        do { try await startCapture() } catch { raise(.permissionRevoked) }
+        do { try await startCapture() } catch is CancellationError {} catch { raise(.permissionRevoked) }
     }
 
     /// Push the current profile and stream info to the live translator.
@@ -316,6 +339,7 @@ final class AppModel {
     }
 
     private func stopCapture() {
+        captureGeneration += 1   // a start still awaiting gives up instead of installing its capture
         capture?.stop()
         capture = nil
         pipelineTask?.cancel()
@@ -363,8 +387,14 @@ final class AppModel {
             saveLedgerSoon()
         case let .translationSkipped(time):
             settle(time + offset, in: &record)
-        case let .translationFailed(time, failure):
+        case let .translationFailed(time, failure, cost, tokens):
             settle(time + offset, in: &record)
+            if tokens > 0 {   // billed even though there is nothing to show: it still counts toward the cap
+                record.cost += cost
+                ledger.entries.append(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live,
+                                                 cost: cost, tokens: tokens))
+                saveLedgerSoon()
+            }
             consecutiveFailures += 1
             switch failure {
             case .invalidKey: raise(.keyInvalid)
@@ -404,7 +434,7 @@ final class AppModel {
 
     func explain(_ line: TranscriptLine, again: Bool = false) {
         guard let key = KeychainStore.apiKey() else { explain[line.id] = .failed("Add an API key in Settings › Account."); return }
-        if prefs.capAction == .noExplain && spentThisCycle >= prefs.monthlyCap && !capOverride {
+        if capReached {   // every cap action but "Only warn me" stops explanations, the dearest calls
             explain[line.id] = .failed("Monthly cap reached. Explanations are paused.")
             return
         }
@@ -425,18 +455,23 @@ final class AppModel {
                 session?.cost += r.cost
                 if prefs.saveExplanations { session?.explanations[line.id, default: []].append(r.explanation) }
                 saveLedgerSoon()
-            } catch let f as ClaudeClient.Failure {
+            } catch {
+                if let billed = error as? ClaudeClient.BilledFailure {   // billed with nothing to show: still counts
+                    ledger.entries.append(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
+                                                     cost: billed.cost, tokens: billed.usage.inputTokens + billed.usage.outputTokens))
+                    session?.cost += billed.cost
+                    saveLedgerSoon()
+                }
                 guard !Task.isCancelled else { return }
-                let message: String = switch f {
-                case .offline: "You’re offline."
-                case .rateLimited, .overloaded: "Claude is busy right now."
-                case .invalidKey: "Your API key stopped working."
-                case .creditsExhausted: "No API credits left."
+                let failure = (error as? ClaudeClient.BilledFailure)?.failure ?? error as? ClaudeClient.Failure
+                let message: String = switch failure {
+                case .offline?: "You’re offline."
+                case .rateLimited?, .overloaded?: "Claude is busy right now."
+                case .invalidKey?: "Your API key stopped working."
+                case .creditsExhausted?: "No API credits left."
                 default: "Claude didn’t answer in time."
                 }
                 explain[line.id] = .failed(message)
-            } catch {
-                if !Task.isCancelled { explain[line.id] = .failed("Claude didn’t answer in time.") }
             }
         }
     }

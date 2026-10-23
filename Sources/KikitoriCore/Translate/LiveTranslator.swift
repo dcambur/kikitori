@@ -72,14 +72,13 @@ public actor LiveTranslator {
             messages: history + [.user(ja)],
             thinking: .disabled,
             outputConfig: .init(effort: "low", format: .init(schema: schema)))
-        let response = try await client.send(request)
+        let (decoded, response, cost) = try await client.answer(request, as: Answer.self, pricing: pricing)
         let answer = response.text
-        let lines = try JSONDecoder().decode(Answer.self, from: Data(answer.utf8)).lines
+        let lines = decoded.lines
             .filter { !$0.en.trimmingCharacters(in: .whitespaces).isEmpty }
             .map { Self.groundNote($0, heard: ja) }
         history += [.user(ja), .assistant(answer)]
-        return Result(lines: lines, usage: response.usage,
-                      cost: pricing.cost(response.usage, model: response.model), raw: answer)
+        return Result(lines: lines, usage: response.usage, cost: cost, raw: answer)
     }
 
     /// A note survives only if its term is in what was actually heard (or in the corrected line):

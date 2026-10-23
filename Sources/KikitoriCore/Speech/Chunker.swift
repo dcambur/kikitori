@@ -78,15 +78,18 @@ public struct Chunker<VAD: VoiceActivityDetector>: Sendable {
         let frameSec = Double(vad.frameSize) / Self.rate
         let length = Double(probs.count) * frameSec
         // Leading silence: keep only `padding` of it so chunks start near speech.
+        // Durations round up to whole frames: Silero's frames are 0.256 s, so rounding down would
+        // turn the 0.2 s padding into none and a 0.5 s pause into a single frame.
+        func frames(_ seconds: Double) -> Int { Int((seconds / frameSec - 1e-9).rounded(.up)) }
         if !probs.contains(where: { $0 >= threshold }) {
-            let keep = Int(padding / frameSec)
+            let keep = frames(padding)
             if probs.count > keep { dropFront(probs.count - keep) }
             return nil
         }
-        let silenceFrames = Int(minSilence / frameSec)
+        let silenceFrames = frames(minSilence)
         if length >= minChunk, probs.count > silenceFrames,
            probs.suffix(silenceFrames).allSatisfy({ $0 < threshold }) {
-            return makeChunk(frames: probs.count - silenceFrames + Int(padding / frameSec))
+            return makeChunk(frames: probs.count - silenceFrames + frames(padding))
         }
         if length >= maxChunk {
             let window = Int(3.0 / frameSec)

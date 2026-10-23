@@ -49,6 +49,21 @@ func signal(_ parts: [(speech: Bool, seconds: Double)]) -> [Float] {
         b += pieces.finish()
         #expect(a == b)
     }
+
+    @Test func paddingAndPausesSurviveSilerosLongFrames() async {
+        var c = Chunker(vad: WideEnergyVAD())
+        // Speech starts on a frame boundary (12 frames in) and has a 0.3 s dip, shorter than minSilence.
+        let chunks = await c.append(signal([(false, 3.072), (true, 3.072), (false, 0.3), (true, 1), (false, 3)])) + c.finish()
+        #expect(chunks.count == 1)
+        #expect(chunks.first.map { $0.start < 3.0 } == true)   // padding before speech is kept
+    }
+}
+
+/// EnergyVAD with Silero's frame size: 4096 samples, 0.256 s.
+struct WideEnergyVAD: VoiceActivityDetector {
+    let frameSize = 4096
+    var inner = EnergyVAD()
+    mutating func probability(_ frame: ArraySlice<Float>) async -> Float { await inner.probability(frame) }
 }
 
 @Suite struct TranscriptFilterTests {
@@ -89,6 +104,38 @@ struct FakeEngine: SpeechEngine {
         }
         #expect(heard.count == 2)
         #expect(skipped == heard)   // nothing is left waiting for English that will never come
+    }
+
+    @Test func slowRecognitionLosesNoAudio() async {
+        // Capture streams keep only the newest buffers (4 here), so audio intake must never wait on recognition.
+        let audio = signal([(false, 1), (true, 2), (false, 1), (true, 2), (false, 1), (true, 2), (false, 2)])
+        let (stream, feed) = AsyncStream.makeStream(of: [Float].self, bufferingPolicy: .bufferingNewest(4))
+        let pipeline = LivePipeline(engine: SlowEngine(delay: .milliseconds(400)), translator: nil, vad: EnergyVAD())
+        let events = pipeline.run(stream)
+        let producer = Task {
+            for i in stride(from: 0, to: audio.count, by: 1600) {   // 0.1 s pieces, faster than real time
+                feed.yield(Array(audio[i..<min(i + 1600, audio.count)]))
+                try? await Task.sleep(for: .milliseconds(1))
+            }
+            feed.finish()
+        }
+        var heard: [Double] = []
+        for await event in events { if case let .heard(time, _, _, _) = event { heard.append(time) } }
+        await producer.value
+        #expect(heard.count == 3)
+        // Speech starts at 1, 4 and 7 s; each chunk begins about 0.2 s of padding earlier.
+        for (time, speech) in zip(heard, [1.0, 4.0, 7.0]) { #expect(abs(time - (speech - 0.2)) < 0.1) }
+    }
+}
+
+/// Takes `delay` per chunk, like a cold model or a busy CPU.
+struct SlowEngine: SpeechEngine {
+    let name = "slow"
+    var delay: Duration
+    func prepare() async throws {}
+    func transcribe(_ samples: [Float], context: [String]) async throws -> String {
+        try await Task.sleep(for: delay)
+        return "こんにちは"
     }
 }
 

@@ -29,7 +29,7 @@ public enum KeyCheck {
             case .rateLimited, .overloaded: return .busy
             case .creditsExhausted: return .noCredit
             case .offline: return .network
-            case .refusal, .badRequest, .unexpected: return .valid
+            case .refusal, .truncated, .badRequest, .unexpected: return .valid
             }
         } catch {
             return .network

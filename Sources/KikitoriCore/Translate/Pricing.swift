@@ -12,9 +12,12 @@ public struct Pricing: Codable, Sendable {
         return try! JSONDecoder().decode(Pricing.self, from: Data(contentsOf: url))
     }()
 
-    /// US dollars for one response's usage; 0 for a model without a price.
-    public func cost(_ usage: ClaudeClient.Usage, model: String) -> Double {
-        guard let r = models[model] else { return 0 }
+    /// US dollars for one response's usage. `model` is the one that answered: a dated or fallback
+    /// id without a price of its own is priced as its base model, else as `requested`, so spend
+    /// never counts as free. 0 only when neither has a price.
+    public func cost(_ usage: ClaudeClient.Usage, model: String, requested: String? = nil) -> Double {
+        let base = models.keys.filter { model.hasPrefix($0) }.max { $0.count < $1.count }
+        guard let r = models[model] ?? base.flatMap({ models[$0] }) ?? requested.flatMap({ models[$0] }) else { return 0 }
         let tokens = Double(usage.inputTokens) * r.input + Double(usage.outputTokens) * r.output
             + Double(usage.cacheCreationInputTokens ?? 0) * r.cacheWrite
             + Double(usage.cacheReadInputTokens ?? 0) * r.cacheRead

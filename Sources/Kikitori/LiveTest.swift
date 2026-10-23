@@ -55,7 +55,8 @@ enum LiveTest {
                         cost += c
                         for l in lines { write(String(format: "[%5.1f | wall %5.1f] EN %@", time, wall, l.en ?? "")) }
                     case .translationSkipped: break
-                    case let .translationFailed(time, failure):
+                    case let .translationFailed(time, failure, c, _):
+                        cost += c
                         write(String(format: "[%5.1f] translation failed: %@", time, "\(failure)"))
                     }
                 }

@@ -46,10 +46,8 @@ public struct Explainer: Sendable {
             messages: [.user(ask)], thinking: .adaptive,
             outputConfig: .init(effort: "low", format: .init(schema: Self.schema)),
             fallbacks: "default")
-        let response = try await client.send(request)
-        let explanation = try JSONDecoder().decode(Explanation.self, from: Data(response.text.utf8))
-        return Result(explanation: explanation, usage: response.usage,
-                      cost: pricing.cost(response.usage, model: response.model))
+        let (explanation, response, cost) = try await client.answer(request, as: Explanation.self, pricing: pricing)
+        return Result(explanation: explanation, usage: response.usage, cost: cost)
     }
 
     static let schema: JSONValue = .strictObject([
