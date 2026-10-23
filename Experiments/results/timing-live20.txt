@@ -1,0 +1,21 @@
+# kk-spike-timing on the audio decoded by kk-spike-mse (live20.wav); summary only (the transcript timeline is left out)
+
+live20.wav: 90.7 s
+19 chunks
+
+== text with and without audioTimeRange: 19/19 chunks identical
+   recognition time: today 1.59 s, with times 1.58 s (19 chunks)
+
+== granularity: 430 runs, 432 characters, 1.00 chars/run, max 3; runs with >1 character: 1
+   run duration: median 120 ms, p90 300 ms, max 1620 ms; zero-length runs 1
+   runs starting before the previous one: 0
+
+== against the audio (energy, 10 ms frames; punctuation left out)
+   runs mostly over silence (<20 % loud frames): 34/395, refined 32/395
+   runs bridging a pause of ≥ 250 ms: 2/395
+   first run start − first loud frame:   n=19 median -60 ms, |err| median 110 ms, p90 230 ms, max 330 ms; early > 150 ms: 4
+                              refined:   n=19 median +0 ms, |err| median 10 ms, p90 230 ms, max 320 ms; early > 150 ms: 4
+   last run end − last loud frame:       n=19 median -50 ms, |err| median 60 ms, p90 430 ms, max 690 ms; early > 150 ms: 5
+   run start − onset after a pause:      n=45 median +50 ms, |err| median 130 ms, p90 430 ms, max 750 ms; early > 150 ms: 6
+                              refined:   n=45 median +0 ms, |err| median 50 ms, p90 210 ms, max 650 ms; early > 150 ms: 4
+

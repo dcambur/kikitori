@@ -1,0 +1,10 @@
+# kk-spike-gpu: two muted WKWebViews in one process, default and non-persistent data stores
+
+player A (default store): playing 612.7; player B (separate store): playing 612.5
+WebKit processes started for these two players:
+  70601 com.apple.WebKit.GPU
+  70603 com.apple.WebKit.Networking
+  70609 com.apple.WebKit.WebContent
+  70607 com.apple.WebKit.WebContent
+  70606 com.apple.WebKit.WebContent
+  70602 com.apple.WebKit.WebContent

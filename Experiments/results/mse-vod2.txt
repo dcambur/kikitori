@@ -1,0 +1,38 @@
+# kk-spike-mse 'https://www.youtube.com/watch?v=kLFsqvruEFs&t=600s' 50 vod2  (VOD, 雑談 archive)
+# 2026-10-23, M4 Pro, macOS 27.0.1 (26A434); not signed in; page muted
+
+page muted (WebKit _setPageMuted)
+  page: addSourceBuffer #0 on MediaSource ms1 ad=false audio/webm; codecs="opus"
+  page: addSourceBuffer #1 on MediaSource ms1 ad=false video/mp4; codecs="av01.0.04M.08"
+  page: audio track: en-US.10 is an auto-dub; switched to ja.4
+  page: addSourceBuffer #2 on MediaSource ms2 ad=false audio/webm; codecs="opus"
+  page: addSourceBuffer #3 on MediaSource ms2 ad=false video/mp4; codecs="av01.0.04M.08"
+[  2.1] t=0.00 paused=0 rate=1 ad=0 attached=msnil | 
+  page: audio track: ja.4 (original)
+  page: addSourceBuffer #0 on MediaSource ms1 ad=false audio/webm; codecs="opus"
+  page: addSourceBuffer #1 on MediaSource ms1 ad=false video/mp4; codecs="av01.0.04M.08"
+[  4.2] t=601.74 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2212.3 s | a#0(ms1) [[590,619.99000000000001]] ahead 18.2 s
+[  6.3] t=603.86 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2210.1 s | a#0(ms1) [[590,619.99000000000001]] ahead 16.1 s
+[  8.4] t=605.93 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2208.1 s | a#0(ms1) [[590,639.99000000000001]] ahead 34.1 s
+[ 10.5] t=608.05 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2205.9 s | a#0(ms1) [[590,639.99000000000001]] ahead 31.9 s
+[ 12.7] t=610.18 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2203.8 s | a#0(ms1) [[590,649.99000000000001]] ahead 39.8 s
+[ 14.7] t=612.21 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2201.8 s | a#0(ms1) [[590,649.99000000000001]] ahead 37.8 s
+[ 16.7] t=614.26 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2199.7 s | a#0(ms1) [[590,649.99000000000001]] ahead 35.7 s
+[ 18.8] t=616.28 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2197.7 s | a#0(ms1) [[590,649.99000000000001]] ahead 33.7 s
+[ 20.8] t=618.29 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2195.7 s | a#0(ms1) [[590,659.99000000000001]] ahead 41.7 s
+[ 22.8] t=620.40 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2193.6 s | a#0(ms1) [[590,659.99000000000001]] ahead 39.6 s
+[ 25.0] t=622.53 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2191.5 s | a#0(ms1) [[590,659.99000000000001]] ahead 37.5 s
+[ 27.1] t=624.67 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2189.3 s | a#0(ms1) [[590,669.99000000000001]] ahead 45.3 s
+[ 29.3] t=626.78 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2187.2 s | a#0(ms1) [[590,669.99000000000001]] ahead 43.2 s
+[ 31.4] t=628.89 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2185.1 s | a#0(ms1) [[590,679.99000000000001]] ahead 51.1 s
+[ 33.5] t=630.99 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2183.0 s | a#0(ms1) [[590,679.99000000000001]] ahead 49.0 s
+[ 35.6] t=633.12 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2180.9 s | a#0(ms1) [[590,679.99000000000001]] ahead 46.9 s
+[ 37.7] t=635.26 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2178.7 s | a#0(ms1) [[590,699.99000000000001]] ahead 64.7 s
+[ 39.9] t=637.39 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2176.6 s | a#0(ms1) [[590,699.99000000000001]] ahead 62.6 s
+[ 41.9] t=639.42 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2174.6 s | a#0(ms1) [[590,699.99000000000001]] ahead 60.6 s
+[ 44.0] t=641.55 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2172.4 s | a#0(ms1) [[590,709.99000000000001]] ahead 68.4 s
+[ 46.1] t=643.59 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2170.4 s | a#0(ms1) [[590,709.99000000000001]] ahead 66.4 s
+[ 48.2] t=645.68 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2168.3 s | a#0(ms1) [[590,709.99000000000001]] ahead 64.3 s
+[ 50.2] t=647.71 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2166.3 s | a#0(ms1) [[590,719.99000000000001]] ahead 72.3 s
+audio buffers: [{"appends":189,"buffered":[[590,719.99000000000001]],"id":0,"kb":1941,"last":{"blocks":0,"clusters":0,"init":false,"kind":"webm","t":null},"ms":1}]
+decodeAudioData of init + 189 segments: {"channels":2,"ok":true,"peak":0.76865899562835693,"rate":16000,"seconds":129.99350000000001}

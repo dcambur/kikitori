@@ -1,0 +1,26 @@
+# kk-spike-timing on make_truth.py output (macOS say, voice Kyoko, 70 words with known start/end)
+
+truth.wav: 35.8 s
+8 chunks
+
+== text with and without audioTimeRange: 8/8 chunks identical
+   recognition time: today 0.68 s, with times 0.69 s (8 chunks)
+
+== granularity: 160 runs, 160 characters, 1.00 chars/run, max 1; runs with >1 character: 0
+   run duration: median 180 ms, p90 300 ms, max 1020 ms; zero-length runs 0
+   runs starting before the previous one: 0
+
+== against the audio (energy, 10 ms frames; punctuation left out)
+   runs mostly over silence (<20 % loud frames): 10/144, refined 10/144
+   runs bridging a pause of ≥ 250 ms: 2/144
+   first run start − first loud frame:   n=8 median -160 ms, |err| median 150 ms, p90 180 ms, max 210 ms; early > 150 ms: 5
+                              refined:   n=8 median +0 ms, |err| median 0 ms, p90 0 ms, max 0 ms; early > 150 ms: 0
+   last run end − last loud frame:       n=8 median +10 ms, |err| median 50 ms, p90 90 ms, max 100 ms; early > 150 ms: 0
+   run start − onset after a pause:      n=20 median +0 ms, |err| median 90 ms, p90 150 ms, max 180 ms; early > 150 ms: 0
+                              refined:   n=20 median +0 ms, |err| median 0 ms, p90 90 ms, max 180 ms; early > 150 ms: 0
+
+== against ground truth (70 words, 40 matched by first character)
+   word start:         n=40 median -62 ms, |err| median 82 ms, p90 231 ms, max 296 ms; early > 150 ms: 9
+   word start refined: n=40 median -42 ms, |err| median 61 ms, p90 236 ms, max 296 ms; early > 150 ms: 5
+   word end:           n=45 median -6 ms, |err| median 42 ms, p90 99 ms, max 147 ms; early > 150 ms: 0
+

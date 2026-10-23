@@ -1,0 +1,84 @@
+# kk-spike-mse 'https://www.youtube.com/watch?v=kLFsqvruEFs&t=600s' 130 seek --seek 1500@14  (VOD seek; a 10 s mid-roll ad followed)
+# 2026-10-23, M4 Pro, macOS 27.0.1 (26A434); not signed in; page muted
+
+page muted (WebKit _setPageMuted)
+  page: addSourceBuffer #0 on MediaSource ms1 ad=false audio/webm; codecs="opus"
+  page: addSourceBuffer #1 on MediaSource ms1 ad=false video/mp4; codecs="av01.0.04M.08"
+  page: audio track: en-US.10 is an auto-dub; switched to ja.4
+  page: addSourceBuffer #2 on MediaSource ms2 ad=false audio/webm; codecs="opus"
+  page: addSourceBuffer #3 on MediaSource ms2 ad=false video/mp4; codecs="av01.0.04M.08"
+[  2.1] t=0.00 paused=0 rate=1 ad=0 attached=ms2 behind-seekable-end 2814.1 s | a#0(ms1) [] ahead - | a#2(ms2) [[590,619.99000000000001]] ahead -
+  page: addSourceBuffer #0 on MediaSource ms1 ad=false audio/webm; codecs="opus"
+  page: addSourceBuffer #1 on MediaSource ms1 ad=false video/mp4; codecs="av01.0.04M.08"
+  page: audio track: ja.4 (original)
+[  4.1] t=600.55 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2213.4 s | a#0(ms1) [[590,619.99000000000001]] ahead 19.4 s
+[  6.2] t=602.66 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2211.3 s | a#0(ms1) [[590,619.99000000000001]] ahead 17.3 s
+[  8.3] t=604.69 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2209.3 s | a#0(ms1) [[590,639.99000000000001]] ahead 35.3 s
+[ 10.3] t=606.74 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2207.3 s | a#0(ms1) [[590,639.99000000000001]] ahead 33.2 s
+[ 12.4] t=608.80 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 2205.2 s | a#0(ms1) [[590,639.99000000000001]] ahead 31.2 s
+[ 14.4] seek to 1500
+[ 14.4] t=1500.00 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 1314.0 s | a#0(ms1) [[590,649.99000000000001]] ahead -
+  page: addSourceBuffer #2 on MediaSource ms2 ad=true audio/webm; codecs="opus"
+  page: addSourceBuffer #3 on MediaSource ms2 ad=true video/mp4; codecs="av01.0.05M.08"
+[ 16.5] t=1.01 paused=0 rate=1 ad=1 attached=ms2 behind-seekable-end 20.1 s | a#0(ms1) [] ahead - | a#2(ms2) [[0,19.989999999999998]] ahead 19.0 s
+[ 18.6] t=3.16 paused=0 rate=1 ad=1 attached=ms2 behind-seekable-end 17.9 s | a#0(ms1) [] ahead - | a#2(ms2) [[0,19.989999999999998]] ahead 16.8 s
+[ 20.7] t=5.30 paused=0 rate=1 ad=1 attached=ms2 behind-seekable-end 15.8 s | a#0(ms1) [] ahead - | a#2(ms2) [[0,19.989999999999998]] ahead 14.7 s
+[ 22.9] t=7.41 paused=0 rate=1 ad=1 attached=ms2 behind-seekable-end 13.7 s | a#0(ms1) [] ahead - | a#2(ms2) [[0,21.07]] ahead 13.7 s
+[ 24.9] t=9.47 paused=0 rate=1 ad=1 attached=ms2 behind-seekable-end 11.6 s | a#0(ms1) [] ahead - | a#2(ms2) [[0,21.07]] ahead 11.6 s
+  page: addSourceBuffer #4 on MediaSource ms3 ad=false audio/webm; codecs="opus"
+  page: addSourceBuffer #5 on MediaSource ms3 ad=false video/mp4; codecs="av01.0.04M.08"
+[ 27.0] t=1500.52 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1313.5 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1519.99]] ahead 19.5 s
+[ 29.1] t=1502.61 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1311.4 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1519.99]] ahead 17.4 s
+[ 31.2] t=1504.73 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1309.3 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1519.99]] ahead 15.3 s
+[ 33.4] t=1506.85 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1307.2 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1539.99]] ahead 33.1 s
+[ 35.5] t=1508.99 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1305.0 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1539.99]] ahead 31.0 s
+[ 37.6] t=1511.09 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1302.9 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1549.99]] ahead 38.9 s
+[ 39.7] t=1513.22 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1300.8 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1549.99]] ahead 36.8 s
+[ 41.9] t=1515.35 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1298.7 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1549.99]] ahead 34.6 s
+[ 43.9] t=1517.43 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1296.6 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1549.99]] ahead 32.6 s
+[ 46.0] t=1519.44 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1294.6 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1559.99]] ahead 40.5 s
+[ 48.0] t=1521.44 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1292.6 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1559.99]] ahead 38.5 s
+[ 50.0] t=1523.53 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1290.5 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1559.99]] ahead 36.5 s
+[ 52.1] t=1525.60 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1288.4 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1578.1300000000001]] ahead 52.5 s
+[ 54.1] t=1527.61 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1286.4 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1579.99]] ahead 52.4 s
+[ 56.2] t=1529.66 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1284.3 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1579.99]] ahead 50.3 s
+[ 58.3] t=1531.79 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1282.2 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1579.99]] ahead 48.2 s
+[ 60.3] t=1533.82 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1280.2 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1579.99]] ahead 46.2 s
+[ 62.5] t=1535.98 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1278.0 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1599.99]] ahead 64.0 s
+[ 64.6] t=1538.09 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1275.9 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1599.99]] ahead 61.9 s
+[ 66.7] t=1540.18 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1273.8 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1599.99]] ahead 59.8 s
+[ 68.7] t=1542.22 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1271.8 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1609.99]] ahead 67.8 s
+[ 70.8] t=1544.29 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1269.7 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1609.99]] ahead 65.7 s
+[ 72.9] t=1546.35 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1267.7 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1619.99]] ahead 73.6 s
+[ 75.0] t=1548.48 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1265.5 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1619.99]] ahead 71.5 s
+[ 77.1] t=1550.55 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1263.5 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1619.99]] ahead 69.4 s
+[ 79.2] t=1552.69 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1261.3 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1619.99]] ahead 67.3 s
+[ 81.3] t=1554.80 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1259.2 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1629.99]] ahead 75.2 s
+[ 83.5] t=1556.94 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1257.1 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1629.99]] ahead 73.0 s
+[ 85.6] t=1559.06 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1254.9 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1639.99]] ahead 80.9 s
+[ 87.6] t=1561.12 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1252.9 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1639.99]] ahead 78.9 s
+[ 89.7] t=1563.23 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1250.8 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1639.99]] ahead 76.8 s
+[ 91.8] t=1565.25 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1248.8 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1659.99]] ahead 94.7 s
+[ 93.8] t=1567.26 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1246.7 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1659.99]] ahead 92.7 s
+[ 95.9] t=1569.39 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1244.6 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1659.99]] ahead 90.6 s
+[ 98.0] t=1571.53 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1242.5 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1659.99]] ahead 88.5 s
+[100.1] t=1573.63 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1240.4 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1659.99]] ahead 86.4 s
+[102.2] t=1575.64 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1238.4 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1679.99]] ahead 104.3 s
+[104.3] t=1577.78 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1236.2 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1679.99]] ahead 102.2 s
+[106.3] t=1579.79 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1234.2 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1689.99]] ahead 110.2 s
+[108.4] t=1581.92 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1232.1 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1689.99]] ahead 108.1 s
+[110.6] t=1584.05 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1230.0 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1689.99]] ahead 105.9 s
+[112.6] t=1586.08 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1227.9 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1689.99]] ahead 103.9 s
+[114.6] t=1588.10 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1225.9 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1699.99]] ahead 111.9 s
+[116.7] t=1590.19 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1223.8 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1699.99]] ahead 109.8 s
+[118.8] t=1592.30 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1221.7 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1709.99]] ahead 117.7 s
+[120.9] t=1594.34 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1219.7 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1709.99]] ahead 115.7 s
+[122.9] t=1596.37 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1217.6 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1709.99]] ahead 113.6 s
+[125.0] t=1598.50 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1215.5 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1718.1700000000001]] ahead 119.7 s
+[127.1] t=1600.58 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1213.4 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1719.99]] ahead 119.4 s
+[129.2] t=1602.65 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1211.3 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1719.99]] ahead 117.3 s
+[131.3] t=1604.78 paused=0 rate=1 ad=0 attached=ms3 behind-seekable-end 1209.2 s | a#0(ms1) [] ahead - | a#2(ms2) [] ahead - | a#4(ms3) [[1490,1719.99]] ahead 115.2 s
+audio buffers: [{"appends":143,"buffered":"gone","id":0,"kb":1285,"last":{"blocks":0,"clusters":0,"init":false,"kind":"webm","t":null},"ms":1},{"appends":58,"buffered":"gone","id":2,"kb":317,"last":{"blocks":0,"clusters":0,"init":false,"kin
+seek issued at page time 12226 ms
+decodeAudioData of init + 420 segments: {"channels":2,"ok":true,"peak":0.76505899429321289,"rate":16000,"seconds":232.89349999999999}
+WebCodecs AudioDecoder on demuxed blocks: {"blocks":12000,"error":null,"first":1490.001,"frames":12000,"gaps":1,"last":1729.981,"maxJumpMs":6.4999999999599822,"seconds":239.99350000004898,"track":{"channels":2,"codec":"A_OPUS","rate":48000,

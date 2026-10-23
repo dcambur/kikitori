@@ -18,6 +18,13 @@ let package = Package(
                 resources: [.process("Resources")]),
         .executableTarget(name: "Kikitori", dependencies: ["KikitoriCore"]),
         .executableTarget(name: "kikitori-cli", dependencies: ["KikitoriCore"]),
+        // Spikes for docs/design/realtime-sync.md (experiments, not shipped): see Experiments/README.md.
+        .executableTarget(name: "kk-spike-mse", path: "Experiments/mse-lookahead",
+                          swiftSettings: [.swiftLanguageMode(.v5)]),
+        .executableTarget(name: "kk-spike-timing", dependencies: ["KikitoriCore"], path: "Experiments/timing", exclude: ["make_truth.py", "karaoke.py"],
+                          swiftSettings: [.swiftLanguageMode(.v5)]),
+        .executableTarget(name: "kk-spike-gpu", path: "Experiments/gpu-process",
+                          swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(name: "KikitoriCoreTests", dependencies: ["KikitoriCore"],
                     resources: [.copy("Fixtures")]),
     ]

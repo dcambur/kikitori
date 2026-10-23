@@ -1,0 +1,21 @@
+# kk-spike-timing on the audio decoded by kk-spike-mse (vod2.wav); summary only (the transcript timeline is left out)
+
+vod2.wav: 130.0 s
+28 chunks
+
+== text with and without audioTimeRange: 28/28 chunks identical
+   recognition time: today 2.30 s, with times 2.29 s (28 chunks)
+
+== granularity: 457 runs, 459 characters, 1.00 chars/run, max 3; runs with >1 character: 1
+   run duration: median 180 ms, p90 360 ms, max 1500 ms; zero-length runs 0
+   runs starting before the previous one: 0
+
+== against the audio (energy, 10 ms frames; punctuation left out)
+   runs mostly over silence (<20 % loud frames): 54/423, refined 49/423
+   runs bridging a pause of ≥ 250 ms: 3/423
+   first run start − first loud frame:   n=28 median +40 ms, |err| median 120 ms, p90 680 ms, max 1090 ms; early > 150 ms: 0
+                              refined:   n=28 median +30 ms, |err| median 40 ms, p90 760 ms, max 1130 ms; early > 150 ms: 0
+   last run end − last loud frame:       n=28 median -10 ms, |err| median 100 ms, p90 940 ms, max 2000 ms; early > 150 ms: 9
+   run start − onset after a pause:      n=87 median +10 ms, |err| median 100 ms, p90 270 ms, max 790 ms; early > 150 ms: 8
+                              refined:   n=86 median +0 ms, |err| median 10 ms, p90 190 ms, max 700 ms; early > 150 ms: 2
+

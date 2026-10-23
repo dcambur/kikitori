@@ -1,0 +1,80 @@
+# kk-spike-mse 'https://www.youtube.com/@weathernews/live' 70 live20 --behind 20  (24/7 Japanese live, held 20 s behind)
+# 2026-10-23, M4 Pro, macOS 27.0.1 (26A434); not signed in; page muted
+
+page muted (WebKit _setPageMuted)
+  page: addSourceBuffer #0 on MediaSource ms1 ad=false audio/mp4; codecs="mp4a.40.2"
+  page: addSourceBuffer #1 on MediaSource ms1 ad=false video/webm; codecs="vp09.00.51.08.01.01.01.01.00"
+[  2.0] t=0.00 paused=<null> rate=<null> ad=0 attached=ms<null> | 
+  page: addSourceBuffer #0 on MediaSource ms1 ad=false audio/mp4; codecs="mp4a.40.2"
+  page: addSourceBuffer #1 on MediaSource ms1 ad=false video/webm; codecs="vp09.00.51.08.01.01.01.01.00"
+[  4.1] placed 20 s behind the seekable end (2827.213145529)
+[  4.1] t=2807.21 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3618.9 s | a#0(ms1) [[2826.0300000000002,2830.02]] ahead -
+        live: 20.8 s behind YouTube's live edge, at live head: 0, ingestion nan
+[  6.2] t=2808.79 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3617.3 s | a#0(ms1) [[2807.04,2819.04],[2826.0300000000002,2830.02]] ahead 10.2 s
+        live: 22.2 s behind YouTube's live edge, at live head: 0, ingestion 1792786358.488083
+[  8.3] t=2810.91 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3615.2 s | a#0(ms1) [[2807.04,2830.02]] ahead 19.1 s
+        live: 20.1 s behind YouTube's live edge, at live head: 0, ingestion 1792786360.617524
+[ 10.5] t=2813.03 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3613.1 s | a#0(ms1) [[2807.04,2830.02]] ahead 17.0 s
+        live: 18.0 s behind YouTube's live edge, at live head: 0, ingestion 1792786362.742597
+[ 12.6] t=2815.17 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3610.9 s | a#0(ms1) [[2807.04,2836.04]] ahead 20.9 s
+        live: 20.9 s behind YouTube's live edge, at live head: 0, ingestion 1792786364.881563
+[ 14.7] t=2817.23 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3608.9 s | a#0(ms1) [[2807.04,2841.0300000000002]] ahead 23.8 s
+        live: 21.8 s behind YouTube's live edge, at live head: 0, ingestion 1792786366.933808
+[ 16.7] t=2819.32 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3606.8 s | a#0(ms1) [[2807.04,2843.0300000000002]] ahead 23.7 s
+        live: 21.7 s behind YouTube's live edge, at live head: 0, ingestion 1792786369.043269
+[ 18.8] t=2821.36 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3604.7 s | a#0(ms1) [[2807.04,2845.02]] ahead 23.7 s
+        live: 21.7 s behind YouTube's live edge, at live head: 0, ingestion 1792786371.07336
+[ 20.9] t=2823.44 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3602.7 s | a#0(ms1) [[2807.04,2847.02]] ahead 23.6 s
+        live: 21.6 s behind YouTube's live edge, at live head: 0, ingestion 1792786373.158974
+[ 22.9] t=2825.47 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3600.6 s | a#0(ms1) [[2807.04,2849.02]] ahead 23.6 s
+        live: 21.5 s behind YouTube's live edge, at live head: 0, ingestion 1792786375.190227
+[ 25.0] t=2827.55 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3598.6 s | a#0(ms1) [[2807.04,2851.04]] ahead 23.5 s
+        live: 21.5 s behind YouTube's live edge, at live head: 0, ingestion 1792786377.271794
+[ 27.1] t=2829.63 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3596.5 s | a#0(ms1) [[2807.04,2853.04]] ahead 23.4 s
+        live: 21.4 s behind YouTube's live edge, at live head: 0, ingestion 1792786379.323347
+[ 29.1] t=2831.72 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3594.4 s | a#0(ms1) [[2807.04,2855.54]] ahead 23.8 s
+        live: 22.3 s behind YouTube's live edge, at live head: 0, ingestion 1792786381.40665
+[ 31.2] t=2833.77 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3592.3 s | a#0(ms1) [[2807.04,2857.73]] ahead 24.0 s
+        live: 22.3 s behind YouTube's live edge, at live head: 0, ingestion 1792786383.476499
+[ 33.3] t=2835.90 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3590.2 s | a#0(ms1) [[2807.04,2859.7199999999998]] ahead 23.8 s
+        live: 22.1 s behind YouTube's live edge, at live head: 0, ingestion 1792786385.594295
+[ 35.4] t=2838.02 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3588.1 s | a#0(ms1) [[2807.04,2861.8099999999999]] ahead 23.8 s
+        live: 22.0 s behind YouTube's live edge, at live head: 0, ingestion 1792786387.715251
+[ 37.5] t=2840.02 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3586.1 s | a#0(ms1) [[2807.04,2864]] ahead 24.0 s
+        live: 22.0 s behind YouTube's live edge, at live head: 0, ingestion 1792786389.721135
+[ 39.5] t=2842.12 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3584.0 s | a#0(ms1) [[2807.04,2866.04]] ahead 23.9 s
+        live: 21.9 s behind YouTube's live edge, at live head: 0, ingestion 1792786391.824204
+[ 41.6] t=2844.19 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3581.9 s | a#0(ms1) [[2807.04,2868.04]] ahead 23.8 s
+        live: 21.8 s behind YouTube's live edge, at live head: 0, ingestion 1792786393.897133
+[ 43.7] t=2846.25 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3579.9 s | a#0(ms1) [[2807.04,2870.0300000000002]] ahead 23.8 s
+        live: 21.8 s behind YouTube's live edge, at live head: 0, ingestion 1792786395.955698
+[ 45.7] t=2848.26 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3577.8 s | a#0(ms1) [[2807.04,2872.0300000000002]] ahead 23.8 s
+        live: 21.8 s behind YouTube's live edge, at live head: 0, ingestion 1792786397.971812
+[ 47.7] t=2850.29 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3575.8 s | a#0(ms1) [[2807.04,2874.0300000000002]] ahead 23.7 s
+        live: 21.7 s behind YouTube's live edge, at live head: 0, ingestion 1792786399.995607
+[ 49.7] t=2852.29 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3573.8 s | a#0(ms1) [[2807.04,2876.02]] ahead 23.7 s
+        live: 21.7 s behind YouTube's live edge, at live head: 0, ingestion 1792786402.002247
+[ 51.9] t=2854.43 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3571.7 s | a#0(ms1) [[2807.04,2878.02]] ahead 23.6 s
+        live: 21.6 s behind YouTube's live edge, at live head: 0, ingestion 1792786404.144581
+[ 53.9] t=2856.43 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3569.7 s | a#0(ms1) [[2807.04,2880.04]] ahead 23.6 s
+        live: 21.6 s behind YouTube's live edge, at live head: 0, ingestion 1792786406.151825
+[ 55.9] t=2858.49 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3567.6 s | a#0(ms1) [[2807.04,2882.04]] ahead 23.6 s
+        live: 21.5 s behind YouTube's live edge, at live head: 0, ingestion 1792786408.204064
+[ 58.0] t=2860.53 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3565.6 s | a#0(ms1) [[2807.04,2884.0300000000002]] ahead 23.5 s
+        live: 21.5 s behind YouTube's live edge, at live head: 0, ingestion 1792786410.247363
+[ 60.0] t=2862.58 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3563.5 s | a#0(ms1) [[2807.04,2886.0300000000002]] ahead 23.5 s
+        live: 21.5 s behind YouTube's live edge, at live head: 0, ingestion 1792786412.270251
+[ 62.1] t=2864.67 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3561.4 s | a#0(ms1) [[2807.04,2888.0300000000002]] ahead 23.4 s
+        live: 21.4 s behind YouTube's live edge, at live head: 0, ingestion 1792786414.373152
+[ 64.2] t=2866.76 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3559.3 s | a#0(ms1) [[2807.04,2890.0300000000002]] ahead 23.3 s
+        live: 21.3 s behind YouTube's live edge, at live head: 0, ingestion 1792786416.455284
+[ 66.3] t=2868.83 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3557.3 s | a#0(ms1) [[2807.04,2892.8099999999999]] ahead 24.0 s
+        live: 22.2 s behind YouTube's live edge, at live head: 0, ingestion 1792786418.529294
+[ 68.3] t=2870.84 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3555.3 s | a#0(ms1) [[2807.04,2894.7199999999998]] ahead 23.9 s
+        live: 22.2 s behind YouTube's live edge, at live head: 0, ingestion 1792786420.544143
+[ 70.3] t=2872.85 paused=0 rate=1 ad=0 attached=ms1 behind-seekable-end 3553.3 s | a#0(ms1) [[2807.04,2896.7399999999998]] ahead 23.9 s
+        live: 22.2 s behind YouTube's live edge, at live head: 0, ingestion 1792786422.5518
+audio buffers: [{"appends":425,"buffered":[[2807.04,2896.7399999999998]],"id":0,"kb":1618,"last":{"boxes":"moof,mdat","init":false,"kind":"mp4","samples":4,"t":2896.6429024943309},"ms":1}]
+seek issued at page time <null> ms
+decodeAudioData of init + 425 segments: {"channels":2,"ok":true,"peak":0.47191345691680908,"rate":16000,"seconds":0.64868749999999997}
+WebCodecs AudioDecoder on demuxed blocks: {"blocks":3906,"error":null,"first":2826.0310199999999,"frames":3906,"gaps":2,"last":2897.7110200000002,"maxJumpMs":22987.754954648608,"seconds":90.697142857138772,"track":{"channels":2,"codec":"mp4
