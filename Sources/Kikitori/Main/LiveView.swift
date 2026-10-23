@@ -57,15 +57,18 @@ struct LiveView: View {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     ForEach(shown) { line in
                         TranscriptRow(line: line, selected: line.id == selection, pending: model.pendingLines.contains(line.id),
-                                      textSize: model.prefs.transcriptTextSize, showJapanese: model.prefs.showJapanese,
-                                      highlight: search)
+                                      textSize: model.prefs.transcriptTextSize, mode: model.prefs.transcriptMode,
+                                      highlight: search, replay: model.replayControl(for: line))
                             .id(line.id)
                             .onTapGesture { select(line) }
                             .contextMenu { rowMenu(line) }
                     }
-                    if shown.isEmpty {
-                        Text(search.isEmpty ? "Waiting for Japanese speech…" : "No lines match ‘\(search)’.")
-                            .foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(40)
+                    if search.isEmpty {
+                        LiveLineSlot(textSize: model.prefs.transcriptTextSize,
+                                     placeholder: shown.isEmpty ? "Waiting for Japanese speech…" : nil,
+                                     proxy: following ? proxy : nil)
+                    } else if shown.isEmpty {
+                        Text("No lines match ‘\(search)’.").foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(40)
                     }
                     Color.clear.frame(height: 1).id("bottom")
                         .onAppear { following = true; newLines = 0 }
@@ -129,6 +132,7 @@ struct LiveView: View {
                 Label("Subtitles", systemImage: "captions.bubble")
             }
             .help("Show subtitles")
+            TranscriptModeMenu()
         }
         ToolbarItemGroup {
             Button { showExport = true } label: { Label("Export", systemImage: "square.and.arrow.up") }
@@ -142,6 +146,7 @@ struct LiveView: View {
     @ViewBuilder func rowMenu(_ line: TranscriptLine) -> some View {
         Button("Explain") { select(line) }
         Button("Explain Again") { model.explain(line, again: true) }
+        ReplayMenuItems(line: line)
         Divider()
         Button("Copy English") { copy(line.en ?? "") }
         Button("Copy Japanese") { copy(line.ja) }
@@ -167,6 +172,39 @@ struct LiveView: View {
     func copy(_ s: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(s, forType: .string)
+    }
+}
+
+/// Japanese & English · Japanese · English, for the transcript panels.
+struct TranscriptModeMenu: View {
+    @Environment(AppModel.self) var model
+    var body: some View {
+        Picker(selection: Binding(get: { model.prefs.transcriptMode }, set: { model.prefs.transcriptMode = $0 })) {
+            ForEach(Preferences.TranscriptMode.allCases, id: \.self) { Text($0.title) }
+        } label: {
+            Label("Show", systemImage: "textformat")
+        }
+        .pickerStyle(.menu)
+        .help("What the transcript shows")
+    }
+}
+
+/// Hear a line again: normal speed, slower, or on a loop (its audio stays in memory for about
+/// half an hour, this session only).
+struct ReplayMenuItems: View {
+    @Environment(AppModel.self) var model
+    let line: TranscriptLine
+    var body: some View {
+        if model.canReplay(line) {
+            Divider()
+            if model.replaying == line.time {
+                Button("Stop Playing") { model.stopReplay() }
+            } else {
+                Button("Play Audio") { model.replay(line) }
+                Button("Play Audio Slower") { model.replay(line, rate: 0.75) }
+                Button("Loop Audio") { model.replay(line, loop: true) }
+            }
+        }
     }
 }
 

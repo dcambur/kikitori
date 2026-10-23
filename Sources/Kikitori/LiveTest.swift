@@ -50,12 +50,12 @@ enum LiveTest {
                 for await event in pipeline.run(counted) {
                     let wall = Date().timeIntervalSince(began)
                     switch event {
-                    case let .heard(time, _, ja, _):
+                    case let .heard(time, _, ja, _, _):
                         write(String(format: "[%5.1f | wall %5.1f] JA %@", time, wall, ja))
                     case let .translated(time, lines, c, _, _):
                         cost += c
                         for l in lines { write(String(format: "[%5.1f | wall %5.1f] EN %@", time, wall, l.en ?? "")) }
-                    case .translationSkipped: break
+                    case .translationSkipped, .hearing: break
                     case let .translationFailed(time, failure, c, _):
                         cost += c
                         write(String(format: "[%5.1f] translation failed: %@", time, "\(failure)"))
@@ -134,7 +134,20 @@ enum PlayerTest {
             write(String(format: "[%4.0f s] webkit audio objects=%d peak=%.3f lines=%d pending=%d issues=%@ page=%@",
                          Date().timeIntervalSince(began), objects.count, loudest, lines.count, model.pendingLines.count,
                          "\(model.issues)", (page as? String) ?? "nil"))
-            if let last = lines.last { write("    last: \(last.ja) → \(last.en ?? "…")") }
+            if !model.hearing.isEmpty { write("    live: \(model.hearing)") }
+            if let last = lines.last {
+                write("    last: \(last.ja) → \(last.en ?? "…")\(model.canReplay(last) ? "  [audio kept]" : "")")
+            }
+        }
+        // The heard chunks as one file next to the log, for offline checks of the real audio
+        // (`kikitori-cli run` or `preview` on it). Test runs only; the app never saves audio.
+        var audio: [Int16] = [], seen = Set<Double>()
+        for line in model.session?.lines ?? [] where seen.insert(line.time).inserted {
+            if let clip = model.clipSamples(line) { audio += clip + [Int16](repeating: 0, count: 4_800) }
+        }
+        if !audio.isEmpty {
+            try? ClipPlayer.wav(audio).write(to: URL(fileURLWithPath: logPath + ".wav"))
+            write(String(format: "audio of %d chunks (%.0f s): %@.wav", seen.count, Double(audio.count) / 16_000, logPath))
         }
         probe?.stop()
         model.stop()

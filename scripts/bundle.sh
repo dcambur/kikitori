@@ -27,7 +27,7 @@ cat > $app/Contents/Info.plist <<PLIST
   <key>LSMinimumSystemVersion</key><string>26.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSAudioCaptureUsageDescription</key>
-  <string>kikitori listens to the app you choose so it can subtitle the stream. Audio is turned into text on this Mac and never recorded or sent anywhere.</string>
+  <string>kikitori listens to the app you choose so it can subtitle the stream. Audio is turned into text on this Mac, kept in memory for replay only while you listen, and never saved or sent anywhere.</string>
   <key>NSMicrophoneUsageDescription</key>
   <string>kikitori can listen to a microphone or audio input instead of an app.</string>
   <key>NSSpeechRecognitionUsageDescription</key>

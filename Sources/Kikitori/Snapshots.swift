@@ -31,6 +31,9 @@ enum Snapshots {
             }
             render(MenuBarPanel(), size: CGSize(width: 320, height: 520), appearance: appearance, model: model,
                    to: folder.appending(path: "menubar-\(suffix).png"))
+            render(ExplanationView(line: model.session!.lines[4]).background(Color.kkInspector),
+                   size: CGSize(width: 330, height: 720), appearance: appearance, model: model,
+                   to: folder.appending(path: "explanation-\(suffix).png"))
             for (name, view) in [("general", AnyView(GeneralTab())), ("translation", AnyView(TranslationTab())),
                                  ("overlay", AnyView(OverlayTab())), ("account", AnyView(AccountTab()))] {
                 render(view, size: CGSize(width: 680, height: 560), appearance: appearance, model: model,
@@ -143,10 +146,13 @@ enum Snapshots {
         model.latencies = [2.7, 2.9, 3.1, 2.8, 2.9]
         let noted = session.lines[4]
         model.explain[noted.id] = .result([Explainer.Explanation(
-            term: "てぇてぇ", reading: "tētē (てぇてぇ)",
-            meaning: "A slurred, excited way of saying 尊い (tōtoi, “precious, sacred”). Fans use it for sweet or heart-warming moments between two streamers, especially in collabs.",
+            term: "てぇてぇ", reading: "てぇてぇ", romaji: "tētē", gist: "Precious, heart-warming (between two people)",
+            meaning: "A slurred, excited way of saying 尊い (tōtoi, “precious, sacred”). Fans use it for sweet moments between two streamers, especially in collabs.",
             inThisLine: "Kuu is a little embarrassed: chat has been “shipping” her with Amane Rio since their horror-game collab. The next line is her denying it.",
-            fanSlang: "“wholesome”, “precious”")], cost: 0.004)
+            parts: [.init(text: "コラボ", reading: "こらぼ", gloss: "collab stream"),
+                    .init(text: "てぇてぇ", reading: "てぇてぇ", gloss: "so precious"),
+                    .init(text: "言われてて", reading: "いわれてて", gloss: "keep being told")],
+            fanSlang: ["wholesome", "precious", "they’re so cute together"])], cost: 0.004)
         model.ledger.cycleStartDay = 15
         for d in 0..<8 {
             let date = Date.now.addingTimeInterval(-Double(7 - d) * 86_400 - 3_600)

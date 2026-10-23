@@ -1,6 +1,6 @@
 import Foundation
 
-/// A listening session: what was heard, translated and explained (spec §5.7). Audio is never kept.
+/// A listening session: what was heard, translated and explained (spec §5.7). Audio is never saved.
 public struct SessionRecord: Codable, Sendable, Identifiable, Equatable {
     public var id = UUID()
     public var start: Date

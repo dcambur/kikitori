@@ -55,7 +55,10 @@ final class OverlayController {
             _ = model.prefs.position
             _ = model.state
             _ = model.source
-            if model.source?.id == PlayerController.sourceID { _ = PlayerController.shared.isOnScreen }
+            if model.source?.id == PlayerController.sourceID {
+                _ = PlayerController.shared.isOnScreen
+                _ = PlayerController.shared.isFullScreen
+            }
         } onChange: {
             Task { @MainActor in self.apply(); self.observe() }
         }
@@ -65,9 +68,11 @@ final class OverlayController {
     private func apply() {
         guard let panel else { return }
         panel.ignoresMouseEvents = model.prefs.clickThrough
-        // The built-in player draws subtitles on the video itself; the floating panel is for other
-        // apps, and for the player while its video is off screen (another section, window closed).
-        let playerShowsThem = model.source?.id == PlayerController.sourceID && PlayerController.shared.isOnScreen
+        // The built-in player draws the Japanese on the video and the English in its side panel;
+        // the floating panel is for other apps, for the player while its video is off screen
+        // (another section, window closed), and for the English in full screen.
+        let playerShowsThem = model.source?.id == PlayerController.sourceID
+            && PlayerController.shared.isOnScreen && !PlayerController.shared.isFullScreen
         let show = model.prefs.overlayVisible && model.state != .idle && !playerShowsThem
         if show && !panel.isVisible { place(); panel.orderFrontRegardless() }
         if !show && panel.isVisible { panel.orderOut(nil) }

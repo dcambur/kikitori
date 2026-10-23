@@ -69,6 +69,9 @@ over turbo, and the transducer models drop fast reactions. Details: [bench/READM
 Sent to Anthropic: the Japanese text of each chunk, the streamer profile, the stream title, and
 for Explain the line with its neighbours. Never sent: audio, your screen, past sessions. There is
 no kikitori server. Transcripts, profiles and usage stay in `~/Library/Application Support/kikitori`.
+Audio is never saved: so you can hear a line again, the last half hour or so of speech stays in
+memory during a session and is dropped when it stops. The stream title (for the built-in player, the
+video's title and channel) is sent as context.
 
 ## Status
 

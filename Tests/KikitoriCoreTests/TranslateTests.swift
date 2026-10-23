@@ -187,6 +187,26 @@ func messageJSON(text: String, model: String = "claude-haiku-5-5", stop: String 
     }
 }
 
+@Suite struct ExplanationFormatTests {
+    @Test func savedOldExplanationsStillLoad() throws {
+        let old = #"{"term":"草","reading":"kusa (くさ)","meaning":"m","inThisLine":"i","fanSlang":"“LOL”"}"#
+        let e = try JSONDecoder().decode(Explainer.Explanation.self, from: Data(old.utf8))
+        #expect(e.fanSlang == ["“LOL”"] && e.parts.isEmpty && e.confidence == .high && e.gist.isEmpty)
+    }
+
+    @Test func structuredAnswersDecode() throws {
+        let json = #"""
+        {"term":"レポ","reading":"れぽ","romaji":"repo","gist":"The game R.E.P.O.","meaning":"m","inThisLine":"i",
+         "parts":[{"text":"はやった","reading":"はやった","gloss":"took off"}],"fanSlang":["went viral"],
+         "confidence":"medium","caveat":"Could also be レポート (report)."}
+        """#
+        let e = try JSONDecoder().decode(Explainer.Explanation.self, from: Data(json.utf8))
+        #expect(e.parts.first?.gloss == "took off" && e.fanSlang == ["went viral"] && e.confidence == .medium)
+        let again = try JSONDecoder().decode(Explainer.Explanation.self, from: JSONEncoder().encode(e))
+        #expect(again == e)   // saved sessions round-trip
+    }
+}
+
 @Suite struct PricingTests {
     @Test func haikuCostIncludesCacheRates() {
         let usage = ClaudeClient.Usage(input: 1_000_000, output: 1_000_000, cacheWrite: 1_000_000, cacheRead: 1_000_000)

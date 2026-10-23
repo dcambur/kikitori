@@ -97,7 +97,7 @@ struct FakeEngine: SpeechEngine {
         var heard: [Double] = [], skipped: [Double] = []
         for await event in pipeline.run(audio) {
             switch event {
-            case let .heard(time, _, _, _): heard.append(time)
+            case let .heard(time, _, _, _, _): heard.append(time)
             case let .translationSkipped(time): skipped.append(time)
             default: break
             }
@@ -120,7 +120,7 @@ struct FakeEngine: SpeechEngine {
             feed.finish()
         }
         var heard: [Double] = []
-        for await event in events { if case let .heard(time, _, _, _) = event { heard.append(time) } }
+        for await event in events { if case let .heard(time, _, _, _, _) = event { heard.append(time) } }
         await producer.value
         #expect(heard.count == 3)
         // Speech starts at 1, 4 and 7 s; each chunk begins about 0.2 s of padding earlier.
@@ -151,5 +151,72 @@ struct SlowEngine: SpeechEngine {
         for await s in capture.samples { all += s }
         #expect(all == [0, 0.5, -0.5, Float(32_767) / 32_768, -1])
         #expect(capture.progress.videoTime == 12.5)
+    }
+}
+
+@Suite struct LiveLineTests {
+    @Test func keepsOnlyWordsAfterTheLastChunk() {
+        var p = PreviewText()
+        #expect(p.update(.init(start: 0, end: 1, text: "こん", isFinal: false)) == "こん")
+        #expect(p.update(.init(start: 0, end: 1.5, text: "こんにちは", isFinal: true)) == "こんにちは")
+        #expect(p.update(.init(start: 2, end: 2.5, text: "今日", isFinal: false)) == "こんにちは今日")
+        #expect(p.cut(at: 1.8) == "今日")                   // the first words became a proper line
+        #expect(p.update(.init(start: 2, end: 3, text: "今日は", isFinal: true)) == "今日は")
+        // Words the chunker never turned into a line (music, noise) age out.
+        #expect(p.update(.init(start: 20, end: 21, text: "ラララ", isFinal: true)) == "ラララ")
+    }
+
+    @Test func dropsTheWordsOfAResultThatAChunkAlreadyCovers() {
+        // One streaming result often spans several chunks: only its words after the cut stay.
+        var p = PreviewText()
+        let words = [PreviewResult.Word(text: "毎回", start: 0, end: 1), .init(text: "かさたな", start: 1, end: 2.5),
+                     .init(text: "やってるのよ", start: 2.5, end: 4)]
+        #expect(p.update(.init(start: 0, end: 4, text: "毎回かさたなやってるのよ", isFinal: true, words: words))
+                == "毎回かさたなやってるのよ")
+        #expect(p.cut(at: 2.6) == "やってるのよ")
+        #expect(p.cut(at: 4) == "")
+    }
+
+    @Test func cutsInsideALongPieceInProportion() {
+        var p = PreviewText()
+        // Still-changing results come in long pieces: a cut halfway keeps about the second half.
+        #expect(p.update(.init(start: 0, end: 4, text: "あいうえおかきくけこ", isFinal: false)) == "あいうえおかきくけこ")
+        #expect(p.cut(at: 2) == "かきくけこ")
+    }
+
+    struct EchoPreview: LivePreviewEngine {
+        func stream(_ audio: AsyncStream<[Float]>, context: [String]) -> AsyncThrowingStream<PreviewResult, Error> {
+            AsyncThrowingStream { c in
+                Task {
+                    var t = 0.0
+                    for await s in audio {
+                        let d = Double(s.count) / 16_000
+                        c.yield(.init(start: t, end: t + d, text: "あ", isFinal: true))
+                        t += d
+                    }
+                    c.finish()
+                }
+            }
+        }
+    }
+
+    @Test func pipelineShowsTheLiveLineAndClearsItAtTheEnd() async {
+        var pipeline = LivePipeline(engine: FakeEngine(), translator: nil, vad: EnergyVAD())
+        pipeline.preview = EchoPreview()
+        let audio = AsyncStream<[Float]> { c in
+            for piece in stride(from: 0, to: 6 * 16_000, by: 1_600) {
+                _ = piece
+                c.yield([Float](repeating: 0.3, count: 1_600))   // 6 s of loud "speech", 0.1 s at a time
+            }
+            c.finish()
+        }
+        var lines: [String] = [], heardAudio = 0
+        for await event in pipeline.run(audio) {
+            if case let .hearing(text) = event { lines.append(text) }
+            if case let .heard(_, _, _, _, samples) = event { heardAudio += samples.count }
+        }
+        #expect(lines.contains { !$0.isEmpty })
+        #expect(lines.last == "")
+        #expect(heardAudio > 0)   // the chunk's audio comes with it, for replay
     }
 }

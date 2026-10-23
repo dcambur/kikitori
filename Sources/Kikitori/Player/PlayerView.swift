@@ -2,8 +2,8 @@ import KikitoriCore
 import SwiftUI
 import WebKit
 
-/// Main window › Watch: the real YouTube (or any video site) page with subtitles on the video,
-/// and an inspector beside it with the transcript and the explanation of a 注 line.
+/// Main window › Watch: the real YouTube (or any video site) page with Japanese subtitles on the
+/// video as they are heard, and a panel beside it with the translated transcript and explanations.
 struct PlayerView: View {
     @Environment(AppModel.self) var model
     @State private var address = ""
@@ -42,19 +42,13 @@ struct PlayerView: View {
                         .textFieldStyle(.roundedBorder).frame(minWidth: 220, idealWidth: 380, maxWidth: 460)
                         .onSubmit { player.load(address) }
                 }
-                ToolbarItemGroup {
-                    Menu {
-                        Picker("Show", selection: Binding(get: { model.prefs.subtitleMode }, set: { model.prefs.subtitleMode = $0 })) {
-                            ForEach(Preferences.SubtitleMode.allCases, id: \.self) { Text($0.title) }
-                        }
-                        .pickerStyle(.inline)
-                    } label: {
-                        Label(model.prefs.subtitleMode.title, systemImage: "textformat")
+                ToolbarItem {
+                    Toggle(isOn: $showInspector) {
+                        Label("Translation", systemImage: "sidebar.right").labelStyle(.titleAndIcon)
                     }
-                    .help("What the subtitles show")
-                    Button { showInspector.toggle() } label: { Label("Transcript", systemImage: "sidebar.right") }
-                        .help("Show the transcript and explanations")
-                        .keyboardShortcut("i", modifiers: [.command, .option])
+                    .toggleStyle(.button)
+                    .help("The English transcript and explanations, beside the video (⌥⌘I)")
+                    .keyboardShortcut("i", modifiers: [.command, .option])
                 }
             }
             .inspector(isPresented: $showInspector) {
@@ -86,8 +80,9 @@ struct PlayerView: View {
     }
 }
 
-/// Beside the video: the explanation of the focused line (a 注 chip, a clicked row, Explain Last
-/// Line) above the session's transcript, which follows the newest line.
+/// Beside the video: what the transcript shows (Japanese & English · Japanese · English), the
+/// explanation of the focused line (a clicked row, Explain Last Line) and the session's
+/// transcript, which follows the newest line.
 struct WatchInspector: View {
     @Environment(AppModel.self) var model
 
@@ -96,6 +91,12 @@ struct WatchInspector: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Picker("Show", selection: Binding(get: { model.prefs.transcriptMode }, set: { model.prefs.transcriptMode = $0 })) {
+                ForEach(Preferences.TranscriptMode.allCases, id: \.self) { Text($0.title) }
+            }
+            .pickerStyle(.segmented).labelsHidden().controlSize(.small)
+            .padding(10)
+            Divider()
             if let focused {
                 ExplanationView(line: focused, compact: true)
                     .frame(minHeight: 140, maxHeight: 340, alignment: .top)
@@ -105,16 +106,12 @@ struct WatchInspector: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 2) {
                         ForEach(lines) { line in
-                            TranscriptRow(line: line, selected: line.id == model.explainFocus,
-                                          pending: model.pendingLines.contains(line.id),
-                                          textSize: model.prefs.transcriptTextSize - 1, showJapanese: model.prefs.showJapanese)
-                                .id(line.id)
-                                .onTapGesture { if line.en != nil { model.focusExplanation(line) } }
+                            row(line)
                         }
-                        if lines.isEmpty {
-                            Text(model.isLive ? "Waiting for Japanese speech…" : "Press Start Subtitles to see the transcript here.")
-                                .foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(24)
-                        }
+                        LiveLineSlot(textSize: model.prefs.transcriptTextSize - 1,
+                                     placeholder: lines.isEmpty ? (model.isLive ? "Waiting for Japanese speech…"
+                                                                  : "Press Start Subtitles to see the transcript here.") : nil,
+                                     proxy: proxy)
                     }
                     .padding(8)
                 }
@@ -124,6 +121,18 @@ struct WatchInspector: View {
                 }
             }
         }
+    }
+
+    func row(_ line: TranscriptLine) -> some View {
+        TranscriptRow(line: line, selected: line.id == model.explainFocus, pending: model.pendingLines.contains(line.id),
+                      textSize: model.prefs.transcriptTextSize - 1, mode: model.prefs.transcriptMode,
+                      replay: model.replayControl(for: line))
+            .id(line.id)
+            .onTapGesture { if line.en != nil { model.focusExplanation(line) } }
+            .contextMenu {
+                Button("Explain") { model.focusExplanation(line) }.disabled(line.en == nil)
+                ReplayMenuItems(line: line)
+            }
     }
 }
 

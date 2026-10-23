@@ -54,7 +54,8 @@ public struct TranscriptExport: Sendable {
                 if includeEnglish, let en = line.en { out += "\(en)\n" }
                 if includeNotes, let note = line.note { out += "\n> 注 \(line.term ?? ""): \(note)\n" }
                 if includeNotes, let e = explanations[line.id]?.last {
-                    out += "\n> **\(e.term)** (\(e.reading)): \(e.meaning) \(e.inThisLine)\n"
+                    let gist = e.gist.isEmpty ? "" : " \(e.gist)."
+                    out += "\n> **\(e.term)** (\(e.reading)):\(gist) \(e.meaning) \(e.inThisLine)\n"
                 }
                 out += "\n"
             }

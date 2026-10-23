@@ -35,6 +35,17 @@ final class Preferences {
             }
         }
     }
+    /// What the transcript panels (Live, and beside the video in Watch) show for each line.
+    enum TranscriptMode: String, CaseIterable {
+        case both, japanese, english
+        var title: String {
+            switch self {
+            case .both: "Japanese & English"
+            case .japanese: "Japanese"
+            case .english: "English"
+            }
+        }
+    }
     enum SpeechModel: String, CaseIterable {
         case apple = "Apple Speech", whisperTurbo = "Whisper Large v3 Turbo"
     }
@@ -53,7 +64,12 @@ final class Preferences {
     var maxChunk: Double { didSet { save(maxChunk, "maxChunk") } }
 
     var translation: TranslationSettings { didSet { save(try? JSONEncoder().encode(translation), "translation") } }
-    var showJapanese: Bool { didSet { save(showJapanese, "showJapanese") } }
+    var transcriptMode: TranscriptMode { didSet { save(transcriptMode.rawValue, "transcriptMode") } }
+    /// The ⌃⌥J switch: Japanese shown (with English) or English only.
+    var showJapanese: Bool {
+        get { transcriptMode != .english }
+        set { transcriptMode = newValue ? .both : .english }
+    }
     var subtitleMode: SubtitleMode { didSet { save(subtitleMode.rawValue, "subtitleMode") } }
     var showFurigana: Bool { didSet { save(showFurigana, "showFurigana") } }
 
@@ -87,7 +103,8 @@ final class Preferences {
         speechModel = SpeechModel(rawValue: get("speechModel", "")) ?? .apple
         maxChunk = get("maxChunk", 6.0)
         translation = (d.data(forKey: "translation")).flatMap { try? JSONDecoder().decode(TranslationSettings.self, from: $0) } ?? .init()
-        showJapanese = get("showJapanese", true)
+        transcriptMode = TranscriptMode(rawValue: get("transcriptMode", ""))
+            ?? (get("showJapanese", true) ? .both : .english)   // the earlier on/off setting
         subtitleMode = SubtitleMode(rawValue: get("subtitleMode", "")) ?? .japaneseMain
         showFurigana = get("showFurigana", false)
         overlayVisible = get("overlayVisible", true)

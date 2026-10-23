@@ -76,6 +76,13 @@ final class AppModel {
     var focusRequests = 0
     /// Lines whose English is still on its way (everything else without English stays Japanese only).
     var pendingLines: Set<UUID> = []
+    /// The live line: Japanese words heard since the last line, still changing ("" for none).
+    var hearing = ""
+    /// The newest lines as first heard (before translation corrects or splits them), for the
+    /// built-in player, whose subtitles are Japanese only and never wait for Claude.
+    var recentHeard: [TranscriptLine] = []
+    /// The clip playing now (its chunk's start time), for the rows' play buttons.
+    var replaying: Double?
     var hasAPIKey = KeychainStore.apiKey() != nil
     var overlayRevision = 0
 
@@ -90,6 +97,11 @@ final class AppModel {
     private var watchdog: Timer?
     private var sourceQuitAt: Date?
     @ObservationIgnored nonisolated(unsafe) private var lastSoundAt = Date.now
+    /// Set while a clip plays from a microphone source, which would hear it again: capture
+    /// passes silence instead (keeping the timeline) until it stops.
+    @ObservationIgnored nonisolated(unsafe) private var muteInput = false
+    @ObservationIgnored private var clips = LineClips()
+    @ObservationIgnored private let clipPlayer = ClipPlayer()
     private var warned80Cycle: Date?
 
     init(storage: URL = URL.applicationSupportDirectory.appending(path: "kikitori")) {
@@ -172,6 +184,7 @@ final class AppModel {
         capOverride = false
         activeProfileID = activeProfileID ?? profiles.first(where: { $0.channel.isEmpty == false && source.name.contains($0.name) })?.id
         session = SessionRecord(sourceName: source.name, sourceID: source.id, profileName: activeProfile?.name)
+        if source.id == PlayerController.sourceID { session?.streamTitle = PlayerController.shared.title }
         if let key = KeychainStore.apiKey() {
             hasAPIKey = true
             translator = LiveTranslator(client: ClaudeClient(apiKey: key), profile: activeProfile,
@@ -244,6 +257,9 @@ final class AppModel {
         source = nil
         translator = nil
         issues = []
+        stopReplay()
+        clips.removeAll()
+        recentHeard = []
         state = .idle
     }
 
@@ -283,6 +299,7 @@ final class AppModel {
         lastSoundAt = .now
         var pipeline = LivePipeline(engine: engine, translator: translator, vad: vad, contextTerms: [])
         pipeline.maxChunk = prefs.maxChunk
+        pipeline.preview = AppleLivePreview()
         pipeline.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
         let offset = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
         let events = pipeline.run(metered(capture.samples))
@@ -297,7 +314,7 @@ final class AppModel {
         Task.detached { [weak self] in
             var lastStore = Date.distantPast
             for await samples in input {
-                feed.yield(samples)
+                feed.yield(self?.muteInput == true ? [Float](repeating: 0, count: samples.count) : samples)
                 if Date.now.timeIntervalSince(lastStore) > 1, samples.contains(where: { abs($0) > 0.003 }) {
                     lastStore = .now
                     self?.lastSoundAt = .now
@@ -365,6 +382,7 @@ final class AppModel {
         pipelineTask = nil
         // Translations still in flight were cancelled with the pipeline: their lines stay Japanese only.
         pendingLines.removeAll()
+        hearing = ""
         pendingEnds.removeAll()
     }
 
@@ -382,15 +400,23 @@ final class AppModel {
     }
 
     private func handle(_ event: LivePipeline<SileroVAD>.Event, offset: Double) {
+        // Several times a second: touch only the live line, not the session and its views.
+        if case let .hearing(text) = event { hearing = text; return }
         guard var record = session else { return }
         switch event {
-        case let .heard(time, duration, ja, asr):
+        case .hearing: break
+        case let .heard(time, _, ja, asr, audio):
             let t = time + offset
             pendingEnds[t] = Date.now.addingTimeInterval(-asr)
-            _ = duration
             let line = TranscriptLine(time: t, ja: ja)
             record.lines.append(line)
             pendingLines.insert(line.id)
+            clips.store(audio, at: t)
+            recentHeard = Array((recentHeard + [line]).suffix(4))
+            Task { [weak self, id = line.id] in   // subtitles leave the video once speech stops
+                try? await Task.sleep(for: .seconds(8))
+                self?.recentHeard.removeAll { $0.id == id }
+            }
             clear(.noAudio(name: source?.name ?? ""))
         case let .translated(time, lines, cost, _, tokens):
             let t = time + offset
@@ -471,10 +497,10 @@ final class AppModel {
         if case .result(let list, _) = explain[line.id] { previous = list } else { previous = [] }
         explain[line.id] = .loading
         let context = contextLines(before: line)
-        let profile = activeProfile
+        let profile = activeProfile, info = streamInfo
         explainTasks[line.id] = Task {
             do {
-                let r = try await Explainer(client: ClaudeClient(apiKey: key)).explain(line, context: context, profile: profile)
+                let r = try await Explainer(client: ClaudeClient(apiKey: key)).explain(line, context: context, profile: profile, streamInfo: info)
                 guard !Task.isCancelled else { return }
                 explain[line.id] = .result(previous + [r.explanation], cost: r.cost)
                 ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
@@ -523,8 +549,47 @@ final class AppModel {
 
     var lastLine: TranscriptLine? { session?.lines.last { $0.en != nil } }
 
+    /// Sent to the translator and the explainer. For the built-in player, the video's channel
+    /// too (the title is filled in from the page; see PlayerController).
     var streamInfo: String {
-        [session?.streamTitle ?? "", session?.game ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
+        let channel = source?.id == PlayerController.sourceID ? PlayerController.shared.channel : ""
+        return [session?.streamTitle ?? "", session?.game ?? "", channel.isEmpty ? "" : "channel: \(channel)"]
+            .filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    // MARK: Replay
+
+    /// `line`'s audio (16 kHz mono), while it is still in memory.
+    func clipSamples(_ line: TranscriptLine) -> [Int16]? { clips.clip(at: line.time) }
+
+    /// Whether `line`'s audio is still in memory (this session, last half hour or so).
+    func canReplay(_ line: TranscriptLine) -> Bool { clips.clip(at: line.time) != nil }
+
+    /// Play `line`'s audio again: every line from the same chunk shares it. Again on the same
+    /// clip stops it.
+    func replay(_ line: TranscriptLine, rate: Float = 1, loop: Bool = false) {
+        if replaying == line.time { stopReplay(); return }
+        guard let clip = clips.clip(at: line.time) else { return }
+        clipPlayer.onFinish = { [weak self] in self?.replayEnded() }
+        guard clipPlayer.play(clip, rate: rate, loop: loop) else { replayEnded(); return }
+        muteInput = source?.id.hasPrefix("mic:") == true
+        replaying = line.time
+    }
+
+    /// The row play button for `line`, if its audio is still in memory.
+    func replayControl(for line: TranscriptLine) -> TranscriptRow.ReplayControl? {
+        guard canReplay(line) else { return nil }
+        return .init(playing: replaying == line.time) { [weak self] in self?.replay(line) }
+    }
+
+    func stopReplay() {
+        clipPlayer.stop()
+        replayEnded()
+    }
+
+    private func replayEnded() {
+        replaying = nil
+        muteInput = false
     }
 
     // MARK: Profiles

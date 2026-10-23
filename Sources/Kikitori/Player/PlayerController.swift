@@ -17,9 +17,14 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     var url: URL?
     var paused = true
     var hasVideo = false
+    /// The video's channel, sent to Claude as context with the title.
+    var channel = ""
     /// True while the web view is in a window (the Watch section is showing, or full screen).
     /// Off screen during a player session, the floating overlay shows the subtitles instead.
     var isOnScreen = false
+    /// In WebKit's full screen there is no room for the translation panel: the floating overlay
+    /// shows the English instead (see OverlayController).
+    var isFullScreen = false
 
     @ObservationIgnored private let log = Logger(subsystem: "app.kikitori", category: "player")
     @ObservationIgnored private var lastStateLog = Date.distantPast
@@ -51,7 +56,10 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
             // Leaving full screen puts the web view back where it was; if the Watch section was
             // rebuilt meanwhile, that is an old host: move it to the current one.
             MainActor.assumeIsolated {
-                guard let self, web.fullscreenState == .notInFullscreen else { return }
+                guard let self else { return }
+                let full = web.fullscreenState != .notInFullscreen
+                if full != self.isFullScreen { self.isFullScreen = full }
+                guard !full else { return }
                 if let host = self.host, host.window != nil { host.adopt() } else { self.isOnScreen = web.window != nil }
             }
         }
@@ -98,12 +106,21 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
             // Sent every 500 ms: assign only what changed, so views redraw only when something did.
             let paused = body["paused"] as? Bool ?? true
             let hasVideo = body["hasVideo"] as? Bool ?? false
+            // "(3) Title - YouTube": the count of unread notifications comes and goes.
             let title = (body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
+                .replacingOccurrences(of: #"^\(\d+\)\s*"#, with: "", options: .regularExpression)
             let url = (body["url"] as? String).flatMap(URL.init(string:))
+            // The channel name is briefly missing while YouTube swaps pages: keep the last one.
+            let channel = (body["channel"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? self.channel
             if paused != self.paused { self.paused = paused }
             if hasVideo != self.hasVideo { self.hasVideo = hasVideo }
-            if title != self.title { self.title = title }
             if url != self.url { self.url = url }
+            if title != self.title || channel != self.channel {
+                let old = self.title
+                self.title = title
+                self.channel = channel
+                useAsStreamInfo(title: title, replacing: old)
+            }
             if Date.now.timeIntervalSince(lastStateLog) > 5 {
                 lastStateLog = .now
                 log.notice("state video=\(hasVideo) paused=\(paused) lines=\(AppModel.shared.session?.lines.count ?? 0)")
@@ -141,35 +158,48 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         }
     }
 
-    /// Push the latest lines into the page whenever they or the display mode change.
+    /// During a player session, the video's title is the stream info (what Claude is told the
+    /// stream is about), unless the viewer typed their own.
+    private func useAsStreamInfo(title: String, replacing old: String) {
+        let model = AppModel.shared
+        guard !title.isEmpty, model.source?.id == Self.sourceID, let current = model.session?.streamTitle,
+              current.isEmpty || current == old else { return }
+        let before = model.streamInfo
+        model.session?.streamTitle = title
+        if model.streamInfo != before { model.contextChanged() }   // each change costs a prompt-cache rewrite
+    }
+
+    /// Push the latest lines into the page whenever they or the live line change.
     private func observeSubtitles() {
         withObservationTracking {
-            _ = AppModel.shared.overlayRevision
-            _ = AppModel.shared.pendingLines
-            _ = AppModel.shared.prefs.subtitleMode
+            _ = AppModel.shared.recentHeard
+            _ = AppModel.shared.hearing
             _ = AppModel.shared.prefs.overlayLines
+            _ = AppModel.shared.source
         } onChange: {
             Task { @MainActor in self.pushSubtitles(); self.observeSubtitles() }
         }
     }
 
+    /// Subtitles on the video are the Japanese as it is heard, never waiting for Claude: the
+    /// live line, under the newest lines (up to the overlay's line count in all).
     func pushSubtitles() {
         let model = AppModel.shared
-        guard model.source?.id == Self.sourceID else { if !lastShown.isEmpty { show([]) }; return }
-        let lines = (model.session?.lines ?? []).suffix(model.prefs.overlayLines).map { line -> [String: Any] in
-            ["id": line.id.uuidString, "ja": line.ja, "en": line.en ?? "", "term": line.term ?? "",
-             "pending": model.pendingLines.contains(line.id)]
-        }
-        show(Array(lines))
+        guard model.source?.id == Self.sourceID, model.isLive else { if !lastShown.isEmpty { show([], live: "") }; return }
+        let live = model.hearing
+        let count = max(model.prefs.overlayLines - (live.isEmpty ? 0 : 1), live.isEmpty ? 1 : 0)
+        let lines = model.recentHeard.suffix(count).map { ["id": $0.id.uuidString, "ja": $0.ja] }
+        show(Array(lines), live: live)
     }
 
-    private func show(_ lines: [[String: Any]]) {
+    private func show(_ lines: [[String: Any]], live: String) {
         guard let data = try? JSONSerialization.data(withJSONObject: lines),
-              let json = String(data: data, encoding: .utf8) else { return }
-        let mode = AppModel.shared.prefs.subtitleMode.rawValue
-        let script = "window.__kikitori && window.__kikitori.show(\(json), '\(mode)')"
+              let json = String(data: data, encoding: .utf8),
+              let liveData = try? JSONSerialization.data(withJSONObject: [live]),
+              let liveJSON = String(data: liveData, encoding: .utf8) else { return }
+        let script = "window.__kikitori && window.__kikitori.show(\(json), 'japaneseOnly', \(liveJSON)[0])"
         guard script != lastShown else { return }
-        lastShown = lines.isEmpty ? "" : script
+        lastShown = lines.isEmpty && live.isEmpty ? "" : script
         webView.evaluateJavaScript(script, in: nil, in: .page)
     }
 

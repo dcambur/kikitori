@@ -146,7 +146,9 @@ struct TranslationTab: View {
                 .background(.quaternary.opacity(0.4), in: .rect(cornerRadius: 8))
             }
             Section("Original text") {
-                Toggle("Show Japanese above English", isOn: $prefs.showJapanese)
+                Picker("Transcript shows", selection: $prefs.transcriptMode) {
+                    ForEach(Preferences.TranscriptMode.allCases, id: \.self) { Text($0.title) }
+                }
             }
             Section("Claude models") {
                 LabeledContent("Live subtitles", value: "Claude Haiku 5.5")

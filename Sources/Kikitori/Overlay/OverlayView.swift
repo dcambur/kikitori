@@ -11,9 +11,19 @@ struct OverlayView: View {
     @State private var explaining: TranscriptLine?
 
     var prefs: Preferences { model.prefs }
-    var lines: [TranscriptLine] { Array((model.session?.lines ?? []).suffix(prefs.overlayLines)) }
+    /// The newest lines, unless speech stopped a while ago: then new live words show alone.
+    var lines: [TranscriptLine] {
+        Date.now.timeIntervalSince(lastLineAt) > 8 ? [] : Array((model.session?.lines ?? []).suffix(prefs.overlayLines))
+    }
+    /// Over the built-in player in full screen, the video already has the Japanese.
+    var englishOverVideo: Bool { model.source?.id == PlayerController.sourceID && PlayerController.shared.isFullScreen }
     var japaneseOnly: Bool { model.topIssue?.japaneseOnly == true }
-    var idle: Bool { Date.now.timeIntervalSince(lastLineAt) > 8 }
+    var idle: Bool { Date.now.timeIntervalSince(lastLineAt) > 8 && model.hearing.isEmpty }
+    /// The words being heard now, under the lines (not in English-only mode).
+    var liveLine: String? {
+        let mode = japaneseOnly ? Preferences.SubtitleMode.japaneseOnly : prefs.subtitleMode
+        return model.hearing.isEmpty || mode == .englishOnly || englishOverVideo ? nil : model.hearing
+    }
 
     var textColor: Color { prefs.overlayStyle == .light ? Color(hex: 0x111114) : .white }
 
@@ -22,15 +32,20 @@ struct OverlayView: View {
             VStack(spacing: 6) {
                 if let issue = model.topIssue { StatusPill(issue: issue) }
                 else if model.state == .paused { pill("Paused · ⌃⌥P to resume", symbol: "pause.fill") }
-                if idle || lines.isEmpty {
+                if idle || (lines.isEmpty && liveLine == nil) {
                     if !(prefs.hideWhenSilent && model.topIssue == nil && model.state != .paused) || lines.isEmpty {
                         pill(lines.isEmpty ? "Waiting for Japanese speech…" : "Listening", symbol: "ear")
                     }
                 } else {
                     VStack(spacing: 4) {
                         ForEach(Array(lines.enumerated()), id: \.element.id) { i, line in
-                            lineView(line, older: i < lines.count - 1)
+                            lineView(line, older: i < lines.count - 1 || liveLine != nil)
                                 .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                        }
+                        if let liveLine {
+                            Text(liveLine).font(.japanese(prefs.textSize.english * 0.8, weight: .semibold))
+                                .foregroundStyle(textColor.opacity(0.75)).japaneseText()
+                                .multilineTextAlignment(.center)
                         }
                     }
                     .animation(reduceMotion ? .easeOut(duration: 0.12) : .easeOut(duration: 0.18), value: lines.map(\.id))
@@ -65,7 +80,7 @@ struct OverlayView: View {
         let opacity = older ? 0.62 : 1
         let pending = model.pendingLines.contains(line.id)
         // Japanese only while translation is off (offline, cap): the mode can't show English then.
-        let mode = japaneseOnly ? Preferences.SubtitleMode.japaneseOnly : prefs.subtitleMode
+        let mode = englishOverVideo ? .englishOnly : japaneseOnly ? Preferences.SubtitleMode.japaneseOnly : prefs.subtitleMode
         let japaneseMain = mode == .japaneseMain || mode == .japaneseOnly || (line.en == nil && !pending)
         VStack(spacing: 2) {
             if japaneseMain {

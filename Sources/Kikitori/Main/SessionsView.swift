@@ -111,7 +111,8 @@ struct SessionsView: View {
                         LazyVStack(alignment: .leading, spacing: 2) {
                             ForEach(s.lines) { line in
                                 TranscriptRow(line: line, selected: line.id == lineSelection,
-                                              textSize: model.prefs.transcriptTextSize, highlight: query)
+                                              textSize: model.prefs.transcriptTextSize, mode: model.prefs.transcriptMode,
+                                              highlight: query)
                                     .onTapGesture { lineSelection = line.id }
                             }
                         }
@@ -136,18 +137,7 @@ struct SavedExplanation: View {
     let e: Explainer.Explanation
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(e.term).font(.japanese(20, weight: .bold)).japaneseText()
-                    Text(e.reading).foregroundStyle(.secondary)
-                }
-                Text(e.meaning)
-                if !e.inThisLine.isEmpty {
-                    Text("IN THIS LINE").font(.caption.bold()).foregroundStyle(.secondary)
-                    Text(e.inThisLine)
-                }
-            }
-            .padding().textSelection(.enabled)
+            ExplanationCard(e: e).padding().textSelection(.enabled)
         }
     }
 }

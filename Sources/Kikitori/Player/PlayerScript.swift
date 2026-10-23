@@ -24,13 +24,17 @@ enum PlayerScript {
             || v.closest('[data-a-target="video-player"]') || v.parentElement;
 
         const log = m => post('kkLog', String(m));
+        const channel = () => {
+          const a = document.querySelector('ytd-watch-metadata ytd-channel-name a, #owner #channel-name a, [data-a-target="stream-title"] ~ * a');
+          return a ? a.textContent.trim() : '';
+        };
 
         // ---- state -------------------------------------------------------------
         setInterval(() => {
           const v = video();
           const live = !!document.querySelector('.ytp-live') || !!document.querySelector('[data-a-target="player-live-indicator"]');
           post('kkState', { t: v ? v.currentTime : -1, paused: v ? v.paused : true, rate: v ? v.playbackRate : 1,
-                            live, title: document.title, url: location.href, hasVideo: !!v });
+                            live, title: document.title, url: location.href, hasVideo: !!v, channel: channel() });
           // Lines pushed while there was no video (a search page, a video still loading) or before
           // the site rebuilt its player are drawn as soon as the player is there.
           if (lastShow) { const v = video(); if (v && (!layer || layer.parentElement !== playerBox(v))) kk.show(...lastShow); }
@@ -76,6 +80,7 @@ enum PlayerScript {
           #kikitori-subs .kk-line { max-width: 86%; padding: 3px 14px 5px; border-radius: 10px; text-align: center;
                            background: rgba(16,16,22,.72); color: #fff; }
           #kikitori-subs .kk-line.old { opacity: .62; }
+          #kikitori-subs .kk-line.live { opacity: .86; }
           #kikitori-subs .kk-main { font: 600 clamp(14px, 3.4cqw, 40px)/1.3 "Hiragino Sans", -apple-system, sans-serif; }
           #kikitori-subs .kk-sub  { font: 500 clamp(11px, 2.1cqw, 24px)/1.3 -apple-system, "Hiragino Sans", sans-serif;
                                     color: rgba(255,255,255,.82); }
@@ -140,9 +145,10 @@ enum PlayerScript {
           if (text) e.textContent = text;
           return e;
         };
-        // lines: [{id, ja, en, term, pending}], mode: japaneseMain | englishMain | englishOnly | japaneseOnly
-        kk.show = (lines, mode) => {
-          lastShow = lines.length ? [lines, mode] : null;
+        // lines: [{id, ja, en, term, pending}], mode: japaneseMain | englishMain | englishOnly | japaneseOnly,
+        // live: words still being heard, drawn as the newest line.
+        kk.show = (lines, mode, live) => {
+          lastShow = lines.length || live ? [lines, mode, live] : null;
           try {
             const l = ensureLayer(); if (!l) return;
             l.replaceChildren(...lines.map((x, i) => {
@@ -156,14 +162,18 @@ enum PlayerScript {
                 case 'englishMain':  main = en() || ja(); if (x.en) sub = ja(); break;
                 default:             main = ja(); sub = en();
               }
-              const row = el('div', 'kk-line' + (i < lines.length - 1 ? ' old' : ''));
+              const row = el('div', 'kk-line' + (i < lines.length - 1 || live ? ' old' : ''));
               const top = el('div', 'kk-main');
               top.append(main);
               if (x.term) { const chip = el('span', 'kk-note', '注'); chip.dataset.id = x.id; top.append(chip); }
               row.append(top);
               if (sub) { const below = el('div', 'kk-sub'); below.append(sub); row.append(below); }
               return row;
-            }));
+            }).concat(live ? [(() => {
+              const row = el('div', 'kk-line live'), top = el('div', 'kk-main', live);
+              row.append(top);
+              return row;
+            })()] : []));
             place();
           } catch (e) { log('show failed: ' + e); }
         };

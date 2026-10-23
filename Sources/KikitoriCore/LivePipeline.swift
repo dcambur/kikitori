@@ -1,7 +1,9 @@
 import AVFoundation
 import Foundation
+import os
 
-/// Audio in, subtitle events out: chunker → speech engine → filter → translator.
+/// Audio in, subtitle events out: chunker → speech engine → filter → translator, plus an
+/// optional streaming recognizer for the live line (words as they are spoken).
 ///
 /// Three stages run side by side: chunking reads audio as it arrives, speech recognition takes
 /// chunks in order, and translation takes transcripts in order. The queues between them are
@@ -11,8 +13,10 @@ import Foundation
 public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
     public enum Event: Sendable {
         /// Japanese for the chunk that started at `time` and lasted `duration` (seconds since the
-        /// session began).
-        case heard(time: Double, duration: Double, ja: String, asrSeconds: Double)
+        /// session began), with the chunk's audio (16 kHz mono) for replay.
+        case heard(time: Double, duration: Double, ja: String, asrSeconds: Double, audio: [Float])
+        /// The live line: words heard since the last chunk, still changing ("" when there are none).
+        case hearing(String)
         case translated(time: Double, lines: [TranscriptLine], cost: Double, seconds: Double, tokens: Int)
         /// `cost` and `tokens` are what the API billed for an answer that couldn't be used (0 if none).
         case translationFailed(time: Double, ClaudeClient.Failure, cost: Double, tokens: Int)
@@ -29,6 +33,8 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
     public var maxChunk = 6.0
     /// Asked before each translation; false means Japanese only (budget cap, user choice).
     public var shouldTranslate: @Sendable () async -> Bool = { true }
+    /// Streaming recognition for the live line; nil for none.
+    public var preview: (any LivePreviewEngine)?
 
     public init(engine: any SpeechEngine, translator: LiveTranslator?, vad: VAD, contextTerms: [String] = []) {
         self.engine = engine; self.translator = translator; self.vad = vad; self.contextTerms = contextTerms
@@ -38,25 +44,46 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         let (events, emit) = AsyncStream.makeStream(of: Event.self)
         let (chunks, toRecognize) = AsyncStream.makeStream(of: Chunker<VAD>.Chunk.self)
         let (heard, toTranslate) = AsyncStream.makeStream(of: (Double, String).self)
+        let (previewAudio, toPreview) = AsyncStream.makeStream(of: [Float].self)
         let shouldTranslate = shouldTranslate
-        let cut = Task { [vad, maxChunk] in
+        let live = LiveLine { emit.yield(.hearing($0)) }
+        let cut = Task { [vad, maxChunk, preview] in
             var chunker = Chunker(vad: vad)
             chunker.maxChunk = maxChunk
+            var heard = 0   // samples so far: the live line's clock, even through silence
             for await samples in audio {
+                if preview != nil {
+                    toPreview.yield(samples)
+                    heard += samples.count
+                    await live.advance(to: Double(heard) / 16_000)
+                }
                 for chunk in await chunker.append(samples) { toRecognize.yield(chunk) }
             }
+            toPreview.finish()
             for chunk in chunker.finish() { toRecognize.yield(chunk) }
             toRecognize.finish()
+        }
+        let previewing = Task { [preview, contextTerms] in
+            guard let preview else { return }
+            // A failing preview only loses the live line; the chunked recognition carries on.
+            do {
+                for try await result in preview.stream(previewAudio, context: contextTerms) { await live.update(result) }
+            } catch {
+                Logger(subsystem: "app.kikitori", category: "pipeline").error("live line stopped: \(error, privacy: .public)")
+            }
+            await live.clear()
         }
         let recognize = Task { [engine, contextTerms] in
             for await chunk in chunks {
                 let start = Date()
                 let raw = (try? await engine.transcribe(chunk.samples, context: contextTerms)) ?? ""
                 let ja = TranscriptFilter.clean(raw)
-                guard !ja.isEmpty else { continue }
-                emit.yield(.heard(time: chunk.start, duration: chunk.duration, ja: ja,
-                                  asrSeconds: Date().timeIntervalSince(start)))
-                toTranslate.yield((chunk.start, ja))
+                if !ja.isEmpty {
+                    emit.yield(.heard(time: chunk.start, duration: chunk.duration, ja: ja,
+                                      asrSeconds: Date().timeIntervalSince(start), audio: chunk.samples))
+                    toTranslate.yield((chunk.start, ja))
+                }
+                await live.cut(at: chunk.start + chunk.duration)
             }
             toTranslate.finish()
         }
@@ -85,11 +112,32 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
             }
         }
         Task {
-            _ = await (cut.value, recognize.value, translate.value)
+            _ = await (cut.value, recognize.value, translate.value, previewing.value)
             emit.finish()
         }
-        emit.onTermination = { _ in cut.cancel(); recognize.cancel(); translate.cancel() }
+        emit.onTermination = { _ in cut.cancel(); recognize.cancel(); translate.cancel(); previewing.cancel() }
         return events
+    }
+}
+
+/// The live line between the preview and recognition stages: emits it whenever it changes.
+actor LiveLine {
+    let emit: @Sendable (String) -> Void
+    var text = PreviewText()
+    var shown = ""
+
+    init(emit: @escaping @Sendable (String) -> Void) { self.emit = emit }
+
+    func update(_ result: PreviewResult) { show(text.update(result)) }
+    func cut(at time: Double) { show(text.cut(at: time)) }
+    func advance(to time: Double) { show(text.advance(to: time)) }
+    /// The preview ended: forget its words too, so a later cut can't bring them back.
+    func clear() { text = PreviewText(); show("") }
+
+    private func show(_ line: String) {
+        guard line != shown else { return }
+        shown = line
+        emit(line)
     }
 }
 

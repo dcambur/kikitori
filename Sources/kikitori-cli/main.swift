@@ -7,6 +7,8 @@ import KikitoriCore
 //                                    Haiku 5.5, then explain the first line that got a note
 //   run <audio file> [--realtime]    the whole live pipeline on a file: chunker → Apple Speech
 //                                    → filter → Haiku 5.5, printing events as they happen
+//   preview <audio file>             the streaming recognizer behind the live line, at real-time
+//                                    speed: each result with its pieces and their times
 let args = Array(CommandLine.arguments.dropFirst())
 
 func translate(_ path: String, limit: Int) async throws {
@@ -57,14 +59,14 @@ func runFile(_ path: String, realTime: Bool) async throws {
     for await event in pipeline.run(try FileAudioSource.stream(URL(fileURLWithPath: path), realTime: realTime)) {
         let wall = Date().timeIntervalSince(began)
         switch event {
-        case let .heard(time, _, ja, asr):
+        case let .heard(time, _, ja, asr, _):
             print(String(format: "[%6.1f] JA (asr %.2fs, wall %.1fs): %@", time, asr, wall, ja))
         case let .translated(time, lines, c, seconds, _):
             cost += c
             for l in lines {
                 print(String(format: "[%6.1f] EN (+%.1fs): %@%@", time, seconds, l.en ?? "", l.note.map { "  [注 \($0)]" } ?? ""))
             }
-        case .translationSkipped: break
+        case .translationSkipped, .hearing: break
         case let .translationFailed(time, failure, c, _):
             cost += c
             print(String(format: "[%6.1f] translation failed: %@", time, "\(failure)"))
@@ -99,6 +101,12 @@ case "level" where args.count >= 2:
     print(String(format: "%.1f s tapped, %.0f%% audible, peak %.3f", Double(total) / 16_000, total > 0 ? 100 * Double(loud) / Double(total) : 0, peak))
 case "run" where args.count >= 2:
     try await runFile(args[1], realTime: args.contains("--realtime"))
+case "preview" where args.count >= 2:
+    let began = Date()
+    for try await r in AppleLivePreview().stream(try FileAudioSource.stream(URL(fileURLWithPath: args[1]), realTime: true), context: []) {
+        let pieces = r.words.map { String(format: "%@[%.2f–%.2f]", $0.text, $0.start, $0.end) }.joined(separator: " ")
+        print(String(format: "wall %5.2f  %@ %5.2f–%5.2f  %@", Date().timeIntervalSince(began), r.isFinal ? "FINAL" : "  vol", r.start, r.end, pieces))
+    }
 default:
-    print("usage: kikitori-cli sources | translate <chunks.jsonl> [n] | run <audio> [--realtime]")
+    print("usage: kikitori-cli sources | translate <chunks.jsonl> [n] | run <audio> [--realtime] | preview <audio>")
 }
