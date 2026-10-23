@@ -1,9 +1,9 @@
 /// The script injected into the built-in player's page (YouTube, Twitch, any page with a
 /// <video>). It runs in the page's own world so it can use the site's player.
 ///
-/// - Audio: the video element is routed through Web Audio; a ScriptProcessor mixes to mono,
-///   resamples to 16 kHz and posts base64 Int16 packets (~100 ms) to `kkAudio`, each with the
-///   video time. `hear: false` (the lookahead player) keeps the audio away from the speakers.
+/// - Audio is NOT taken here: WebKit gives Web Audio silence for cross-origin video (YouTube
+///   streams from googlevideo.com) and a routed element goes quiet. The app taps its own WebKit
+///   process instead (`AudioSources.ownWebKitProcesses`).
 /// - State: `kkState` every 500 ms (time, paused, rate, live, title, url).
 /// - Subtitles: `__kikitori.show(lines)` draws them in a layer inside the player element, so
 ///   they follow theatre mode and full screen.
@@ -19,66 +19,14 @@ enum PlayerScript {
         const playerBox = v => v.closest('#movie_player') || v.closest('.html5-video-player')
             || v.closest('[data-a-target="video-player"]') || v.parentElement;
 
-        // ---- audio -------------------------------------------------------------
-        let ctx = null, pending = [], attached = new WeakSet(), ratio = 3;
         const log = m => post('kkLog', String(m));
-        function attach(v) {
-          // Only into a running context: a suspended one would silence the video and capture nothing.
-          if (attached.has(v) || !ctx || ctx.state !== 'running') return;
-          try { attachNow(v); } catch (e) { log('attach failed: ' + e); }
-        }
-        function attachNow(v) {
-          attached.add(v);
-          ratio = ctx.sampleRate / 16000;
-          const src = ctx.createMediaElementSource(v);
-          if (HEAR) src.connect(ctx.destination);
-          const proc = ctx.createScriptProcessor(4096, 2, 1);
-          const mute = ctx.createGain(); mute.gain.value = 0;
-          src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
-          let carry = 0;
-          proc.onaudioprocess = e => {
-            if (v.paused) return;
-            const ch = e.inputBuffer.numberOfChannels;
-            const a = e.inputBuffer.getChannelData(0), b = ch > 1 ? e.inputBuffer.getChannelData(1) : a;
-            for (let pos = carry; pos < a.length; pos += ratio) {
-              const i = Math.floor(pos);
-              pending.push((a[i] + b[i]) / 2);
-            }
-            carry = (carry + Math.ceil((a.length - carry) / ratio) * ratio) - a.length;
-            if (pending.length >= 1600) {
-              const pcm = new Int16Array(pending.length);
-              for (let i = 0; i < pending.length; i++) pcm[i] = Math.max(-1, Math.min(1, pending[i])) * 32767;
-              let bin = ''; const bytes = new Uint8Array(pcm.buffer);
-              for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-              post('kkAudio', { pcm: btoa(bin), t: v.currentTime });
-              if (!kk.sent) { kk.sent = true; log('first audio packet, rate ' + ctx.sampleRate); }
-              pending = [];
-            }
-          };
-        }
-        // WebKit starts an AudioContext only from a user gesture: create and resume it on the first
-        // click or key press anywhere in the page (the play click itself counts).
-        const wake = () => {
-          try {
-            if (!ctx) { ctx = new AudioContext(); ctx.onstatechange = () => log('audio ' + ctx.state); }
-            const p = ctx.state !== 'running' ? ctx.resume() : Promise.resolve();
-            p.then(() => { const v = video(); if (v && !v.paused) attach(v); }).catch(e => log('resume failed: ' + e));
-          } catch (e) { log('wake failed: ' + e); }
-        };
-        document.addEventListener('pointerdown', wake, true);
-        document.addEventListener('keydown', wake, true);
-        document.addEventListener('play', e => {
-          if (e.target instanceof HTMLVideoElement) attach(e.target);
-        }, true);
 
         // ---- state -------------------------------------------------------------
         setInterval(() => {
           const v = video();
           const live = !!document.querySelector('.ytp-live') || !!document.querySelector('[data-a-target="player-live-indicator"]');
           post('kkState', { t: v ? v.currentTime : -1, paused: v ? v.paused : true, rate: v ? v.playbackRate : 1,
-                            live, title: document.title, url: location.href, hasVideo: !!v,
-                            audio: ctx ? ctx.state : 'none', tapped: v ? attached.has(v) : false });
-          if (v && !v.paused && !attached.has(v)) attach(v);
+                            live, title: document.title, url: location.href, hasVideo: !!v });
         }, 500);
 
         // ---- subtitles ---------------------------------------------------------

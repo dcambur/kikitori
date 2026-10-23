@@ -15,7 +15,7 @@ struct PlayerView: View {
             .frame(minWidth: 640, minHeight: 400)
             .overlay(alignment: .topTrailing) {
                 if listening {
-                    Label(status, systemImage: player.heardSeconds > 0 ? "waveform" : "exclamationmark.circle")
+                    Label(status, systemImage: "waveform")
                         .font(.callout.weight(.medium)).monospacedDigit()
                         .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(.black.opacity(0.75), in: .capsule).foregroundStyle(.white)
@@ -57,11 +57,10 @@ struct PlayerView: View {
 
     /// What the player is doing, in a few words (also the first thing to check when no subtitles come).
     var status: String {
-        guard listening else { return player.hasVideo ? "Subtitles off" : "" }
-        if !player.tapped { return "Press play to start" }
-        if player.audioState != "running" { return "Click the video once to enable audio" }
+        guard listening else { return "" }
+        if player.paused { return "Press play" }
         let lines = model.session?.lines.count ?? 0
-        return "Hearing audio · \(Int(player.heardSeconds)) s · \(lines) line\(lines == 1 ? "" : "s")"
+        return lines == 0 ? "Listening…" : "Listening · \(lines) line\(lines == 1 ? "" : "s")"
     }
 
     func toggleListening() {

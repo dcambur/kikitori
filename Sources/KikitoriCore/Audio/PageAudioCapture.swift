@@ -8,6 +8,7 @@ public final class PageAudioCapture: AudioCapture, @unchecked Sendable {
     private let lock = NSLock()
     private var received = 0
     private var lastVideoTime: Double?
+    private var peak: Float = 0
 
     public init() {
         (samples, continuation) = AsyncStream.makeStream(of: [Float].self, bufferingPolicy: .bufferingNewest(400))
@@ -17,8 +18,10 @@ public final class PageAudioCapture: AudioCapture, @unchecked Sendable {
     @discardableResult
     public func push(base64: String, videoTime: Double?) -> Bool {
         guard let floats = Self.decode(base64) else { return false }
+        let packetPeak = floats.reduce(0) { max($0, abs($1)) }
         lock.withLock {
             received += floats.count
+            peak = max(peak, packetPeak)
             if let videoTime { lastVideoTime = videoTime }
         }
         continuation.yield(floats)
@@ -29,6 +32,9 @@ public final class PageAudioCapture: AudioCapture, @unchecked Sendable {
     public var progress: (seconds: Double, videoTime: Double?) {
         lock.withLock { (Double(received) / 16_000, lastVideoTime) }
     }
+
+    /// Loudest sample since the last call (0 means the page is sending silence).
+    public func takePeak() -> Float { lock.withLock { defer { peak = 0 }; return peak } }
 
     public func stop() { continuation.finish() }
 

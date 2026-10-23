@@ -223,7 +223,7 @@ final class AppModel {
         try await engine.prepare()
         let capture: any AudioCapture
         if source.id == PlayerController.sourceID {
-            capture = PlayerController.shared.makeCapture()
+            capture = try PlayerController.shared.makeAnyCapture()
         } else if source.id.hasPrefix("mic:") {
             guard await AVCaptureDevice.requestAccess(for: .audio) else { throw CocoaError(.userCancelled) }
             let mic = MicrophoneCapture()
@@ -299,6 +299,13 @@ final class AppModel {
             try? await Task.sleep(for: .seconds(3))   // let the app start its audio helpers
             await togglePause()
         }
+    }
+
+    /// Restart capture for the built-in player (after it switched from page audio to the process tap).
+    func restartPlayerCapture() async {
+        guard state == .listening, source?.id == PlayerController.sourceID else { return }
+        stopCapture()
+        do { try await startCapture() } catch { raise(.permissionRevoked) }
     }
 
     /// Push the current profile and stream info to the live translator.

@@ -60,6 +60,32 @@ public enum AudioSources {
         return nil
     }
 
+    /// Core Audio process objects of this app's own WebKit processes (the built-in player plays
+    /// its sound from WebKit's GPU/WebContent processes, which macOS attributes to this app).
+    public static func ownWebKitProcesses() -> [AudioObjectID] { webKitProcesses(of: ProcessInfo.processInfo.processIdentifier) }
+
+    /// WebKit audio process objects that macOS attributes to the app with this pid.
+    public static func webKitProcesses(of app: pid_t) -> [AudioObjectID] {
+        guard let objects = try? CoreAudioProperty.array(AudioObjectID(kAudioObjectSystemObject),
+                                                         kAudioHardwarePropertyProcessObjectList, of: AudioObjectID.self)
+        else { return [] }
+        return objects.filter { object in
+            guard let pid = try? CoreAudioProperty.value(object, kAudioProcessPropertyPID, default: pid_t(0)), pid > 0,
+                  let bundle = try? CoreAudioProperty.string(object, kAudioProcessPropertyBundleID),
+                  bundle.hasPrefix("com.apple.WebKit") else { return false }
+            return responsiblePID(of: pid) == app
+        }
+    }
+
+    /// The app macOS holds responsible for a helper process (libsystem; used by many system tools).
+    static func responsiblePID(of pid: pid_t) -> pid_t? {
+        typealias Fn = @convention(c) (pid_t) -> pid_t
+        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "responsibility_get_pid_responsible_for_pid")
+        else { return nil }
+        let result = unsafeBitCast(symbol, to: Fn.self)(pid)
+        return result > 0 ? result : nil
+    }
+
     static func parentPID(of pid: pid_t) -> pid_t? {
         var info = kinfo_proc()
         var size = MemoryLayout<kinfo_proc>.stride

@@ -44,7 +44,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
         webView.allowsBackForwardNavigationGestures = true
         super.init()
-        for name in ["kkAudio", "kkState", "kkExplain", "kkLog"] { controller.add(self, contentWorld: .page, name: name) }
+        for name in ["kkState", "kkExplain", "kkLog"] { controller.add(self, contentWorld: .page, name: name) }
         webView.navigationDelegate = self
         load("https://www.youtube.com")
         observeSubtitles()
@@ -66,6 +66,18 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     }
 
     /// A fresh audio stream for a new listening session.
+    /// The capture for a new session: a system audio tap on this app's own WebKit process, which
+    /// is where the player's sound plays. The process appears once the page first plays sound,
+    /// so the tap starts as soon as it exists.
+    func makeAnyCapture() throws -> any AudioCapture {
+        let deferred = DeferredTapCapture()
+        let log = self.log
+        deferred.start(find: { AudioSources.ownWebKitProcesses() }, onStart: { count in
+            log.notice("process tap started on \(count) WebKit process(es)")
+        })
+        return deferred
+    }
+
     func makeCapture() -> PageAudioCapture {
         capture?.stop()
         let c = PageAudioCapture()
@@ -87,19 +99,14 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
 
     private func handle(_ name: String, _ body: [String: Any]) {
         switch name {
-        case "kkAudio":
-            if let pcm = body["pcm"] as? String { capture?.push(base64: pcm, videoTime: body["t"] as? Double) }
         case "kkState":
             videoTime = body["t"] as? Double ?? -1
             paused = body["paused"] as? Bool ?? true
             isLive = body["live"] as? Bool ?? false
             hasVideo = body["hasVideo"] as? Bool ?? false
-            audioState = body["audio"] as? String ?? "none"
-            tapped = body["tapped"] as? Bool ?? false
-            heardSeconds = capture?.progress.seconds ?? 0
             if Date.now.timeIntervalSince(lastStateLog) > 5 {
                 lastStateLog = .now
-                log.notice("state video=\(self.hasVideo) paused=\(self.paused) audio=\(self.audioState, privacy: .public) tapped=\(self.tapped) heard=\(Int(self.heardSeconds))s capturing=\(self.capture != nil)")
+                log.notice("state video=\(self.hasVideo) paused=\(self.paused) lines=\(AppModel.shared.session?.lines.count ?? 0)")
             }
             title = (body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
             url = (body["url"] as? String).flatMap(URL.init(string:))

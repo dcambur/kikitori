@@ -79,6 +79,23 @@ case "sources":
     }
 case "translate" where args.count >= 2:
     try await translate(args[1], limit: args.count > 2 ? Int(args[2]) ?? 8 : 8)
+case "webkit" where args.count >= 2:
+    // Which WebKit audio processes belong to the app with this pid (built-in player check).
+    let objects = AudioSources.webKitProcesses(of: pid_t(args[1]) ?? 0)
+    print("\(objects.count) WebKit audio process(es) for pid \(args[1]): \(objects)")
+    for s in try AudioSources.list() where s.id.hasPrefix("com.apple") || s.name.contains("Safari") {
+        print("  listed as source: \(s.name) [\(s.id)] playing=\(s.isPlaying)")
+    }
+case "level" where args.count >= 2:
+    // Tap the WebKit audio of the app with this pid for 6 s and report how loud it is.
+    let objects = AudioSources.webKitProcesses(of: pid_t(args[1]) ?? 0)
+    let tap = ProcessTapCapture()
+    try tap.start(processObjects: objects)
+    var total = 0, loud = 0, peak: Float = 0
+    let reader = Task { for await s in tap.samples { total += s.count; loud += s.filter { abs($0) > 0.003 }.count; peak = max(peak, s.map(abs).max() ?? 0) } }
+    try await Task.sleep(for: .seconds(6))
+    tap.stop(); _ = await reader.value
+    print(String(format: "%.1f s tapped, %.0f%% audible, peak %.3f", Double(total) / 16_000, total > 0 ? 100 * Double(loud) / Double(total) : 0, peak))
 case "run" where args.count >= 2:
     try await runFile(args[1], realTime: args.contains("--realtime"))
 default:
