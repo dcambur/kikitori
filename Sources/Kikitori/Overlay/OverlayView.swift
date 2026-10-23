@@ -63,39 +63,48 @@ struct OverlayView: View {
     @ViewBuilder func lineView(_ line: TranscriptLine, older: Bool) -> some View {
         let size = prefs.textSize
         let opacity = older ? 0.62 : 1
+        let pending = model.pendingLines.contains(line.id)
+        // Japanese only while translation is off (offline, cap): the mode can't show English then.
+        let mode = japaneseOnly ? Preferences.SubtitleMode.japaneseOnly : prefs.subtitleMode
+        let japaneseMain = mode == .japaneseMain || mode == .japaneseOnly || (line.en == nil && !pending)
         VStack(spacing: 2) {
-            if prefs.showJapanese && !japaneseOnly && line.en != nil {
-                Text(line.ja).font(.japanese(size.japanese)).foregroundStyle(textColor.opacity(0.8 * opacity))
-                    .japaneseText()
-            }
-            if japaneseOnly || line.en == nil && !prefs.showJapanese {
-                Text(line.ja).font(.japanese(size.english * 0.8, weight: .bold)).foregroundStyle(textColor.opacity(opacity))
-                    .japaneseText()
-            } else if let en = line.en {
+            if japaneseMain {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(en).font(.overlay(size.english)).foregroundStyle(textColor.opacity(opacity))
-                    if line.term != nil {
-                        Button { explaining = line } label: {
-                            Text("注").font(.system(size: size.english * 0.55, weight: .bold))
-                                .foregroundStyle(Color.overlayNote)
-                                .padding(.horizontal, 5).padding(.vertical, 1)
-                                .background(Color.overlayNoteBackground, in: .rect(cornerRadius: 5))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Has a note: \(line.term ?? "")")
-                    }
+                    Text(line.ja).font(.japanese(size.english * 0.9, weight: .bold)).foregroundStyle(textColor.opacity(opacity))
+                        .japaneseText()
+                    noteChip(line, size: size)
                 }
-            } else if model.pendingLines.contains(line.id) {
-                Text(line.ja).font(.japanese(size.japanese)).foregroundStyle(textColor.opacity(0.8))
-                TranslatingDots(color: textColor.opacity(0.7)).frame(height: size.english)
+                if mode == .japaneseMain {
+                    if let en = line.en { Text(en).font(.overlay(size.japanese)).foregroundStyle(textColor.opacity(0.82 * opacity)) }
+                    else if pending { TranslatingDots(color: textColor.opacity(0.7)).frame(height: size.japanese) }
+                }
             } else {
-                Text(line.ja).font(.japanese(size.english * 0.8, weight: .bold)).foregroundStyle(textColor.opacity(opacity))
-                    .japaneseText()
+                if mode == .englishMain {
+                    Text(line.ja).font(.japanese(size.japanese)).foregroundStyle(textColor.opacity(0.8 * opacity)).japaneseText()
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if let en = line.en { Text(en).font(.overlay(size.english)).foregroundStyle(textColor.opacity(opacity)) }
+                    else { TranslatingDots(color: textColor.opacity(0.7)).frame(height: size.english) }
+                    noteChip(line, size: size)
+                }
             }
         }
         .multilineTextAlignment(.center)
         .shadow(color: prefs.overlayStyle == .outline ? .black : .clear, radius: 2)
         .onTapGesture { if line.en != nil { explaining = line } }
+    }
+
+    @ViewBuilder func noteChip(_ line: TranscriptLine, size: Preferences.TextSize) -> some View {
+        if line.term != nil {
+            Button { explaining = line } label: {
+                Text("注").font(.system(size: size.english * 0.55, weight: .bold))
+                    .foregroundStyle(Color.overlayNote)
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(Color.overlayNoteBackground, in: .rect(cornerRadius: 5))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Has a note: \(line.term ?? "")")
+        }
     }
 
     @ViewBuilder var background: some View {
@@ -147,7 +156,9 @@ struct OverlayView: View {
         Button("Explain Last Line") { explainLast() }
         Button("Open Transcript") { openMainWindow() }
         Divider()
-        Toggle("Show Japanese", isOn: Binding(get: { prefs.showJapanese }, set: { prefs.showJapanese = $0 }))
+        Picker("Show", selection: Binding(get: { prefs.subtitleMode }, set: { prefs.subtitleMode = $0 })) {
+            ForEach(Preferences.SubtitleMode.allCases, id: \.self) { Text($0.title) }
+        }
         Picker("Lines", selection: Binding(get: { prefs.overlayLines }, set: { prefs.overlayLines = $0 })) {
             ForEach(1...4, id: \.self) { Text("\($0)") }
         }

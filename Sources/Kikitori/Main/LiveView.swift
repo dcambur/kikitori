@@ -4,6 +4,7 @@ import SwiftUI
 /// Main window › Live (spec §5.3).
 struct LiveView: View {
     @Environment(AppModel.self) var model
+    @Environment(\.openWindow) var openWindow
     @State private var selection: UUID?
     @State private var showInspector = true
     @State private var search = ""
@@ -93,9 +94,15 @@ struct LiveView: View {
             Text("Not listening").font(.title2.bold())
             Text("Pick the app that plays the stream. kikitori hears only that app.")
                 .foregroundStyle(.secondary)
-            Button("Start Listening…") { showSourcePicker = true }
-                .buttonStyle(.borderedProminent).controlSize(.large)
-                .popover(isPresented: $showSourcePicker, arrowEdge: .bottom) { SourcePickerView() }
+            HStack {
+                Button("Watch YouTube in kikitori") { openWindow(id: "player") }
+                    .buttonStyle(.borderedProminent).controlSize(.large)
+                Button("Listen to an App…") { showSourcePicker = true }
+                    .controlSize(.large)
+                    .popover(isPresented: $showSourcePicker, arrowEdge: .bottom) { SourcePickerView() }
+            }
+            Text("The built-in player puts subtitles on the video itself and needs no audio permission.")
+                .font(.callout).foregroundStyle(.secondary)
             if let issue = model.topIssue { Text(AppModel.shortText(issue)).foregroundStyle(Color.kkDanger) }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

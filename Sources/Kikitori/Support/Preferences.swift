@@ -23,6 +23,18 @@ final class Preferences {
         case forever = "Forever", year = "1 year", days90 = "90 days", days30 = "30 days", days7 = "7 days", none = "Don’t keep"
         var days: Int? { ["Forever": nil, "1 year": 365, "90 days": 90, "30 days": 30, "7 days": 7, "Don’t keep": 0][rawValue]! }
     }
+    /// What the subtitles show (overlay and player). Japanese is the main line by default.
+    enum SubtitleMode: String, CaseIterable {
+        case japaneseMain, englishMain, englishOnly, japaneseOnly
+        var title: String {
+            switch self {
+            case .japaneseMain: "Japanese, English below"
+            case .englishMain: "English, Japanese above"
+            case .englishOnly: "English only"
+            case .japaneseOnly: "Japanese only"
+            }
+        }
+    }
     enum SpeechModel: String, CaseIterable {
         case apple = "Apple Speech", whisperTurbo = "Whisper Large v3 Turbo"
     }
@@ -42,6 +54,7 @@ final class Preferences {
 
     var translation: TranslationSettings { didSet { save(try? JSONEncoder().encode(translation), "translation") } }
     var showJapanese: Bool { didSet { save(showJapanese, "showJapanese") } }
+    var subtitleMode: SubtitleMode { didSet { save(subtitleMode.rawValue, "subtitleMode") } }
     var showFurigana: Bool { didSet { save(showFurigana, "showFurigana") } }
 
     var overlayVisible: Bool { didSet { save(overlayVisible, "overlayVisible") } }
@@ -75,12 +88,13 @@ final class Preferences {
         maxChunk = get("maxChunk", 6.0)
         translation = (d.data(forKey: "translation")).flatMap { try? JSONDecoder().decode(TranslationSettings.self, from: $0) } ?? .init()
         showJapanese = get("showJapanese", true)
+        subtitleMode = SubtitleMode(rawValue: get("subtitleMode", "")) ?? .japaneseMain
         showFurigana = get("showFurigana", false)
         overlayVisible = get("overlayVisible", true)
         overlayStyle = OverlayStyle(rawValue: get("overlayStyle", "")) ?? .dark
         overlayOpacity = get("overlayOpacity", 0.72)
         textSize = TextSize(rawValue: get("textSize", "")) ?? .m
-        overlayLines = get("overlayLines", 2)
+        overlayLines = get("overlayLines", 1)
         position = Position(rawValue: get("position", "")) ?? .bottomCenter
         clickThrough = get("clickThrough", false)
         hideWhenSilent = get("hideWhenSilent", true)

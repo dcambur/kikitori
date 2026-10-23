@@ -62,6 +62,12 @@ struct KikitoriApp: App {
         .defaultSize(width: 1100, height: 700)
         .commands { KikitoriCommands(model: model) }
 
+        Window("Watch", id: "player") {
+            PlayerView().environment(model)
+        }
+        .defaultSize(width: 1180, height: 760)
+        .keyboardShortcut("w", modifiers: [.command, .shift])
+
         Window("Welcome to kikitori", id: "onboarding") {
             OnboardingView().environment(model)
         }

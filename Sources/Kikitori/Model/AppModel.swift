@@ -222,7 +222,9 @@ final class AppModel {
         let engine = AppleSpeechEngine()
         try await engine.prepare()
         let capture: any AudioCapture
-        if source.id.hasPrefix("mic:") {
+        if source.id == PlayerController.sourceID {
+            capture = PlayerController.shared.makeCapture()
+        } else if source.id.hasPrefix("mic:") {
             guard await AVCaptureDevice.requestAccess(for: .audio) else { throw CocoaError(.userCancelled) }
             let mic = MicrophoneCapture()
             try mic.start(device: AudioDeviceID(source.id.dropFirst(4)))

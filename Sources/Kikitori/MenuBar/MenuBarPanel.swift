@@ -60,6 +60,7 @@ struct MenuBarPanel: View {
                     show(); if let l = model.lastLine { model.explain(l) }
                 }
             }
+            menuItem("Watch in kikitori", "⇧⌘W") { NSApp.activate(); openWindow(id: "player") }
             menuItem("Settings…", "⌘,") { NSApp.activate(); openSettings() }
             Divider()
             menuItem("Quit kikitori", "⌘Q") { model.stop(); NSApp.terminate(nil) }

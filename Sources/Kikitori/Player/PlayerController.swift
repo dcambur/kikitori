@@ -1,0 +1,137 @@
+import AppKit
+import KikitoriCore
+import Observation
+import WebKit
+
+/// The built-in player: a WKWebView showing the real site, with our script injected.
+/// It is an audio source for the pipeline (no system-audio permission needed) and the place
+/// where subtitles are drawn, on the video itself.
+@MainActor @Observable
+final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    static let shared = PlayerController()
+    static let sourceID = "kikitori.player"
+
+    let webView: WKWebView
+    var title = ""
+    var url: URL?
+    var videoTime: Double = -1
+    var paused = true
+    var isLive = false
+    var hasVideo = false
+
+    @ObservationIgnored private var capture: PageAudioCapture?
+    @ObservationIgnored private var lastShown = ""
+
+    override init() {
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .default()   // stays signed in between launches
+        config.mediaTypesRequiringUserActionForPlayback = []
+        config.preferences.isElementFullscreenEnabled = true
+        let controller = WKUserContentController()
+        controller.addUserScript(WKUserScript(source: PlayerScript.source(hear: true), injectionTime: .atDocumentEnd,
+                                              forMainFrameOnly: true, in: .page))
+        config.userContentController = controller
+        webView = WKWebView(frame: .zero, configuration: config)
+        // Safari's user agent: Google refuses sign-in for unknown embedded browsers more often.
+        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+        webView.allowsBackForwardNavigationGestures = true
+        super.init()
+        for name in ["kkAudio", "kkState", "kkExplain"] { controller.add(self, contentWorld: .page, name: name) }
+        webView.navigationDelegate = self
+        load("https://www.youtube.com")
+        observeSubtitles()
+    }
+
+    /// A link, a video id or search words.
+    func load(_ input: String) {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        let target: URL?
+        if text.contains("."), let u = URL(string: text.hasPrefix("http") ? text : "https://\(text)") {
+            target = u
+        } else {
+            var c = URLComponents(string: "https://www.youtube.com/results")!
+            c.queryItems = [URLQueryItem(name: "search_query", value: text)]
+            target = c.url
+        }
+        if let target { webView.load(URLRequest(url: target)) }
+    }
+
+    /// A fresh audio stream for a new listening session.
+    func makeCapture() -> PageAudioCapture {
+        capture?.stop()
+        let c = PageAudioCapture()
+        capture = c
+        return c
+    }
+
+    func stopCapture() {
+        capture?.stop()
+        capture = nil
+    }
+
+    nonisolated func userContentController(_ userContentController: WKUserContentController,
+                                           didReceive message: WKScriptMessage) {
+        let name = message.name
+        let body = message.body as? [String: Any] ?? [:]
+        MainActor.assumeIsolated { handle(name, body) }
+    }
+
+    private func handle(_ name: String, _ body: [String: Any]) {
+        switch name {
+        case "kkAudio":
+            if let pcm = body["pcm"] as? String { capture?.push(base64: pcm, videoTime: body["t"] as? Double) }
+        case "kkState":
+            videoTime = body["t"] as? Double ?? -1
+            paused = body["paused"] as? Bool ?? true
+            isLive = body["live"] as? Bool ?? false
+            hasVideo = body["hasVideo"] as? Bool ?? false
+            title = (body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
+            url = (body["url"] as? String).flatMap(URL.init(string:))
+        case "kkExplain":
+            let model = AppModel.shared
+            if let id = (body["id"] as? String).flatMap(UUID.init(uuidString:)),
+               let line = model.session?.lines.first(where: { $0.id == id }) {
+                model.explain(line)
+                openMainWindow()
+            }
+        default: break
+        }
+    }
+
+    /// Push the latest lines into the page whenever they or the display mode change.
+    private func observeSubtitles() {
+        withObservationTracking {
+            _ = AppModel.shared.overlayRevision
+            _ = AppModel.shared.pendingLines
+            _ = AppModel.shared.prefs.subtitleMode
+            _ = AppModel.shared.prefs.overlayLines
+        } onChange: {
+            Task { @MainActor in self.pushSubtitles(); self.observeSubtitles() }
+        }
+    }
+
+    func pushSubtitles() {
+        let model = AppModel.shared
+        guard model.source?.id == Self.sourceID else { if !lastShown.isEmpty { show([]) }; return }
+        let lines = (model.session?.lines ?? []).suffix(model.prefs.overlayLines).map { line -> [String: Any] in
+            ["id": line.id.uuidString, "ja": line.ja, "en": line.en ?? "", "term": line.term ?? "",
+             "pending": model.pendingLines.contains(line.id)]
+        }
+        show(Array(lines))
+    }
+
+    private func show(_ lines: [[String: Any]]) {
+        guard let data = try? JSONSerialization.data(withJSONObject: lines),
+              let json = String(data: data, encoding: .utf8) else { return }
+        let mode = AppModel.shared.prefs.subtitleMode.rawValue
+        let script = "window.__kikitori && window.__kikitori.show(\(json), '\(mode)')"
+        guard script != lastShown else { return }
+        lastShown = lines.isEmpty ? "" : script
+        webView.evaluateJavaScript(script, in: nil, in: .page)
+    }
+
+    nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        MainActor.assumeIsolated { lastShown = ""; pushSubtitles() }
+    }
+}

@@ -91,3 +91,18 @@ struct FakeEngine: SpeechEngine {
         #expect(skipped == heard)   // nothing is left waiting for English that will never come
     }
 }
+
+@Suite struct PageAudioCaptureTests {
+    @Test func decodesLittleEndianInt16Packets() async {
+        let capture = PageAudioCapture()
+        let pcm: [Int16] = [0, 16_384, -16_384, 32_767, -32_768]
+        let data = pcm.withUnsafeBufferPointer { Data(buffer: $0) }
+        #expect(capture.push(base64: data.base64EncodedString(), videoTime: 12.5))
+        #expect(!capture.push(base64: "not base64!", videoTime: nil))
+        capture.stop()
+        var all: [Float] = []
+        for await s in capture.samples { all += s }
+        #expect(all == [0, 0.5, -0.5, Float(32_767) / 32_768, -1])
+        #expect(capture.progress.videoTime == 12.5)
+    }
+}
