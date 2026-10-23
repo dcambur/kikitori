@@ -1,7 +1,8 @@
 # Exact-sync subtitles in Watch: research and recommendation
 
-Status: research with spikes, 2026-10-23. Nothing here is built into the app. The spike code is in
-`Experiments/` (see its README), and trimmed logs are in `Experiments/results/`.
+Status: research with spikes, 2026-10-23. **Approach A chosen** (decision 1 in §10, answered
+2026-10-23); decisions 2–4 are still open. Nothing here is built into the app yet. The spike code
+is in `Experiments/` (see its README), and trimmed logs are in `Experiments/results/`.
 
 ## In short
 
@@ -23,9 +24,8 @@ process (spiked). It doubles the streaming. It plays the video and its ads a sec
 nobody sees them, and it maps time through two players' clocks instead of the media's own
 timestamps.
 
-Decisions for you are listed at the end (§10). The main one is whether reading the player's own
-buffered bytes is acceptable to you under the "no direct download" rule. It makes no extra
-requests and stores nothing.
+Decisions are listed at the end (§10). The main one, whether reading the player's own buffered
+bytes is acceptable under the "no direct download" rule, is answered: yes, go with A.
 
 ## 1. Why subtitles lag today, in numbers
 
@@ -415,9 +415,9 @@ This is an engineering assessment, not legal advice.
 
 ## 10. Decisions for you
 
-1. **Is reading the player's own buffered audio acceptable** under your "no direct download"
-   rule? It makes no extra requests, the bytes come from the official player's own playback, and
-   nothing is stored. If not, B is the only way to get a lead, with the costs in §7.
+1. ~~**Is reading the player's own buffered audio acceptable** under your "no direct download"
+   rule?~~ **Answered 2026-10-23: yes. Go with approach A.** (It makes no extra requests, the
+   bytes come from the official player's own playback, and nothing is stored.)
 2. **Start and seek:** hold the video paused up to ~3 s until the first line's English is ready
    ("Preparing subtitles…"), or play at once and show Japanese first for that one line? The
    Japanese is ready within ~0.5 s either way.
