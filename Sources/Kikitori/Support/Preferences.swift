@@ -62,6 +62,8 @@ final class Preferences {
 
     var speechModel: SpeechModel { didSet { save(speechModel.rawValue, "speechModel") } }
     var maxChunk: Double { didSet { save(maxChunk, "maxChunk") } }
+    /// Speaker labels in collabs (docs/design/speaker-labels.md): off by default, spec §6.
+    var speakerLabels: Bool { didSet { save(speakerLabels, "speakerLabels") } }
 
     var translation: TranslationSettings { didSet { save(try? JSONEncoder().encode(translation), "translation") } }
     /// Translate lines into English with Claude as they are heard. Off by default: transcription
@@ -105,6 +107,7 @@ final class Preferences {
         lastSourceID = d.string(forKey: "lastSourceID")
         speechModel = SpeechModel(rawValue: get("speechModel", "")) ?? .apple
         maxChunk = get("maxChunk", 6.0)
+        speakerLabels = get("speakerLabels", false)
         translate = get("translate", false)
         translation = (d.data(forKey: "translation")).flatMap { try? JSONDecoder().decode(TranslationSettings.self, from: $0) } ?? .init()
         transcriptMode = TranscriptMode(rawValue: get("transcriptMode", ""))

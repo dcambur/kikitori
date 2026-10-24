@@ -70,6 +70,7 @@ struct AudioTab: View {
     @Environment(AppModel.self) var model
     @State private var showPicker = false
     var body: some View {
+        @Bindable var prefs = model.prefs
         Form {
             Section("Source") {
                 LabeledContent("Listen to") {
@@ -82,6 +83,9 @@ struct AudioTab: View {
             Section("Speech detection") {
                 LabeledContent("Detector", value: "Silero VAD on the Neural Engine")
                 Text("Speech is cut at natural pauses; silence and music are never sent to the speech model.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Label speakers in collabs", isOn: $prefs.speakerLabels)
+                Text("Best effort. Uses more CPU. Up to four voices, A to D; right-click a line to name one. Takes effect from the next session.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

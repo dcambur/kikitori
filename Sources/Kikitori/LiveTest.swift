@@ -50,7 +50,7 @@ enum LiveTest {
                 for await event in pipeline.run(counted) {
                     let wall = Date().timeIntervalSince(began)
                     switch event {
-                    case let .heard(time, _, ja, _, _):
+                    case let .heard(time, _, ja, _, _, _):
                         write(String(format: "[%5.1f | wall %5.1f] JA %@", time, wall, ja))
                     case let .translated(time, lines, c, _, _):
                         cost += c

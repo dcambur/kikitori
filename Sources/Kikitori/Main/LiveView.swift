@@ -44,7 +44,7 @@ struct LiveView: View {
             showInspector = true
         }
         .sheet(isPresented: $showExport) {
-            ExportSheet(lines: lines, explanations: model.session?.explanations ?? [:],
+            ExportSheet(lines: model.session?.namedLines ?? [], explanations: model.session?.explanations ?? [:],
                         name: [model.activeProfile?.name ?? model.source?.name ?? "kikitori",
                                (model.session?.start ?? .now).formatted(.iso8601.year().month().day())]
                             .joined(separator: " – "))
@@ -58,7 +58,8 @@ struct LiveView: View {
                     ForEach(shown) { line in
                         TranscriptRow(line: line, selected: line.id == selection, pending: model.pendingLines.contains(line.id),
                                       textSize: model.prefs.transcriptTextSize, mode: model.prefs.transcriptMode,
-                                      highlight: search, replay: model.replayControl(for: line))
+                                      highlight: search, replay: model.replayControl(for: line),
+                                      speakerNames: model.session?.speakerNames ?? [:])
                             .id(line.id)
                             .onTapGesture { select(line) }
                             .contextMenu { rowMenu(line) }
@@ -152,6 +153,7 @@ struct LiveView: View {
         Button("Copy English") { copy(line.en ?? "") }
         Button("Copy Japanese") { copy(line.ja) }
         Button("Copy Both with Time") { copy("\(TranscriptExport.clock(line.time))  \(line.ja)\n\(line.en ?? "")") }
+        if let speaker = line.speaker { SpeakerMenu(label: speaker) }
         if let term = line.term, let profile = model.activeProfile {
             Divider()
             Button("Add “\(term)” to \(profile.name)’s Glossary") {

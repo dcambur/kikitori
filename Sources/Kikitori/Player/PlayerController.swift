@@ -195,7 +195,11 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         guard model.source?.id == Self.sourceID, model.isLive else { if !lastShown.isEmpty { show([], live: "") }; return }
         let live = model.hearing
         let count = max(model.prefs.overlayLines - (live.isEmpty ? 0 : 1), live.isEmpty ? 1 : 0)
-        let lines = model.recentHeard.suffix(count).map { ["ja": $0.ja] }
+        let lines = model.recentHeard.suffix(count).map { line -> [String: Any] in
+            var row: [String: Any] = ["ja": line.ja]
+            if let speaker = line.speaker { row["who"] = Self.speakerTag(speaker) }
+            return row
+        }
         show(Array(lines), live: live)
     }
 
@@ -232,12 +236,20 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         if !on { pushSubtitles() }
     }
 
+    /// A speaker's tag for the page: its name for this session (else its letter) and its colour
+    /// (`overlaySpeakers`).
+    static func speakerTag(_ label: String) -> [String] {
+        let colours = ["#7FD4FF", "#FFB37A", "#B9F27C", "#F7A6DA"]
+        return [AppModel.shared.session?.speakerNames?[label] ?? label, colours[max(0, SpeakerChip.index(label))]]
+    }
+
     /// Hand cues to the page (`reset` first forgets the ones it has).
     func addCues(_ cues: [Cue], reset: Bool = false) {
         let list: [[String: Any]] = cues.map { cue in
             ["id": cue.id.uuidString, "vid": cue.videoID,
              "chars": cue.chars.map { [$0.text, $0.start, $0.end] as [Any] },
-             "lines": cue.lines.map { [$0.from, $0.to] }]
+             "lines": cue.lines.map { [$0.from, $0.to] },
+             "who": cue.lines.map { $0.speaker.map(Self.speakerTag) ?? [] }]
         }
         guard let data = try? JSONSerialization.data(withJSONObject: list), let json = String(data: data, encoding: .utf8) else { return }
         webView.evaluateJavaScript("window.__kikitori && window.__kikitori.cues(\(json), \(reset))", in: nil, in: .page)

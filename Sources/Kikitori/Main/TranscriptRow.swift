@@ -1,3 +1,4 @@
+import AppKit
 import KikitoriCore
 import SwiftUI
 
@@ -12,6 +13,8 @@ struct TranscriptRow: View {
     var highlight: String = ""
     /// Shows the play button (on hover, or while playing) when set.
     var replay: ReplayControl?
+    /// Names given to speaker labels this session ("A" → "Pekora").
+    var speakerNames: [String: String] = [:]
 
     struct ReplayControl {
         var playing: Bool
@@ -44,15 +47,13 @@ struct TranscriptRow: View {
                 case .both, .english:
                     if mode == .both || line.en == nil {
                         HStack(spacing: 6) {
-                            if let speaker = line.speaker {
-                                Text(speaker).font(.caption2.bold()).padding(.horizontal, 4)
-                                    .background(Color.kkSpeakers[0].opacity(0.15), in: .rect(cornerRadius: 5))
-                            }
+                            if let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
                             marked(line.ja).font(.japanese(textSize - 2)).foregroundStyle(.secondary).japaneseText()
                         }
                     }
                     if let en = line.en {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            if mode == .english, let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
                             marked(en).font(.system(size: textSize))
                             if let term = line.term { NoteChip(term: term) }
                         }
@@ -90,7 +91,9 @@ struct TranscriptRow: View {
     }
 
     var accessibilityText: String {
-        var s = "\(TranscriptExport.clock(line.time)). \(line.en ?? "Translating"). Japanese: \(line.ja)."
+        var s = "\(TranscriptExport.clock(line.time)). "
+        if let speaker = line.speaker { s += "Speaker \(speaker)\(speakerNames[speaker].map { ", \($0)" } ?? ""). " }
+        s += "\(line.en ?? "Translating"). Japanese: \(line.ja)."
         if let term = line.term { s += " Has a note: \(term)." }
         return s
     }
@@ -134,6 +137,52 @@ struct LiveLineRow: View {
         .padding(.vertical, 6).padding(.horizontal, 10)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Hearing now: \(text)")
+    }
+}
+
+/// A speaker tag (spec §5.3): the letter, or the name given to it, in that speaker's colour.
+struct SpeakerChip: View {
+    let label: String
+    var name: String?
+
+    static func index(_ label: String) -> Int { Int((label.unicodeScalars.first?.value ?? 65) - 65) % 4 }
+
+    var body: some View {
+        let colour = Color.kkSpeakers[max(0, Self.index(label))]
+        Text(name ?? label).font(.caption2.bold()).foregroundStyle(colour).padding(.horizontal, 4)
+            .background(colour.opacity(0.15), in: .rect(cornerRadius: 5))
+            .help(name.map { "Speaker \(label): \($0)" } ?? "Speaker \(label). Right-click the line to name this voice.")
+            .accessibilityLabel(name.map { "Speaker \(label), \($0)" } ?? "Speaker \(label)")
+    }
+}
+
+/// A line's speaker in its context menu: say whose voice it is (a profile: remembered for next
+/// time too), or give it a name for this session.
+struct SpeakerMenu: View {
+    @Environment(AppModel.self) var model
+    let label: String
+
+    var body: some View {
+        Menu("Speaker \(model.session?.speakerNames?[label] ?? label)") {
+            ForEach(model.profiles) { profile in
+                Button("This Is \(profile.name)") { model.nameSpeaker(label, as: profile.name, profile: profile) }
+            }
+            if !model.profiles.isEmpty { Divider() }
+            Button("Name for This Session…") { if let name = ask() { model.nameSpeaker(label, as: name) } }
+        }
+    }
+
+    func ask() -> String? {
+        let alert = NSAlert()
+        alert.messageText = "Name Speaker \(label)"
+        alert.informativeText = "Lines by this voice show the name for the rest of this session."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        field.stringValue = model.session?.speakerNames?[label] ?? ""
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Name")
+        alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = field
+        return alert.runModal() == .alertFirstButtonReturn ? field.stringValue : nil
     }
 }
 

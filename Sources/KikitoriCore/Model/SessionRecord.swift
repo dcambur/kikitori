@@ -14,6 +14,8 @@ public struct SessionRecord: Codable, Sendable, Identifiable, Equatable {
     /// Explanations by line id, newest last (Explain Again keeps earlier answers).
     public var explanations: [UUID: [Explainer.Explanation]] = [:]
     public var cost = 0.0
+    /// Names given to speaker labels this session ("A" → "Pekora"); nil in sessions without any.
+    public var speakerNames: [String: String]?
 
     public init(start: Date = .now, sourceName: String, sourceID: String, profileName: String?) {
         self.start = start; self.sourceName = sourceName; self.sourceID = sourceID; self.profileName = profileName
@@ -21,6 +23,18 @@ public struct SessionRecord: Codable, Sendable, Identifiable, Equatable {
 
     public var duration: TimeInterval { (end ?? .now).timeIntervalSince(start) }
     public var noteCount: Int { lines.filter { $0.note != nil }.count }
+
+    /// How a speaker label reads in text: the name given to it, else "Speaker A".
+    public func speakerName(_ label: String) -> String { speakerNames?[label] ?? "Speaker \(label)" }
+
+    /// The lines with their speaker labels written out as names, for export.
+    public var namedLines: [TranscriptLine] {
+        lines.map { line in
+            var line = line
+            line.speaker = line.speaker.map(speakerName)
+            return line
+        }
+    }
 
     public var summary: SessionSummary {
         SessionSummary(id: id, start: start, end: end, sourceName: sourceName, profileName: profileName,

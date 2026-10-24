@@ -104,6 +104,7 @@ enum PlayerScript {
           #kikitori-subs .kk-line.live { opacity: .86; }
           #kikitori-subs .kk-main { font: 600 clamp(14px, 3.4cqw, 40px)/1.3 "Hiragino Sans", -apple-system, sans-serif; }
           #kikitori-subs .kk-c { opacity: 0; transition: opacity 60ms linear; }
+          #kikitori-subs .kk-spk { font-size: 62%; font-weight: 700; margin-right: .5em; }
           #kikitori-subs .kk-c.on { opacity: 1; }
         `;
         document.documentElement.appendChild(style);
@@ -157,19 +158,27 @@ enum PlayerScript {
         document.addEventListener('fullscreenchange', place);
         document.addEventListener('webkitfullscreenchange', place);
 
-        const line = (cls, text) => {
+        // A speaker tag before a line: [label or name, colour], or nothing.
+        const speakerTag = who => {
+          if (!who || !who[0]) return null;
+          const tag = document.createElement('span');
+          tag.className = 'kk-spk'; tag.textContent = who[0]; tag.style.color = who[1];
+          return tag;
+        };
+        const line = (cls, text, who) => {
           const row = document.createElement('div'), main = document.createElement('div');
           row.className = cls; main.className = 'kk-main'; main.textContent = text;
+          const tag = speakerTag(who); if (tag) main.prepend(tag);
           row.append(main);
           return row;
         };
-        // lines: [{ja}], the newest lines as heard; live: words still being heard, drawn last.
+        // lines: [{ja, who?}], the newest lines as heard; live: words still being heard, drawn last.
         kk.show = (lines, live) => {
           if (sync.on) return;
           lastShow = lines.length || live ? [lines, live] : null;
           try {
             const l = ensureLayer(); if (!l) return;
-            const rows = lines.map((x, i) => line('kk-line' + (i < lines.length - 1 || live ? ' old' : ''), x.ja));
+            const rows = lines.map((x, i) => line('kk-line' + (i < lines.length - 1 || live ? ' old' : ''), x.ja, x.who));
             if (live) rows.push(line('kk-line live', live));
             l.replaceChildren(...rows);
             place();
@@ -177,7 +186,8 @@ enum PlayerScript {
         };
 
         // ---- synced subtitles --------------------------------------------------------------
-        // cue: { id, vid, chars: [[text, start, end]], lines: [[from, to]] }, times in video seconds.
+        // cue: { id, vid, chars: [[text, start, end]], lines: [[from, to]], who?: [[speaker, colour]] per line },
+        // times in video seconds.
         // Every frame: the newest lines that have begun (up to `lines`), each until 8 s after its
         // last character, its characters shown from their own times. Unrevealed characters keep
         // their place (transparent), so a line never moves while it fills.
@@ -243,7 +253,7 @@ enum PlayerScript {
               c.lines.forEach(([from, to], i) => {
                 if (from >= to) return;
                 const start = c.chars[from][1], end = c.chars[to - 1][2], key = c.id + ':' + i;
-                if (start <= t && !c.late && t < end + 8) shown.push({ c, from, to, key });
+                if (start <= t && !c.late && t < end + 8) shown.push({ c, from, to, key, i });
               });
             }
             const rows = shown.slice(-sync.lines);
@@ -258,6 +268,7 @@ enum PlayerScript {
                 if (!el) {
                   const row = document.createElement('div'), main = document.createElement('div'), spans = [];
                   main.className = 'kk-main';
+                  const tag = speakerTag(r.c.who && r.c.who[r.i]); if (tag) main.append(tag);
                   for (let k = r.from; k < r.to; k++) {
                     const span = document.createElement('span'), start = r.c.chars[k][1];
                     span.className = start <= t ? 'kk-c on' : 'kk-c';   // already due: shown at once, no fade

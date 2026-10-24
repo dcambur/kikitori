@@ -122,7 +122,9 @@ func wav(_ pcm: Data, rate: Int = 16_000) -> Data {
     // their own MediaSource, on a timeline starting at 0).
     let made = (await js("return window.__kkspike.bufs.map(b => b.madeInAd);") as? [Bool]) ?? []
     let content = audio.filter { a in (a["kb"] as? Int ?? 0) > 0 && made[safe: a["id"] as? Int ?? -1] == false }
-    guard let main = content.last ?? audio.last, let id = main["id"] as? Int else { exit(1) }
+    let largest = ProcessInfo.processInfo.environment["KK_SPIKE_LARGEST"] != nil
+        ? content.max { ($0["kb"] as? Int ?? 0) < ($1["kb"] as? Int ?? 0) } : nil
+    guard let main = largest ?? content.last ?? audio.last, let id = main["id"] as? Int else { exit(1) }
     let segs = await js("return window.__kkspike.segments(\(id));")
     print("seek issued at page time \(await js("return window.__kkspike.seekAt || null;") ?? "nil") ms")
     print("segments of a#\(id):")

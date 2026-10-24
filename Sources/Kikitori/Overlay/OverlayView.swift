@@ -89,6 +89,7 @@ struct OverlayView: View {
         VStack(spacing: 2) {
             if japaneseMain {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    speakerTag(line, size: size.english * 0.9, opacity: opacity)
                     Text(line.ja).font(.japanese(size.english * 0.9, weight: .bold)).foregroundStyle(textColor.opacity(opacity))
                         .japaneseText()
                     noteChip(line, size: size)
@@ -102,6 +103,7 @@ struct OverlayView: View {
                     Text(line.ja).font(.japanese(size.japanese)).foregroundStyle(textColor.opacity(0.8 * opacity)).japaneseText()
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    speakerTag(line, size: size.english, opacity: opacity)
                     if let en = line.en { Text(en).font(.overlay(size.english)).foregroundStyle(textColor.opacity(opacity)) }
                     else { TranslatingDots(color: textColor.opacity(0.7)).frame(height: size.english) }
                     noteChip(line, size: size)
@@ -111,6 +113,16 @@ struct OverlayView: View {
         .multilineTextAlignment(.center)
         .shadow(color: prefs.overlayStyle == .outline ? .black : .clear, radius: 2)
         .onTapGesture { if !model.pendingLines.contains(line.id) { explaining = line } }
+    }
+
+    /// Who said it (spec §5.2): the letter, or the name given to it, at 62 % of the line's size.
+    @ViewBuilder func speakerTag(_ line: TranscriptLine, size: CGFloat, opacity: Double) -> some View {
+        if let speaker = line.speaker {
+            Text(model.session?.speakerNames?[speaker] ?? speaker)
+                .font(.system(size: size * 0.62, weight: .bold))
+                .foregroundStyle(Color.overlaySpeakers[max(0, SpeakerChip.index(speaker))].opacity(opacity))
+                .accessibilityLabel("Speaker \(speaker)")
+        }
     }
 
     @ViewBuilder func noteChip(_ line: TranscriptLine, size: Preferences.TextSize) -> some View {

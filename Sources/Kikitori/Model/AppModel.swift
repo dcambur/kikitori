@@ -109,6 +109,10 @@ final class AppModel {
     // Synced subtitles: the media pipeline's input, its events, and the cues not yet in the transcript.
     @ObservationIgnored private var mediaFeed: AsyncStream<MediaPipeline<SileroVAD>.Input>.Continuation?
     @ObservationIgnored private var mediaTask: Task<Void, Never>?
+    /// Who is speaking, for speaker labels: one per pipeline (the tap, the built-in player's
+    /// read-ahead), kept for the whole session so a voice keeps its letter across pauses.
+    @ObservationIgnored private var liveSpeakers: DeferredSpeakerTracker?
+    @ObservationIgnored private var mediaSpeakers: DeferredSpeakerTracker?
     @ObservationIgnored private var cues: [UUID: Cue] = [:]
     @ObservationIgnored private var cueAudio: [UUID: [Float]] = [:]
     @ObservationIgnored private var revealedLines: Set<String> = []
@@ -199,6 +203,7 @@ final class AppModel {
         activeProfileID = activeProfileID ?? profiles.first(where: { $0.channel.isEmpty == false && source.name.contains($0.name) })?.id
         session = SessionRecord(sourceName: source.name, sourceID: source.id, profileName: activeProfile?.name)
         if source.id == PlayerController.sourceID { session?.streamTitle = PlayerController.shared.title }
+        startSpeakerTracking(player: source.id == PlayerController.sourceID)
         if let key = KeychainStore.apiKey() {
             hasAPIKey = true
             translator = LiveTranslator(client: ClaudeClient(apiKey: key), profile: activeProfile,
@@ -272,6 +277,8 @@ final class AppModel {
         translator = nil
         issues = []
         stopReplay()
+        liveSpeakers = nil
+        mediaSpeakers = nil
         clips.removeAll()
         recentHeard = []
         state = .idle
@@ -314,6 +321,7 @@ final class AppModel {
         var pipeline = LivePipeline(engine: engine, translator: translator, vad: vad, contextTerms: [])
         pipeline.maxChunk = prefs.maxChunk
         pipeline.preview = AppleLivePreview()
+        pipeline.speakers = liveSpeakers
         pipeline.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
         let offset = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
         let events = pipeline.run(metered(capture.samples))
@@ -329,6 +337,7 @@ final class AppModel {
     private func startSyncedSubtitles(engine: AppleSpeechEngine, vad: SileroVAD) {
         var media = MediaPipeline(engine: engine, translator: translator, vad: vad)
         media.maxChunk = prefs.maxChunk
+        media.speakers = mediaSpeakers
         media.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
         let (inputs, feed) = AsyncStream.makeStream(of: MediaPipeline<SileroVAD>.Input.self)
         let events = media.run(inputs)
@@ -401,7 +410,9 @@ final class AppModel {
               var record = session else { return }
         let l = cue.lines[line]
         let t = Date.now.timeIntervalSince(record.start)
-        record.lines.append(TranscriptLine(time: t, ja: l.ja, en: l.en, note: l.note, term: l.term))
+        var revealed = TranscriptLine(time: t, ja: l.ja, en: l.en, note: l.note, term: l.term)
+        revealed.speaker = l.speaker
+        record.lines.append(revealed)
         if let audio = cueAudio[id] { clips.store(audio, at: t) }
         if (0..<cue.lines.count).allSatisfy({ revealedLines.contains("\(id):\($0)") }) { cueAudio[id] = nil }
         session = record
@@ -541,26 +552,30 @@ final class AppModel {
         guard var record = session else { return }
         switch event {
         case .hearing: break
-        case let .heard(time, _, ja, asr, audio):
+        case let .heard(time, _, ja, asr, audio, turns):
             let t = time + offset
             pendingEnds[t] = Date.now.addingTimeInterval(-asr)
-            let line = TranscriptLine(time: t, ja: ja)
-            record.lines.append(line)
-            if prefs.translate, translator != nil { pendingLines.insert(line.id) }   // else no dots: no English is coming
+            // With speakers tracked, one line per speaker turn (same time: the chunk's start).
+            let heard = turns.isEmpty ? [TranscriptLine(time: t, ja: ja)] : turns.map { var l = $0; l.time = t; return l }
+            record.lines += heard
+            if prefs.translate, translator != nil { pendingLines.formUnion(heard.map(\.id)) }   // else no dots: no English is coming
             clips.store(audio, at: t)
-            recentHeard = Array((recentHeard + [line]).suffix(4))
-            Task { [weak self, id = line.id] in   // subtitles leave the video once speech stops
+            recentHeard = Array((recentHeard + heard).suffix(4))
+            Task { [weak self, ids = heard.map(\.id)] in   // subtitles leave the video once speech stops
                 try? await Task.sleep(for: .seconds(8))
-                self?.recentHeard.removeAll { $0.id == id }
+                self?.recentHeard.removeAll { ids.contains($0.id) }
             }
             clear(.noAudio(name: source?.name ?? ""))
         case let .translated(time, lines, cost, _, tokens):
             let t = time + offset
+            // The chunk's untranslated lines (one, or one per speaker turn) are next to each other.
             if let i = record.lines.firstIndex(where: { $0.time == t && $0.en == nil }) {
-                pendingLines.remove(record.lines[i].id)
+                var j = i
+                while j + 1 < record.lines.count, record.lines[j + 1].time == t, record.lines[j + 1].en == nil { j += 1 }
+                for line in record.lines[i...j] { pendingLines.remove(line.id) }
                 let translated = lines.map { var l = $0; l.time = t; return l }
                 // No lines back means fillers or backchannels: the Japanese stays, without English.
-                if !translated.isEmpty { record.lines.replaceSubrange(i...i, with: translated) }
+                if !translated.isEmpty { record.lines.replaceSubrange(i...j, with: translated) }
             }
             if let end = pendingEnds.removeValue(forKey: t) { latencies.append(Date.now.timeIntervalSince(end)) }
             noteTranslated(cost: cost, tokens: tokens, in: &record)
@@ -601,7 +616,7 @@ final class AppModel {
     }
 
     private func settle(_ time: Double, in record: inout SessionRecord) {
-        if let line = record.lines.first(where: { $0.time == time && $0.en == nil }) { pendingLines.remove(line.id) }
+        for line in record.lines where line.time == time && line.en == nil { pendingLines.remove(line.id) }
         pendingEnds[time] = nil
     }
 
@@ -738,6 +753,61 @@ final class AppModel {
 
     // MARK: Profiles
 
+    // MARK: Speaker labels
+
+    /// Speaker labels for this session, when the setting is on: the trackers load in the
+    /// background (lines stay unlabelled until then). The active profile's saved voice, if any,
+    /// gets a slot first and its name.
+    private func startSpeakerTracking(player: Bool) {
+        liveSpeakers = nil
+        mediaSpeakers = nil
+        guard prefs.speakerLabels else { return }
+        let voices = activeProfile.flatMap { p in voiceSample(for: p).map { [(name: p.name, samples: $0)] } } ?? []
+        let sessionID = session?.id
+        let named: @Sendable ([Int: String]) -> Void = { [weak self] names in
+            Task { @MainActor in
+                guard let self, self.session?.id == sessionID else { return }
+                for (slot, name) in names { self.session?.speakerNames = (self.session?.speakerNames ?? [:]).merging([SpeakerLabeler.label(slot): name]) { $1 } }
+            }
+        }
+        liveSpeakers = DeferredSpeakerTracker(voices: voices, onLoad: named)
+        if player { mediaSpeakers = DeferredSpeakerTracker(voices: voices, onLoad: named) }
+    }
+
+    /// Names a speaker label for the rest of this session ("A" → "Fubuki"). With a profile, also
+    /// remembers the voice: the newest few seconds where only that voice spoke become the
+    /// profile's voice sample, so the next session with this profile labels it from the start.
+    func nameSpeaker(_ label: String, as name: String, profile: Profile? = nil) {
+        let name = name.trimmingCharacters(in: .whitespaces)
+        guard session != nil, !name.isEmpty else { return }
+        session?.speakerNames = (session?.speakerNames ?? [:]).merging([label: name]) { $1 }
+        guard let profile, let slot = label.unicodeScalars.first.map({ Int($0.value) - 65 }) else { return }
+        let tracker = synced ? mediaSpeakers : liveSpeakers
+        Task { [weak self] in
+            let samples = await tracker?.voice(slot: slot) ?? []
+            guard samples.count >= 16_000 * 3 else { return }   // too little to tell a voice by
+            self?.saveVoice(samples, for: profile)
+        }
+    }
+
+    private func voiceURL(_ profile: Profile) -> URL { supportURL.appending(path: "voices/\(profile.id.uuidString).f32") }
+
+    /// A profile's saved voice sample (16 kHz mono), if one was saved.
+    func voiceSample(for profile: Profile) -> [Float]? {
+        guard let data = try? Data(contentsOf: voiceURL(profile)), !data.isEmpty else { return nil }
+        return data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+    }
+
+    func hasVoice(_ profile: Profile) -> Bool { FileManager.default.fileExists(atPath: voiceURL(profile).path) }
+
+    private func saveVoice(_ samples: [Float], for profile: Profile) {
+        let url = voiceURL(profile)
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? samples.withUnsafeBytes { Data($0) }.write(to: url)
+    }
+
+    func forgetVoice(_ profile: Profile) { try? FileManager.default.removeItem(at: voiceURL(profile)) }
+
     func saveProfiles() { Self.save(profiles, to: supportURL.appending(path: "profiles.json")) }
 
     func upsert(_ profile: Profile) {
@@ -746,6 +816,7 @@ final class AppModel {
     }
 
     func deleteProfile(_ id: UUID) {
+        if let p = profiles.first(where: { $0.id == id }) { forgetVoice(p) }
         profiles.removeAll { $0.id == id }
         if activeProfileID == id { activeProfileID = nil }
         saveProfiles()

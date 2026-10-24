@@ -97,7 +97,7 @@ struct FakeEngine: SpeechEngine {
         var heard: [Double] = [], skipped: [Double] = []
         for await event in pipeline.run(audio) {
             switch event {
-            case let .heard(time, _, _, _, _): heard.append(time)
+            case let .heard(time, _, _, _, _, _): heard.append(time)
             case let .translationSkipped(time): skipped.append(time)
             default: break
             }
@@ -120,7 +120,7 @@ struct FakeEngine: SpeechEngine {
             feed.finish()
         }
         var heard: [Double] = []
-        for await event in events { if case let .heard(time, _, _, _, _) = event { heard.append(time) } }
+        for await event in events { if case let .heard(time, _, _, _, _, _) = event { heard.append(time) } }
         await producer.value
         #expect(heard.count == 3)
         // Speech starts at 1, 4 and 7 s; each chunk begins about 0.2 s of padding earlier.
@@ -224,7 +224,7 @@ struct SlowEngine: SpeechEngine {
                 if !text.isEmpty, lines.allSatisfy(\.isEmpty) { speak(seconds: 3); feed.finish() }
                 lines.append(text)
             }
-            if case let .heard(_, _, _, _, samples) = event { heardAudio += samples.count }
+            if case let .heard(_, _, _, _, samples, _) = event { heardAudio += samples.count }
         }
         #expect(lines.contains { !$0.isEmpty })
         #expect(lines.last == "")

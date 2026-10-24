@@ -13,9 +13,13 @@ public struct Cue: Sendable, Equatable, Codable, Identifiable {
         public var en: String?
         public var note: String?
         public var term: String?
+        /// Who said it ("A", "B", …), when speakers are tracked.
+        public var speaker: String?
 
-        public init(from: Int, to: Int, ja: String, en: String? = nil, note: String? = nil, term: String? = nil) {
+        public init(from: Int, to: Int, ja: String, en: String? = nil, note: String? = nil, term: String? = nil,
+                    speaker: String? = nil) {
             self.from = from; self.to = to; self.ja = ja; self.en = en; self.note = note; self.term = term
+            self.speaker = speaker
         }
     }
 

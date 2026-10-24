@@ -65,7 +65,7 @@ struct SessionsView: View {
         }
         .sheet(isPresented: $showExport) {
             if let s = opened {
-                ExportSheet(lines: s.lines, explanations: s.explanations,
+                ExportSheet(lines: s.namedLines, explanations: s.explanations,
                             name: [s.profileName ?? s.sourceName, s.start.formatted(.iso8601.year().month().day())].joined(separator: " – "))
             }
         }
@@ -112,7 +112,7 @@ struct SessionsView: View {
                             ForEach(s.lines) { line in
                                 TranscriptRow(line: line, selected: line.id == lineSelection,
                                               textSize: model.prefs.transcriptTextSize, mode: model.prefs.transcriptMode,
-                                              highlight: query)
+                                              highlight: query, speakerNames: s.speakerNames ?? [:])
                                     .onTapGesture { lineSelection = line.id }
                             }
                         }

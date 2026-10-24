@@ -13,6 +13,8 @@ come from these runs; trimmed logs are in `results/`.
 | `kk-spike-gpu` (`gpu-process/`) | Two web views in one process: one WebKit GPU process or two? |
 | `kk-check-mediatap` (`mediatap-check/`) | The production `MediaTapScript` on bytes captured by `kk-spike-mse`, in random appends: coverage, gaps, switched on late, resync after `abort()` |
 | `kk-check-reveal` (`reveal-check/`) | The production `PlayerScript` reveal with a fake clock: timing, `kkReveal`, late cues, seeks, ads |
+| `speakers/splice.py` | A "collab" with known turns, spliced from solo stream recordings (for `docs/design/speaker-labels.md`). |
+| `speakers/score.py` | Scores `kikitori-cli speakers --json` against splice.py's truth: character accuracy, speaker changes found, lines labelled right. |
 | `kk-check-sync` (`sync-check/`) | Both production scripts plus `MediaPipeline` on a real YouTube page, muted and without translation: cue lead and reveal accuracy |
 
 ```bash
@@ -24,7 +26,14 @@ swift run kk-spike-gpu [url]
 swift run kk-check-mediatap <captured .webm/.mp4> [--late] [--abort]
 swift run kk-check-reveal
 swift run kk-check-sync "<youtube url>" <seconds> [--seek <to>@<at>]
+python3 Experiments/speakers/splice.py <out prefix> pekora=<a.wav> miko=<b.wav> [--seconds 360] [--seed 1]
+swift run kikitori-cli speakers <out prefix>.wav --json <run>.jsonl
+python3 Experiments/speakers/score.py <run>.jsonl.chars.json <out prefix>.truth.json
 ```
+
+`KK_SPIKE_LARGEST=1 swift run kk-spike-mse …` keeps the largest audio buffer instead of the newest:
+YouTube sometimes replaces its MediaSource during a long run, and the newest then holds only the
+last few seconds.
 
 The app itself: `open -n build/Kikitori.app --args --player-test "<url>" <seconds> <log> --muted`
 (logs synced reveals and the transcript; translates, so it bills a little).

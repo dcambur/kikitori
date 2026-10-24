@@ -137,12 +137,13 @@ struct WatchInspector: View {
     func row(_ line: TranscriptLine) -> some View {
         TranscriptRow(line: line, selected: line.id == model.explainFocus, pending: model.pendingLines.contains(line.id),
                       textSize: model.prefs.transcriptTextSize - 1, mode: model.prefs.transcriptMode,
-                      replay: model.replayControl(for: line))
+                      replay: model.replayControl(for: line), speakerNames: model.session?.speakerNames ?? [:])
             .id(line.id)
             .onTapGesture { if !model.pendingLines.contains(line.id) { model.focusExplanation(line) } }
             .contextMenu {
                 Button("Explain") { model.focusExplanation(line) }.disabled(model.pendingLines.contains(line.id))
                 ReplayMenuItems(line: line)
+                if let speaker = line.speaker { SpeakerMenu(label: speaker) }
             }
     }
 }

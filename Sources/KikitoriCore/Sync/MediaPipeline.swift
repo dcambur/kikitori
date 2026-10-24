@@ -42,6 +42,9 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
     /// Audio kept behind the playhead (16 kHz, ~19 MB for 5 minutes): seeking forward and back into
     /// a stretch skipped over finds it still here, since the site won't fetch what it has buffered.
     public var keepBehind = 300.0
+    /// Who is speaking, for speaker labels; nil for none. Fed the audio the chunker reads, in
+    /// video time; forgets its voices when the video changes.
+    public var speakers: (any SpeakerTracking)?
     public var shouldTranslate: @Sendable () async -> Bool = { true }
 
     public init(engine: any TimedSpeechEngine, translator: LiveTranslator?, vad: VAD) {
@@ -58,6 +61,7 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
     struct Heard: Sendable {
         var videoID: String
         var chars: [TimedChar]
+        var speakers: [Int?]
         var audio: [Float]
         var end: Double
     }
@@ -67,11 +71,24 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
         let (chunks, toRecognize) = AsyncStream.makeStream(of: Pending.self)
         let (heard, toTranslate) = AsyncStream.makeStream(of: Heard.self)
         let playhead = Playhead()
-        let staleAfter = staleAfter, shouldTranslate = shouldTranslate
+        let (speakerAudio, toSpeakers) = AsyncStream.makeStream(of: ([Float], Double, String).self)
+        let staleAfter = staleAfter, shouldTranslate = shouldTranslate, speakers = speakers
         let cutter = Cutter(vad: vad, maxChunk: maxChunk, horizon: horizon, keep: keepBehind, playhead: playhead) { toRecognize.yield($0) }
+        if speakers != nil { cutter.read = { toSpeakers.yield(($0, $1, $2)) } }
         let cut = Task {
             for await input in inputs { await cutter.take(input) }
             toRecognize.finish()
+            toSpeakers.finish()
+        }
+        let tracking = Task {
+            guard let speakers else { return }
+            var video: String?
+            for await (samples, time, videoID) in speakerAudio {
+                if let v = video, v != videoID { await speakers.reset() }
+                video = videoID
+                await speakers.append(samples, at: time)
+            }
+            await speakers.finish()
         }
         let recognize = Task { [engine, contextTerms] in
             for await chunk in chunks {
@@ -80,26 +97,27 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
                 let cleaned = TranscriptFilter.clean(pieces)
                 guard !cleaned.isEmpty else { continue }
                 let chars = OnsetRefiner.refine(cleaned, samples: chunk.samples).shifted(by: chunk.start)
-                toTranslate.yield(Heard(videoID: chunk.videoID, chars: chars, audio: chunk.samples, end: chunk.end))
+                var who: [Int?] = []
+                if let speakers { who = SpeakerLabeler.speakers(for: chars, in: await speakers.frames(from: chunk.start, to: chunk.end)) }
+                toTranslate.yield(Heard(videoID: chunk.videoID, chars: chars, speakers: who, audio: chunk.samples, end: chunk.end))
             }
             toTranslate.finish()
         }
         let translate = Task { [translator] in
             for await h in heard {
                 guard !playhead.passed(h.videoID, h.end, by: staleAfter) else { continue }
-                let ja = h.chars.text
-                func japaneseOnly() -> Cue { Cue(videoID: h.videoID, chars: h.chars, lines: CueAligner.lines([], over: h.chars)) }
+                let spoken = Spoken(ja: h.chars.text, chars: h.chars, speakers: h.speakers)
+                func japaneseOnly() -> Cue { Cue(videoID: h.videoID, chars: h.chars, lines: spoken.cueLines([])) }
                 guard let translator, await shouldTranslate() else {
                     emit.yield(.translationSkipped)
                     emit.yield(.cue(japaneseOnly(), audio: h.audio))
                     continue
                 }
                 do {
-                    let r = try await translator.translate(ja)
+                    let r = try await translator.translate(spoken.translatorInput)
                     emit.yield(.translated(cost: r.cost, tokens: r.usage.total))
                     // No lines back means fillers or backchannels: the Japanese stays, without English.
-                    let lines = r.lines.isEmpty ? CueAligner.lines([], over: h.chars) : CueAligner.lines(r.lines, over: h.chars)
-                    emit.yield(.cue(Cue(videoID: h.videoID, chars: h.chars, lines: lines), audio: h.audio))
+                    emit.yield(.cue(Cue(videoID: h.videoID, chars: h.chars, lines: spoken.cueLines(r.lines)), audio: h.audio))
                 } catch let billed as ClaudeClient.BilledFailure {
                     emit.yield(.translationFailed(billed.failure, cost: billed.cost, tokens: billed.usage.total))
                     emit.yield(.cue(japaneseOnly(), audio: h.audio))
@@ -113,10 +131,10 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
             }
         }
         Task {
-            _ = await (cut.value, recognize.value, translate.value)
+            _ = await (cut.value, recognize.value, translate.value, tracking.value)
             emit.finish()
         }
-        emit.onTermination = { _ in cut.cancel(); recognize.cancel(); translate.cancel() }
+        emit.onTermination = { _ in cut.cancel(); recognize.cancel(); translate.cancel(); tracking.cancel() }
         return events
     }
 }
@@ -170,6 +188,8 @@ final class Cutter<VAD: VoiceActivityDetector>: @unchecked Sendable {
     let vad: VAD, maxChunk: Double, horizon: Double, keep: Double
     let playhead: Playhead
     let emit: (MediaPipeline<VAD>.Pending) -> Void
+    /// Sees every stretch of audio the chunker reads: (samples, video time, video).
+    var read: (([Float], Double, String) -> Void)?
     var timelines: [String: MediaTimeline] = [:]
     var resamplers: [Int: MediaResampler] = [:]
     var done: [String: Intervals] = [:]
@@ -240,6 +260,7 @@ final class Cutter<VAD: VoiceActivityDetector>: @unchecked Sendable {
             let next = done[head.videoID]?.next(after: r.cursor)
             let stop = min(range.end, limit, next ?? .infinity)
             let samples = timeline.samples(from: r.cursor, to: stop)
+            read?(samples, r.cursor, r.videoID)
             for chunk in await r.chunker.append(samples) {
                 emit(.init(videoID: r.videoID, start: r.start + chunk.start, samples: chunk.samples))
                 r.emitted = r.start + chunk.start + chunk.duration

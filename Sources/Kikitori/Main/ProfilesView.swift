@@ -105,6 +105,8 @@ struct ProfileEditor: View {
     let importAction: () -> Void
     @State private var selectedTerms: Set<GlossaryTerm.ID> = []
     @State private var confirmDelete = false
+    /// Bumped when the voice sample is forgotten, so the row redraws.
+    @State private var voiceRevision = 0
 
     var tokens: Int { profile.promptBlock.count / 2 }
 
@@ -152,6 +154,19 @@ struct ProfileEditor: View {
                     }
                 }
                 TextField("Channel link (optional)", text: $profile.channel)
+                LabeledContent("Voice") {
+                    let _ = voiceRevision
+                    if let voice = model.voiceSample(for: profile) {
+                        HStack {
+                            Text("\(voice.count / 16_000) s sample").foregroundStyle(.secondary)
+                            Button("Forget") { model.forgetVoice(profile); voiceRevision += 1 }
+                        }
+                    } else {
+                        Text("None").foregroundStyle(.secondary)
+                    }
+                }
+                .help("With speaker labels on, a session using this profile labels this voice with its name from the start. "
+                      + "To save one, right-click a line of theirs in a collab and choose Speaker › This Is \(profile.name).")
             }
             Section {
                 Table($profile.glossary, selection: $selectedTerms) {

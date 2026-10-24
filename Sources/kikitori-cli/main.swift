@@ -9,6 +9,14 @@ import KikitoriCore
 //                                    → filter → Haiku 5.5, printing events as they happen
 //   preview <audio file>             the streaming recognizer behind the live line, at real-time
 //                                    speed: each result with its pieces and their times
+//   speakers <audio file> [--realtime] [--json out.jsonl] [--enroll name@[file:]from-to ...]
+//                                    speaker labels: chunker → Apple Speech (timed) + Sortformer
+//                                    → turns, without translation; prints each chunk's turns, how
+//                                    long each chunk waited for the diarizer, and its cost.
+//                                    --enroll: a known voice from that stretch (seconds) of the file,
+//                                    or of another one (name@file:from-to)
+//                                    --json also writes <out>.chars.json: every character's time
+//                                    and shown speaker, for Experiments/speakers/score.py
 let args = Array(CommandLine.arguments.dropFirst())
 
 func translate(_ path: String, limit: Int) async throws {
@@ -59,7 +67,7 @@ func runFile(_ path: String, realTime: Bool) async throws {
     for await event in pipeline.run(try FileAudioSource.stream(URL(fileURLWithPath: path), realTime: realTime)) {
         let wall = Date().timeIntervalSince(began)
         switch event {
-        case let .heard(time, _, ja, asr, _):
+        case let .heard(time, _, ja, asr, _, _):
             print(String(format: "[%6.1f] JA (asr %.2fs, wall %.1fs): %@", time, asr, wall, ja))
         case let .translated(time, lines, c, seconds, _):
             cost += c
@@ -73,6 +81,119 @@ func runFile(_ path: String, realTime: Bool) async throws {
         }
     }
     print(String(format: "done in %.1fs, translation cost $%.4f", Date().timeIntervalSince(began), cost))
+}
+
+/// What each chunk was labelled with, character by character, for scoring against a truth file:
+/// the recognizer's pieces (recorded by `RecordingEngine`) and the tracker's frames (by
+/// `TimedTracker`), put through the same steps as `LivePipeline`.
+actor Recorder {
+    struct Char: Encodable { var text: String; var start, end: Double; var speaker: String }
+    var samples: [Float] = [], pieces: [TimedChar] = []
+    var chunks: [[Char]] = []
+    func heard(_ samples: [Float], _ pieces: [TimedChar]) { self.samples = samples; self.pieces = pieces }
+    func label(from: Double, frames: SpeakerFrames) {
+        let chars = OnsetRefiner.refine(TranscriptFilter.clean(pieces), samples: samples).shifted(by: from)
+        let who = SpeakerLabeler.speakers(for: chars, in: frames)
+        var shown = [String](repeating: "", count: chars.count)
+        for turn in SpeakerLabeler.turns(chars, speakers: who) {
+            for i in turn.from..<turn.to { shown[i] = turn.speaker.map(SpeakerLabeler.label) ?? "" }
+        }
+        chunks.append(chars.indices.map { Char(text: chars[$0].text, start: chars[$0].start, end: chars[$0].end, speaker: shown[$0]) })
+    }
+}
+
+struct RecordingEngine: TimedSpeechEngine {
+    let inner: AppleSpeechEngine, recorder: Recorder
+    var name: String { inner.name }
+    func prepare() async throws { try await inner.prepare() }
+    func transcribe(_ samples: [Float], context: [String]) async throws -> String { try await inner.transcribe(samples, context: context) }
+    func transcribeTimed(_ samples: [Float], context: [String]) async throws -> [TimedChar] {
+        let pieces = try await inner.transcribeTimed(samples, context: context)
+        await recorder.heard(samples, pieces)
+        return pieces
+    }
+}
+
+/// The tracker, timing how long each chunk waits for it.
+actor TimedTracker: SpeakerTracking {
+    let inner: SpeakerTracker, recorder: Recorder
+    var waits: [Double] = []
+    init(_ inner: SpeakerTracker, recorder: Recorder) { self.inner = inner; self.recorder = recorder }
+    func append(_ samples: [Float], at time: Double) async { await inner.append(samples, at: time) }
+    func finish() async { await inner.finish() }
+    func reset() async { await inner.reset() }
+    func frames(from: Double, to: Double) async -> SpeakerFrames {
+        let start = Date()
+        let f = await inner.frames(from: from, to: to)
+        waits.append(Date().timeIntervalSince(start))
+        await recorder.label(from: from, frames: f)
+        return f
+    }
+}
+
+func speakers(_ path: String, realTime: Bool, json: String?, enroll: [String]) async throws {
+    let url = URL(fileURLWithPath: path)
+    var all: [Float] = []
+    for await piece in try FileAudioSource.stream(url) { all += piece }
+    var voices: [(name: String, samples: [Float])] = []
+    for spec in enroll {   // name@from-to, or name@file:from-to
+        guard let at = spec.firstIndex(of: "@") else { continue }
+        var rest = spec[spec.index(after: at)...], source = all
+        if let colon = rest.lastIndex(of: ":") {
+            source = []
+            for await piece in try FileAudioSource.stream(URL(fileURLWithPath: String(rest[..<colon]))) { source += piece }
+            rest = rest[rest.index(after: colon)...]
+        }
+        let range = rest.split(separator: "-").compactMap { Double($0) }
+        guard range.count == 2 else { continue }
+        let a = Int(range[0] * 16_000), b = min(source.count, Int(range[1] * 16_000))
+        if a < b { voices.append((String(spec[..<at]), Array(source[a..<b]))) }
+    }
+    let recorder = Recorder()
+    let engine = RecordingEngine(inner: AppleSpeechEngine(), recorder: recorder)
+    try await engine.prepare()
+    var began = Date()
+    let (tracker, names) = try await SpeakerTracker.load(voices: voices)
+    print(String(format: "Sortformer loaded in %.1f s; enrolled: %@", Date().timeIntervalSince(began),
+                 names.sorted { $0.key < $1.key }.map { "\(SpeakerLabeler.label($0.key))=\($0.value)" }.joined(separator: " ")))
+    // Faster than real time the diarizer falls behind the recognizer: let chunks wait for it.
+    if !realTime { await tracker.setMaxWait(600) }
+    let timed = TimedTracker(tracker, recorder: recorder)
+    var pipeline = LivePipeline(engine: engine, translator: nil, vad: try await SileroVAD.load())
+    pipeline.maxChunk = Double(ProcessInfo.processInfo.environment["KIKITORI_MAX_CHUNK"] ?? "") ?? 6
+    pipeline.speakers = timed
+    var out = ""
+    began = Date()
+    let usage0 = cpuSeconds()
+    for await event in pipeline.run(try FileAudioSource.stream(url, realTime: realTime)) {
+        guard case let .heard(time, duration, ja, asr, _, turns) = event else { continue }
+        let wait = await timed.waits.last ?? 0
+        print(String(format: "[%6.1f +%4.1f] asr %.2fs, speakers +%.2fs", time, duration, asr, wait))
+        for t in turns { print("    \(t.speaker ?? "?")  \(t.ja)") }
+        struct Row: Encodable { var time, duration, asr, wait: Double; var ja: String; var turns: [[String: String]] }
+        let row = Row(time: time, duration: duration, asr: asr, wait: wait, ja: ja,
+                      turns: turns.map { ["speaker": $0.speaker ?? "", "ja": $0.ja] })
+        out += String(decoding: try JSONEncoder().encode(row), as: UTF8.self) + "\n"
+    }
+    let wall = Date().timeIntervalSince(began), busy = await tracker.busySeconds
+    let audio = Double(all.count) / 16_000
+    let waits = await timed.waits.sorted()
+    print(String(format: "audio %.0f s, wall %.1f s; diarizer busy %.1f s (%.1f%% of real time); process CPU %.1f s",
+                 audio, wall, busy, 100 * busy / audio, cpuSeconds() - usage0))
+    if !waits.isEmpty {
+        print(String(format: "speaker wait per chunk: median %.2f s, p90 %.2f s, max %.2f s (%d chunks)",
+                     waits[waits.count / 2], waits[Int(Double(waits.count - 1) * 0.9)], waits.last!, waits.count))
+    }
+    if let json {
+        try out.write(toFile: json, atomically: true, encoding: .utf8)
+        try JSONEncoder().encode(await recorder.chunks).write(to: URL(fileURLWithPath: json + ".chars.json"))
+    }
+}
+
+func cpuSeconds() -> Double {
+    var usage = rusage()
+    getrusage(RUSAGE_SELF, &usage)
+    return Double(usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) + Double(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1e6
 }
 
 switch args.first {
@@ -107,6 +228,9 @@ case "preview" where args.count >= 2:
         let pieces = r.words.map { String(format: "%@[%.2f–%.2f]", $0.text, $0.start, $0.end) }.joined(separator: " ")
         print(String(format: "wall %5.2f  %@ %5.2f–%5.2f  %@", Date().timeIntervalSince(began), r.isFinal ? "FINAL" : "  vol", r.start, r.end, pieces))
     }
+case "speakers" where args.count >= 2:
+    func values(_ name: String) -> [String] { args.indices.filter { args[$0] == name && $0 + 1 < args.count }.map { args[$0 + 1] } }
+    try await speakers(args[1], realTime: args.contains("--realtime"), json: values("--json").first, enroll: values("--enroll"))
 default:
-    print("usage: kikitori-cli sources | translate <chunks.jsonl> [n] | run <audio> [--realtime] | preview <audio>")
+    print("usage: kikitori-cli sources | translate <chunks.jsonl> [n] | run <audio> [--realtime] | preview <audio> | speakers <audio> [--realtime] [--json out] [--enroll name@from-to]")
 }

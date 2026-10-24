@@ -152,7 +152,9 @@ public actor LiveTranslator {
     words. Leave out only stretches that are clearly noise or nonsense, and never invent content \
     that is not there. A chunk with real sentences never gets an empty list.
     - Several people may speak in one chunk. Keep each person's line separate when you can tell \
-    them apart; do not label speakers.
+    them apart; do not label speakers. A line break inside a chunk marks where the voice \
+    changes (detected automatically, usually right): start a new line there, and never join \
+    text from both sides of it into one line.
 
     How to write the lines
     - Split the chunk into subtitle lines at natural sentence or turn boundaries. Each line has:
