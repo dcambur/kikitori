@@ -18,6 +18,26 @@ public protocol SpeakerTracking: Sendable {
     func reset() async
 }
 
+/// A tracker on a clock `offset` seconds behind its own. A live pipeline's clock starts at 0 on
+/// every run (after each pause), while its tracker lasts the whole session: shifted by each run's
+/// start, the tracker's times keep increasing, so audio from before a pause never stands in for
+/// audio after it.
+public struct ShiftedSpeakerTracker: SpeakerTracking {
+    public let inner: any SpeakerTracking
+    public let offset: Double
+
+    public init(_ inner: any SpeakerTracking, by offset: Double) { self.inner = inner; self.offset = offset }
+
+    public func append(_ samples: [Float], at time: Double) async { await inner.append(samples, at: time + offset) }
+    public func frames(from: Double, to: Double) async -> SpeakerFrames {
+        var f = await inner.frames(from: from + offset, to: to + offset)
+        for k in f.frames.indices { f.frames[k].start -= offset }
+        return f
+    }
+    public func finish() async { await inner.finish() }
+    public func reset() async { await inner.reset() }
+}
+
 /// A tracker that loads in the background: until the model is ready (a download of ~230 MB
 /// the first time, a few seconds after that), audio goes unlabelled. `onLoad` gets the names of
 /// enrolled voices by slot; a failed load leaves labels off (logged).

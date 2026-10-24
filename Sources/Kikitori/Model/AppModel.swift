@@ -328,10 +328,16 @@ final class AppModel {
         var pipeline = LivePipeline(engine: engine, translator: translator, vad: vad, contextTerms: [])
         pipeline.maxChunk = prefs.maxChunk
         pipeline.preview = AppleLivePreview()
-        pipeline.speakers = liveSpeakers
+        // The tracker lasts the session, the pipeline's clock restarts with each run: on the
+        // session's clock, audio before a pause never stands in for audio after it.
+        let installed = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
+        pipeline.speakers = liveSpeakers.map { ShiftedSpeakerTracker($0, by: installed) }
         pipeline.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
-        let offset = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
-        let events = pipeline.run(metered(capture.samples))
+        // The run's clock starts at its first audio, which for the built-in player comes only once
+        // the page first plays sound: line times count from then.
+        let firstAudio = OSAllocatedUnfairLock<Date?>(initialState: nil)
+        let sessionStart = session?.start ?? .now
+        let events = pipeline.run(metered(capture.samples, firstAudio: firstAudio))
         let sessionID = session?.id
         pipelineTask = Task { [weak self] in
             for await event in events {
@@ -342,7 +348,7 @@ final class AppModel {
                     if case let .translated(_, _, cost, _, tokens) = event { self?.billLate(cost, tokens: tokens, session: sessionID) }
                     break
                 }
-                self?.handle(event, offset: offset)
+                self?.handle(event, offset: (firstAudio.withLock { $0 } ?? .now).timeIntervalSince(sessionStart))
             }
         }
         if source.id == PlayerController.sourceID { startSyncedSubtitles(engine: engine, vad: vad) }
@@ -509,12 +515,14 @@ final class AppModel {
         }
     }
 
-    /// Passes audio through and notes when it was last audible (at most one store per second).
-    private func metered(_ input: AsyncStream<[Float]>) -> AsyncStream<[Float]> {
+    /// Passes audio through and notes when it was last audible (at most one store per second),
+    /// and when the first audio came (`firstAudio`).
+    private func metered(_ input: AsyncStream<[Float]>, firstAudio: OSAllocatedUnfairLock<Date?>) -> AsyncStream<[Float]> {
         let (output, feed) = AsyncStream.makeStream(of: [Float].self, bufferingPolicy: .bufferingNewest(400))
         Task.detached { [weak self] in
             var lastStore = Date.distantPast
             for await samples in input {
+                if lastStore == .distantPast { firstAudio.withLock { $0 = $0 ?? .now } }
                 let silent = self?.muteInput == true || self?.muteForSync == true
                 feed.yield(silent ? [Float](repeating: 0, count: samples.count) : samples)
                 if Date.now.timeIntervalSince(lastStore) > 1, samples.contains(where: { abs($0) > 0.003 }) {
