@@ -5,6 +5,7 @@ import Foundation
 import KikitoriCore
 import Observation
 import os
+import Synchronization
 
 /// The app's single source of truth: the live session, its status, stores and settings.
 /// Every status surface (overlay pill, menu bar, banners) reads `status` (spec §4).
@@ -101,12 +102,13 @@ final class AppModel {
     private var consecutiveFailures = 0
     private var watchdog: Timer?
     private var sourceQuitAt: Date?
-    @ObservationIgnored nonisolated(unsafe) private var lastSoundAt = Date.now
+    // These three are also read or written by the audio task (`metered`), off the main actor.
+    private nonisolated let lastSound = OSAllocatedUnfairLock(initialState: Date.now)
     /// Set while a clip plays from a microphone source, which would hear it again: capture
     /// passes silence instead (keeping the timeline) until it stops.
-    @ObservationIgnored nonisolated(unsafe) private var muteInput = false
+    private nonisolated let muteInput = Atomic(false)
     /// Set while synced: the player's sound is recognized from its buffered audio instead.
-    @ObservationIgnored nonisolated(unsafe) private var muteForSync = false
+    private nonisolated let muteForSync = Atomic(false)
     // Synced subtitles: the media pipeline's input, its events, and the cues not yet in the transcript.
     @ObservationIgnored private var mediaFeed: AsyncStream<MediaPipeline<SileroVAD>.Input>.Continuation?
     @ObservationIgnored private var mediaTask: Task<Void, Never>?
@@ -328,7 +330,7 @@ final class AppModel {
             capture = tap
         }
         self.capture = capture
-        lastSoundAt = .now
+        lastSound.withLock { $0 = .now }
         var pipeline = LivePipeline(engine: engine, translator: translator, vad: vad, contextTerms: [])
         pipeline.maxChunk = prefs.maxChunk
         pipeline.preview = AppleLivePreview()
@@ -391,7 +393,7 @@ final class AppModel {
         mediaTask = nil
         PlayerController.shared.setMediaTap(false)
         if synced { synced = false; PlayerController.shared.setSynced(false, lines: prefs.overlayLines) }
-        muteForSync = false
+        muteForSync.store(false, ordering: .relaxed)
         PlayerController.shared.addCues([], reset: true)
         cues = [:]
         cueAudio = [:]
@@ -419,7 +421,7 @@ final class AppModel {
         if want != synced {
             syncLog.notice("sync: \(want ? "synced" : "not synced", privacy: .public) (decoded audio at the playhead: \(hasAudio), live: \(live))")
             synced = want
-            muteForSync = want
+            muteForSync.store(want, ordering: .relaxed)
             PlayerController.shared.setSynced(want, lines: prefs.overlayLines)
         }
         feed.yield(.playhead(videoID: videoID, time: time, process: want))
@@ -438,7 +440,7 @@ final class AppModel {
     func mediaArrived(_ packet: MediaPacket) {
         guard let feed = mediaFeed else { return }
         mediaPackets += 1
-        if packet.samples.contains(where: { abs($0) > 0.003 }) { lastSoundAt = .now }
+        if packet.samples.contains(where: { abs($0) > 0.003 }) { lastSound.withLock { $0 = .now } }
         feed.yield(.packet(packet))
     }
 
@@ -531,11 +533,11 @@ final class AppModel {
             var lastStore = Date.distantPast
             for await samples in input {
                 if lastStore == .distantPast { firstAudio.withLock { $0 = $0 ?? .now } }
-                let silent = self?.muteInput == true || self?.muteForSync == true
+                let silent = self.map { $0.muteInput.load(ordering: .relaxed) || $0.muteForSync.load(ordering: .relaxed) } ?? false
                 feed.yield(silent ? [Float](repeating: 0, count: samples.count) : samples)
                 if Date.now.timeIntervalSince(lastStore) > 1, samples.contains(where: { abs($0) > 0.003 }) {
                     lastStore = .now
-                    self?.lastSoundAt = .now
+                    self?.lastSound.withLock { $0 = .now }
                 }
             }
             feed.finish()
@@ -554,7 +556,7 @@ final class AppModel {
             return
         }
         guard state == .listening else { return }
-        let silent = Date.now.timeIntervalSince(lastSoundAt)
+        let silent = Date.now.timeIntervalSince(lastSound.withLock { $0 })
         if silent > 60 { raise(.noAudio(name: source?.name ?? "the source")) } else { clear(.noAudio(name: source?.name ?? "the source")) }
         if prefs.endAfterSilenceMinutes > 0, silent > Double(prefs.endAfterSilenceMinutes * 60) {
             stop()
@@ -827,7 +829,7 @@ final class AppModel {
         guard let clip = clips.clip(at: line.time) else { return }
         clipPlayer.onFinish = { [weak self] in self?.replayEnded() }
         guard clipPlayer.play(clip, rate: rate, loop: loop) else { replayEnded(); return }
-        muteInput = source?.id.hasPrefix("mic:") == true
+        muteInput.store(source?.id.hasPrefix("mic:") == true, ordering: .relaxed)
         replaying = line.time
     }
 
@@ -844,7 +846,7 @@ final class AppModel {
 
     private func replayEnded() {
         replaying = nil
-        muteInput = false
+        muteInput.store(false, ordering: .relaxed)
     }
 
     // MARK: Profiles
