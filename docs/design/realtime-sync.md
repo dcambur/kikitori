@@ -487,6 +487,21 @@ Known costs and limits:
 - Before YouTube's auto-dub is switched back, the first seconds can be processed from the dub,
   under their own key; they are never shown once the original plays.
 
+### After first use (2026-10-24)
+
+On a game stream (Shirakami Fubuki, WarioWare VOD), synced subtitles stopped about 8 minutes in.
+The audio was still arriving 60–120 s ahead.
+- **Cause:** Silero VAD's carried state settled on "no speech" under loud game music and stayed
+  there while she talked. Over 520–640 s it gave 0 chunks; the recognizer on plain 6 s windows
+  heard speech throughout.
+- **Fix:** `SileroVAD` starts its state afresh after 2 s without speech. Chunks on clean speech
+  are identical (stream archive, live news, synthetic); that stretch now gives 29 chunks. This
+  helps unsynced subtitles too.
+- **Also:** cues now go out as soon as they are recognized, with the English following, so a
+  slow API can't hold up the Japanese.
+- **Logging:** the read-ahead path is now logged (category `sync`, and the player's state line:
+  audio lead, bytes, packets, MediaSources, chunk timings, drops).
+
 ## Reproducing
 
 ```bash

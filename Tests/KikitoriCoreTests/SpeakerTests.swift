@@ -188,6 +188,33 @@ actor FakeTracker: SpeakerTracking {
         #expect(await tracker.appended > 4.9)   // the tracker heard all the audio
     }
 
+    @Test func syncedCuesCarryTheirSpeakersFromRecognition() async {
+        // Speech at 102–103.5 s of the video; characters from chunk start + 0.2 s, 0.2 s each.
+        let tracker = FakeTracker(change: 103)
+        var pipeline = MediaPipeline(engine: FakeTimedEngine(), translator: nil, vad: EnergyVAD())
+        pipeline.speakers = tracker
+        let rate = 48_000.0
+        let samples = (0..<Int(8 * rate)).map { i -> Float in
+            let t = 100 + Double(i) / rate
+            return t >= 102 && t < 103.5 ? 0.2 * sin(Float(i) * 0.02) : 0
+        }
+        let (inputs, feed) = AsyncStream.makeStream(of: MediaPipeline<EnergyVAD>.Input.self)
+        let events = pipeline.run(inputs)
+        for start in stride(from: 0, to: samples.count, by: 24_000) {
+            feed.yield(.packet(MediaPacket(videoID: "v", stream: 1, time: 100 + Double(start) / rate, rate: rate,
+                                           samples: Array(samples[start..<min(start + 24_000, samples.count)]))))
+        }
+        feed.yield(.playhead(videoID: "v", time: 100, process: true))
+        var cue: Cue?
+        for await e in events {
+            if case let .cue(c, _) = e { cue = c; feed.finish() }
+        }
+        // The Japanese goes out split by speaker, before any translation.
+        #expect(cue?.lines.map(\.speaker) == ["A", "B"])
+        #expect(cue.map { $0.lines.map(\.ja).joined() == $0.chars.text } == true)
+        #expect(await tracker.appended > 102)   // the tracker heard the audio the chunker read, in video time
+    }
+
     @Test func withoutTimedRecognitionThereAreNoTurns() async {
         var pipeline = LivePipeline(engine: FakeEngine(), translator: nil, vad: EnergyVAD())
         pipeline.speakers = FakeTracker(change: 1.5)

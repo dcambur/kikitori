@@ -189,6 +189,35 @@ struct EdgeEngine: TimedSpeechEngine {
         #expect(r[1].isEmpty && r[2].isEmpty, "\(r)")
     }
 
+    /// A slow API delays only the English: the cue (its Japanese) goes out once recognized.
+    @Test func theJapaneseDoesNotWaitForTheTranslation() async {
+        struct SlowTransport: HTTPTransport {
+            let inner: StubTransport
+            func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+                try await Task.sleep(for: .milliseconds(1500))
+                return try await inner.send(request)
+            }
+        }
+        let answer = #"{"lines":[{"ja":"あい","en":"Hi","note":"","term":""}]}"#
+        let client = ClaudeClient(apiKey: "k", transport: SlowTransport(inner: StubTransport([(200, messageJSON(text: answer), [:])])))
+        let pipeline = MediaPipeline(engine: EdgeEngine(), translator: LiveTranslator(client: client, profile: nil), vad: EnergyVAD())
+        let (inputs, feed) = AsyncStream.makeStream(of: MediaPipeline<EnergyVAD>.Input.self)
+        let events = pipeline.run(inputs)
+        for input in packets(start: 0, seconds: 8, bursts: [2]) + [.playhead(videoID: "v", time: 0, process: true)] { feed.yield(input) }
+        let began = Date()
+        var cueAt: Double?, translatedAt: Double?, english: String?
+        for await e in events {
+            switch e {
+            case .cue: cueAt = Date().timeIntervalSince(began)
+            case let .translation(_, lines, _, _): translatedAt = Date().timeIntervalSince(began); english = lines.first?.en; feed.finish()
+            default: break
+            }
+        }
+        #expect(cueAt.map { $0 < 1.0 } == true, "cue after \(cueAt ?? -1) s")
+        #expect(translatedAt.map { $0 >= 1.5 } == true)
+        #expect(english == "Hi")
+    }
+
     @Test func nothingIsWorkedOnWhileNotSynced() async {
         let pipeline = MediaPipeline(engine: EdgeEngine(), translator: nil, vad: EnergyVAD())
         let audio = packets(start: 0, seconds: 10, bursts: [2])

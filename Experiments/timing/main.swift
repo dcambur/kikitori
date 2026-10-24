@@ -111,6 +111,26 @@ func percentile(_ v: [Double], _ p: Double) -> Double {
 let url = URL(fileURLWithPath: path)
 let audio = try await samples(of: url)
 print(String(format: "%@: %.1f s", url.lastPathComponent, Double(audio.count) / rate))
+if args.contains("--fixed") {   // no VAD: what the recognizer hears in plain 6 s windows
+    try await SpeechEngineWarmup.run()
+    for start in stride(from: 0, to: audio.count, by: 96_000) {
+        let (text, _) = try await recognize(Array(audio[start..<min(start + 96_000, audio.count)]), timed: false)
+        print(String(format: "%6.0f s  %@", Double(start) / rate, text))
+    }
+    exit(0)
+}
+if args.contains("--vad") {   // Silero's speech probability, the highest per second
+    var vad = try await SileroVAD.load()
+    var line = ""
+    for (i, start) in stride(from: 0, to: audio.count - vad.frameSize, by: vad.frameSize).enumerated() {
+        if let every = option("--reset").flatMap(Int.init), i % every == 0 { await vad.reset() }   // fresh state every N frames
+        let p = await vad.probability(audio[start..<start + vad.frameSize])
+        line += p.isNaN ? "N" : p >= 0.5 ? "#" : p >= 0.2 ? "+" : "."
+        if args.contains("--raw"), i < 40 { print(i, p) }
+        if (i + 1) % 39 == 0 { print(String(format: "%6.0f s %@", Double(start) / rate - 9, line)); line = "" }
+    }
+    exit(0)
+}
 var chunker = Chunker(vad: try await SileroVAD.load())
 chunker.maxChunk = 6   // as LivePipeline
 var chunks: [Chunker<SileroVAD>.Chunk] = []

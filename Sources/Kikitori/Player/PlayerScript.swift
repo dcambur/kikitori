@@ -13,8 +13,10 @@
 ///   mode, the miniplayer and full screen), bottom-centre on the picture itself.
 /// - Synced subtitles (`__kikitori.sync(true, lines)`): `__kikitori.cues(list, reset)` hands over
 ///   cues ready before they are spoken, and each character appears when the video reaches its
-///   time (`currentTime`, every frame). A cue is final: it is drawn as it came, never changed.
-///   When a line begins, `kkReveal` {id, line} tells the app (the transcript gets it then; also
+///   time (`currentTime`, every frame). A cue comes first as one Japanese line, then again with
+///   the translator's lines; the second replaces the first only if it hasn't begun, so what is
+///   drawn never changes.
+///   When a line begins, `kkReveal` {id, line, from, to} tells the app (the transcript gets it then; also
 ///   checked every 500 ms, since frames stop while the window is hidden). Lines a seek jumps over
 ///   are never posted. A cue that arrives after its start (just after a seek) is not drawn on the
 ///   video; it still goes to the transcript. Seeking back before a cue makes it drawable again.
@@ -53,7 +55,8 @@ enum PlayerScript {
           const media = window.__kikitoriMedia ? window.__kikitoriMedia.status() : null;
           post('kkState', { t: v ? v.currentTime : -1, paused: v ? v.paused : true, rate: v ? v.playbackRate : 1,
                             live, title: document.title, url: location.href, hasVideo: !!v, channel: channel(),
-                            vid: currentVid(), media: !!(media && media.ok),
+                            vid: currentVid(), media: !!(media && media.ok), mediaUntil: media ? media.until : null,
+                            mediaKB: media ? media.kb : 0,
                             ad: !!document.querySelector('#movie_player.ad-showing') });
           // Lines pushed while there was no video (a search page, a video still loading) or before
           // the site rebuilt its player are drawn as soon as the player is there.
@@ -206,7 +209,7 @@ enum PlayerScript {
               const start = c.chars[from][1];
               if (start > t || sync.skips.some(([a, b]) => start > a && start < b)) return;
               sync.posted.add(key);
-              post('kkReveal', { id: c.id, line: i });
+              post('kkReveal', { id: c.id, line: i, from, to });
             });
           }
           sync.postedT = t;
@@ -232,7 +235,13 @@ enum PlayerScript {
         kk.cues = (list, reset) => {
           if (reset) { sync.cues = []; sync.posted.clear(); sync.rows = ''; sync.els = new Map(); sync.postedT = null; sync.skips = []; }
           const v = video(), t = v ? v.currentTime : 0, vid = currentVid(), ad = !!document.querySelector('#movie_player.ad-showing');
-          for (const c of list) { c.late = !ad && c.vid === vid && c.chars[0][1] < t - 0.05; sync.cues.push(c); }
+          for (const c of list) {
+            // A cue sent again (its translator lines, after its Japanese) replaces the first one
+            // only while it hasn't begun: what is on screen never changes.
+            const i = sync.cues.findIndex(x => x.id === c.id);
+            if (i >= 0) { if (ad || sync.cues[i].vid !== vid || sync.cues[i].chars[0][1] > t + 0.3) sync.cues[i] = Object.assign(c, { late: sync.cues[i].late }); continue; }
+            c.late = !ad && c.vid === vid && c.chars[0][1] < t - 0.05; sync.cues.push(c);
+          }
           sync.cues.sort((a, b) => a.chars[0][1] - b.chars[0][1]);
         };
         function frame() {

@@ -87,8 +87,11 @@ All in `SpeakerLabeler` (pure functions, unit-tested) and `Spoken`:
    `CueAligner` (edit-distance alignment of its corrected Japanese), and each line takes the
    speaker who said most of its characters (by time). So a line that does straddle a change is
    still labelled sensibly.
-5. **Synced cues** (`MediaPipeline`) use the same steps; `Cue.Line.speaker` carries the label to
-   the transcript (`revealed`) and to the page.
+5. **Synced cues** (`MediaPipeline`) use the same steps. A cue goes out as soon as its chunk is
+   recognized, already split into one Japanese line per speaker turn; when its translation comes
+   (`.translation`), the translator's lines replace them, each with its majority speaker.
+   `Cue.Line.speaker` carries the label to the transcript (`revealed`, `cueTranslated`) and to
+   the page.
 
 ## 4. Names and voices
 

@@ -98,6 +98,19 @@ final class Sink: NSObject, WKScriptMessageHandler {
     _ = await js("window.fakeT = 54; document.querySelector('video').dispatchEvent(new Event('seeking')); return 1;")
     await at(54.5, expect: "飛ぶ")   // spoken at 50–51: still within its 8 s, as playback from there would show
     await at(55.2, expect: "飛ぶ / 跳", reveals: ["A:0", "A:1", "B:0", "D:0"])
+    // A cue comes as one Japanese line, then with the translator's lines: replaced before it
+    // begins (two rows)…
+    _ = await js("""
+        const c = l => ({ id: 'E', vid: 'vid1', chars: [['あ', 80.0, 80.2], ['い', 80.2, 80.4], ['う', 80.4, 80.6]], lines: l });
+        window.__kikitori.cues([c([[0, 3]])], false); window.fakeT = 79; return 1;
+        """)
+    _ = await js("window.__kikitori.cues([{ id: 'E', vid: 'vid1', chars: [['あ', 80.0, 80.2], ['い', 80.2, 80.4], ['う', 80.4, 80.6]], lines: [[0, 2], [2, 3]] }], false); return 1;")
+    await at(80.5, expect: "あい / う")
+    // …but not once it has begun: what is on screen stays.
+    _ = await js("window.__kikitori.cues([{ id: 'F', vid: 'vid1', chars: [['か', 90.0, 90.2], ['き', 90.2, 90.4]], lines: [[0, 2]] }], false); return 1;")
+    await at(90.1, expect: "か_")
+    _ = await js("window.__kikitori.cues([{ id: 'F', vid: 'vid1', chars: [['か', 90.0, 90.2], ['き', 90.2, 90.4]], lines: [[0, 1], [1, 2]] }], false); return 1;")
+    await at(90.3, expect: "かき", reveals: ["A:0", "A:1", "B:0", "D:0", "E:0", "E:1", "F:0"])   // one row, one reveal
     print(failures == 0 ? "all checks passed" : "\(failures) check(s) failed")
     exit(failures == 0 ? 0 : 1)
 }
