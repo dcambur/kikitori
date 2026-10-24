@@ -288,7 +288,10 @@ struct AccountTab: View {
             status = result.message
             guard result.shouldSave else { return }
             do { try KeychainStore.setAPIKey(candidate); model.hasAPIKey = true; key = "" }
-            catch { status = "The key couldn’t be saved in the Keychain (\((error as NSError).code))." }
+            catch {
+                model.hasAPIKey = KeychainStore.apiKey() != nil   // the old key was removed first
+                status = "The key couldn’t be saved in the Keychain (\((error as NSError).code))."
+            }
         }
     }
 }

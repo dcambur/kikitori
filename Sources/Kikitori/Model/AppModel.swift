@@ -349,11 +349,15 @@ final class AppModel {
         pipelineTask = Task { [weak self] in
             for await event in events {
                 // Paused or stopped: what is still queued belongs to the run that ended (its lines
-                // would wait for English forever, or land in the next session). Ending the loop
-                // also stops the pipeline's stages.
+                // would wait for English forever, or land in the next session); only its bills
+                // count. The stream ends once its buffer is empty, and that stops the stages.
                 guard !Task.isCancelled else {
-                    if case let .translated(_, _, cost, _, tokens) = event { self?.billLate(cost, tokens: tokens, session: sessionID) }
-                    break
+                    switch event {
+                    case let .translated(_, _, cost, _, tokens), let .translationFailed(_, _, cost, tokens):
+                        self?.billLate(cost, tokens: tokens, session: sessionID)
+                    default: break
+                    }
+                    continue
                 }
                 self?.handle(event, offset: (firstAudio.withLock { $0 } ?? .now).timeIntervalSince(sessionStart))
             }
@@ -376,8 +380,12 @@ final class AppModel {
         mediaTask = Task { [weak self] in
             for await event in events {
                 guard !Task.isCancelled else {   // as for the tap's pipeline (startCapture)
-                    if case let .translation(_, _, cost, tokens) = event { self?.billLate(cost, tokens: tokens, session: sessionID) }
-                    break
+                    switch event {
+                    case let .translation(_, _, cost, tokens), let .translationFailed(_, _, cost, tokens):
+                        self?.billLate(cost, tokens: tokens, session: sessionID)
+                    default: break
+                    }
+                    continue
                 }
                 self?.handleSynced(event)
             }
@@ -693,7 +701,7 @@ final class AppModel {
         guard tokens > 0 else { return }
         if session?.id == id { session?.cost += cost }
         ledger.add(UsageEntry(session: id, model: LiveTranslator.model, kind: .live, cost: cost, tokens: tokens))
-        saveLedgerSoon()
+        saveLedgerNow()   // it may come just before the app quits
     }
 
     private func noteFailure(_ failure: ClaudeClient.Failure, cost: Double, tokens: Int, in record: inout SessionRecord) {
