@@ -281,6 +281,7 @@ final class AppModel {
         sourceQuitAt = nil
         session?.end = .now
         saveSession()
+        saveLedgerNow()
         session = nil
         source = nil
         translator = nil
@@ -758,7 +759,7 @@ final class AppModel {
                 let r = try await Explainer(client: ClaudeClient(apiKey: key)).explain(line, context: context, profile: profile, streamInfo: info)
                 // Billed even if it was cancelled meanwhile (another Explain): it counts toward the cap.
                 ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
-                                                 cost: r.cost, tokens: r.usage.inputTokens + r.usage.outputTokens))
+                                                 cost: r.cost, tokens: r.usage.total))
                 session?.cost += r.cost
                 saveLedgerSoon()
                 guard !Task.isCancelled else { return }
@@ -767,7 +768,7 @@ final class AppModel {
             } catch {
                 if let billed = error as? ClaudeClient.BilledFailure {   // billed with nothing to show: still counts
                     ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
-                                                     cost: billed.cost, tokens: billed.usage.inputTokens + billed.usage.outputTokens))
+                                                     cost: billed.cost, tokens: billed.usage.total))
                     session?.cost += billed.cost
                     saveLedgerSoon()
                 }
@@ -942,6 +943,11 @@ final class AppModel {
             guard !Task.isCancelled else { return }
             Self.save(ledger.entries, to: supportURL.appending(path: "usage.json"))
         }
+    }
+
+    func saveLedgerNow() {
+        ledgerSave?.cancel()
+        Self.save(ledger.entries, to: supportURL.appending(path: "usage.json"))
     }
 
     func setCycleStartDay(_ day: Int) {
