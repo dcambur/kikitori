@@ -121,6 +121,10 @@ public final class MediaResampler: @unchecked Sendable {
             converter?.primeMethod = .none   // output sample 0 is input sample 0: times stay put
             rate = packet.rate
             outputTime = packet.time
+        } else {
+            // Following on, give or take a few ms (a lost frame, rounding): what follows still
+            // goes at its own time, so small holes don't add up to a shift.
+            outputTime += packet.time - nextInput
         }
         nextInput = packet.end
         guard let converter, !packet.samples.isEmpty,

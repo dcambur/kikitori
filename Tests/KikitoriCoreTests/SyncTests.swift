@@ -234,3 +234,107 @@ struct EdgeEngine: TimedSpeechEngine {
         #expect(r[0].isEmpty)
     }
 }
+
+/// The cutting stage driven directly, with 16 kHz packets (no resampler).
+@Suite struct CutterTests {
+    /// 0.5 s packets; speech bursts of 1.5 s at `bursts`.
+    func packets(start: Double, seconds: Double, bursts: [Double]) -> [MediaPipeline<EnergyVAD>.Input] {
+        let samples = (0..<Int(seconds * 16_000)).map { i -> Float in
+            let t = start + Double(i) / 16_000
+            return bursts.contains { t >= $0 && t < $0 + 1.5 } ? 0.2 * sin(Float(i) * 0.06) : 0
+        }
+        return stride(from: 0, to: samples.count, by: 8_000).map {
+            .packet(MediaPacket(videoID: "v", stream: 1, time: start + Double($0) / 16_000, rate: 16_000,
+                                samples: Array(samples[$0..<min($0 + 8_000, samples.count)])))
+        }
+    }
+
+    final class Seen: @unchecked Sendable { var chunks: [(start: Double, end: Double)] = [] }
+    func cutter() -> (Cutter<EnergyVAD>, Seen) {
+        let seen = Seen()
+        let c = Cutter(vad: EnergyVAD(), maxChunk: 6, horizon: 30, keep: 300, playhead: Playhead()) { seen.chunks.append(($0.start, $0.end)) }
+        return (c, seen)
+    }
+
+    /// A playhead off the 16 kHz grid (any real `currentTime`) used to leave the run a fraction of
+    /// a sample short of the gap, stuck: the audio after it waited for the playhead to get there.
+    @Test(arguments: [100.00001, 100.00004])
+    func aGapIsCrossedWhateverThePlayheadsSubSampleOffset(_ playhead: Double) async {
+        let (c, seen) = cutter()
+        for input in packets(start: 99, seconds: 11, bursts: [102, 106]) + packets(start: 110.5, seconds: 20, bursts: [114, 120]) {
+            await c.take(input)
+        }
+        await c.take(.playhead(videoID: "v", time: playhead, process: true))
+        #expect(seen.chunks.count == 4, "chunks at \(seen.chunks.map(\.start))")
+    }
+
+    /// The end of the audio buffered so far is not a gap because some audio lies far beyond the
+    /// horizon (left from before a seek back): speech running over it stays one chunk.
+    @Test(arguments: [false, true])
+    func speechOverTheBufferedEdgeIsOneChunk(_ audioFarAhead: Bool) async {
+        let (c, seen) = cutter()
+        let speech = packets(start: 0, seconds: 40, bursts: [18.5, 20])   // 18.5–21.5 s
+        if audioFarAhead { for p in packets(start: 100, seconds: 10, bursts: []) { await c.take(p) } }
+        for p in speech.prefix(40) { await c.take(p) }                    // 0–20 s now
+        await c.take(.playhead(videoID: "v", time: 0, process: true))
+        for p in speech.dropFirst(40) { await c.take(p) }                 // the rest as it comes
+        await c.take(.playhead(videoID: "v", time: 0.5, process: true))
+        #expect(seen.chunks.count == 1, "chunks \(seen.chunks)")
+    }
+}
+
+extension MediaPipelineTests {
+    struct SlowEdgeEngine: TimedSpeechEngine {
+        let name = "slow edges"
+        func prepare() async throws {}
+        func transcribe(_ samples: [Float], context: [String]) async throws -> String { "あい" }
+        func transcribeTimed(_ samples: [Float], context: [String]) async throws -> [TimedChar] {
+            try await Task.sleep(for: .milliseconds(300))
+            return try await EdgeEngine().transcribeTimed(samples, context: context)
+        }
+    }
+
+    /// Chunks dropped before recognition (a seek forward while they were queued) are not done:
+    /// seeking back there still gives them cues.
+    @Test func chunksDroppedByASeekAreRedoneOnSeekingBack() async {
+        var pipeline = MediaPipeline(engine: SlowEdgeEngine(), translator: nil, vad: EnergyVAD())
+        pipeline.horizon = 30
+        let (inputs, feed) = AsyncStream.makeStream(of: MediaPipeline<EnergyVAD>.Input.self)
+        let events = pipeline.run(inputs)
+        let seen = Mutex<[Double]>([])
+        let reader = Task { for await e in events { if case let .cue(cue, _) = e { seen.withLock { $0.append(cue.start) } } } }
+        let bursts: [Double] = [2, 6, 10, 14, 18, 22, 26]
+        for p in packets(start: 0, seconds: 120, bursts: bursts + [80, 84]) { feed.yield(p) }
+        feed.yield(.playhead(videoID: "v", time: 0, process: true))
+        try? await Task.sleep(for: .milliseconds(450))                    // ~1 chunk recognized
+        feed.yield(.playhead(videoID: "v", time: 75, process: true))      // seek forward
+        try? await Task.sleep(for: .milliseconds(2500))
+        for k in 0...8 { feed.yield(.playhead(videoID: "v", time: 1 + Double(k) * 0.5, process: true)); try? await Task.sleep(for: .milliseconds(500)) }
+        try? await Task.sleep(for: .milliseconds(2500))
+        feed.finish()
+        await reader.value
+        let starts = seen.withLock { $0 }
+        let missing = bursts.filter { b in !starts.contains { abs($0 - b) < 0.05 } }
+        #expect(missing.isEmpty, "no cue for the speech at \(missing)")
+    }
+
+    /// A 20 ms hole every second (a lost frame) is under the join tolerance: what follows still
+    /// goes at its own time instead of shifting earlier with every hole.
+    @Test func smallHolesDoNotShiftLaterAudio() {
+        let resampler = MediaResampler()
+        var timeline = MediaTimeline()
+        var t = 10.0
+        for k in 0..<200 {   // 0.1 s packets at 48 kHz, a click in the last one
+            var samples = [Float](repeating: 0, count: 4_800)
+            if k == 199 { samples[2_400] = 1 }
+            if k % 10 == 9 { t += 0.02 }
+            if let o = resampler.convert(MediaPacket(videoID: "v", stream: 0, time: t, rate: 48_000, samples: samples)) {
+                timeline.add(start: o.start, samples: o.samples)
+            }
+            if k < 199 { t += 0.1 }
+        }
+        let range = timeline.ranges.last!, s = range.samples
+        let peak = s.indices.max { abs(s[$0]) < abs(s[$1]) }!
+        #expect(abs(range.start + Double(peak) / 16_000 - (t + 0.05)) < 0.005)
+    }
+}
