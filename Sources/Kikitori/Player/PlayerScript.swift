@@ -195,14 +195,28 @@ enum PlayerScript {
         // last character, its characters shown from their own times. Unrevealed characters keep
         // their place (transparent), so a line never moves while it fills.
         const sync = { on: false, lines: 1, cues: [], posted: new Set(), lastT: null, postedT: null, skips: [], skipsVid: null, raf: 0, rows: '', spans: [], els: new Map() };
+        // The first cue starting at or after `t` (cues are sorted by start).
+        function firstCue(t) {
+          let lo = 0, hi = sync.cues.length;
+          while (lo < hi) { const mid = (lo + hi) >> 1; if (sync.cues[mid].chars[0][1] < t) lo = mid + 1; else hi = mid; }
+          return lo;
+        }
         // Lines that have begun by `t`, once each, to the app; never those a forward seek jumped
         // over (`skips`, also for cues that arrive later). Not while the video is seeking: its
-        // currentTime is already the new one before the 'seeking' event says so.
-        function postReveals(t) {
+        // currentTime is already the new one before the 'seeking' event says so. Every frame looks
+        // only at cues begun since `since`; the 500 ms check looks at all of them.
+        function postReveals(t, since) {
           const vid = currentVid();
-          if (vid !== sync.skipsVid) { sync.skips = []; sync.skipsVid = vid; }
-          for (const c of sync.cues) {
-            if (c.vid !== vid || c.chars[0][1] > t) continue;
+          if (vid !== sync.skipsVid) {
+            sync.skips = []; sync.skipsVid = vid;
+            // Another video, track or MediaSource: its key never comes back, nor do its cues.
+            const old = sync.cues.filter(c => c.vid !== vid);
+            if (old.length) { sync.cues = sync.cues.filter(c => c.vid === vid); for (const c of old) c.lines.forEach((_, i) => sync.posted.delete(c.id + ':' + i)); }
+          }
+          for (let k = since === undefined ? 0 : firstCue(since); k < sync.cues.length; k++) {
+            const c = sync.cues[k];
+            if (c.chars[0][1] > t) break;
+            if (c.vid !== vid) continue;
             c.lines.forEach(([from, to], i) => {
               const key = c.id + ':' + i;
               if (from >= to || sync.posted.has(key)) return;
@@ -255,10 +269,13 @@ enum PlayerScript {
             if (sync.lastT === null || t < sync.lastT - 0.3 || t > sync.lastT + 1.5) for (const c of sync.cues) if (c.chars[0][1] >= t) c.late = false;
             sync.lastT = t;
             if (sync.cues.length > 2000) sync.cues = sync.cues.filter(c => c.chars[c.chars.length - 1][2] > t - 1800);
-            if (!v.seeking) postReveals(t);
+            if (!v.seeking) postReveals(t, t - 60);
+            // Lines on screen now: begun, and at most 8 s past their end (a cue spans under a minute).
             const shown = [];
-            for (const c of sync.cues) {
-              if (c.vid !== vid || c.chars[0][1] > t) continue;
+            for (let k = firstCue(t - 60); k < sync.cues.length; k++) {
+              const c = sync.cues[k];
+              if (c.chars[0][1] > t) break;
+              if (c.vid !== vid) continue;
               c.lines.forEach(([from, to], i) => {
                 if (from >= to) return;
                 const start = c.chars[from][1], end = c.chars[to - 1][2], key = c.id + ':' + i;
