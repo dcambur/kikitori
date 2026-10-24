@@ -109,7 +109,7 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
                     continue
                 }
                 let began = Date()
-                let pieces = (try? await engine.transcribeTimed(chunk.samples, context: contextTerms)) ?? []
+                let pieces = await recognized([]) { try await engine.transcribeTimed(chunk.samples, context: contextTerms) }
                 let cleaned = TranscriptFilter.clean(pieces)
                 guard !cleaned.isEmpty else { continue }
                 let chars = OnsetRefiner.refine(cleaned, samples: chunk.samples).shifted(by: chunk.start)

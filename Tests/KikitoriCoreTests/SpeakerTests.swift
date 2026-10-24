@@ -215,6 +215,18 @@ actor FakeTracker: SpeakerTracking {
         #expect(await tracker.appended > 102)   // the tracker heard the audio the chunker read, in video time
     }
 
+    @Test func aTranslatedLineWithoutJapaneseGetsItsOwnCharacters() async {
+        let answer = #"{"lines":[{"ja":"あいうえお","en":"Line one","note":"","term":""},{"ja":"","en":"Line two","note":"","term":""}]}"#
+        let stub = StubTransport([(200, messageJSON(text: answer), [:])])
+        var pipeline = LivePipeline(engine: FakeTimedEngine(),
+                                    translator: LiveTranslator(client: ClaudeClient(apiKey: "k", transport: stub), profile: nil), vad: EnergyVAD())
+        pipeline.speakers = FakeTracker(change: 2.0)
+        let audio = AsyncStream<[Float]> { c in c.yield(signal([(false, 1), (true, 2), (false, 2)])); c.finish() }
+        var translated: [TranscriptLine] = []
+        for await event in pipeline.run(audio) { if case let .translated(_, lines, _, _, _) = event { translated = lines } }
+        #expect(translated.map(\.ja).joined() == "あいうえおかきくけこ")   // not the whole chunk again on line two
+    }
+
     @Test func withoutTimedRecognitionThereAreNoTurns() async {
         var pipeline = LivePipeline(engine: FakeEngine(), translator: nil, vad: EnergyVAD())
         pipeline.speakers = FakeTracker(change: 1.5)

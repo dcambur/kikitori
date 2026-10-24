@@ -97,7 +97,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                 let start = Date()
                 var spoken = Spoken(ja: "")
                 if let speakers, let timed = engine as? any TimedSpeechEngine {
-                    let pieces = TranscriptFilter.clean((try? await timed.transcribeTimed(chunk.samples, context: contextTerms)) ?? [])
+                    let pieces = TranscriptFilter.clean(await recognized([]) { try await timed.transcribeTimed(chunk.samples, context: contextTerms) })
                     spoken = Spoken(ja: pieces.text, chars: OnsetRefiner.refine(pieces, samples: chunk.samples).shifted(by: chunk.start))
                     let asr = Date().timeIntervalSince(start)
                     if let last = spoken.chars.last {
@@ -111,7 +111,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                                           audio: chunk.samples, turns: spoken.turnLines(at: chunk.start)))
                     }
                 } else {
-                    let raw = (try? await engine.transcribe(chunk.samples, context: contextTerms)) ?? ""
+                    let raw = await recognized("") { try await engine.transcribe(chunk.samples, context: contextTerms) }
                     spoken.ja = TranscriptFilter.clean(raw)
                     if !spoken.ja.isEmpty {
                         emit.yield(.heard(time: chunk.start, duration: chunk.duration, ja: spoken.ja,
@@ -134,11 +134,14 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                 let start = Date()
                 do {
                     let r = try await translator.translate(spoken.translatorInput)
-                    let speakers = spoken.cueLines(r.lines).map(\.speaker)
+                    // Each line on its own characters (with speakers tracked): its speaker, and its
+                    // Japanese if the translator gave none.
+                    let placed = spoken.cueLines(r.lines)
                     let lines = r.lines.enumerated().map { k, l in
-                        var line = TranscriptLine(time: time, ja: l.ja.isEmpty ? ja : l.ja, en: l.en,
+                        let own = placed.count == r.lines.count ? placed[k] : nil
+                        var line = TranscriptLine(time: time, ja: l.ja.isEmpty ? own?.ja ?? ja : l.ja, en: l.en,
                                                   note: l.note.isEmpty ? nil : l.note, term: l.term.isEmpty ? nil : l.term)
-                        line.speaker = speakers.count == r.lines.count ? speakers[k] : speakers.first ?? nil
+                        line.speaker = own.map(\.speaker) ?? placed.first?.speaker
                         return line
                     }
                     emit.yield(.translated(time: time, lines: lines, cost: r.cost,
@@ -158,6 +161,14 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         emit.onTermination = { _ in cut.cancel(); recognize.cancel(); translate.cancel(); previewing.cancel(); tracking.cancel() }
         return events
+    }
+}
+
+/// A chunk whose recognition failed is lost (and logged); the next one tries again.
+func recognized<T>(_ fallback: T, _ work: () async throws -> T) async -> T {
+    do { return try await work() } catch {
+        Logger(subsystem: "app.kikitori", category: "pipeline").error("recognition failed: \(error, privacy: .public)")
+        return fallback
     }
 }
 
