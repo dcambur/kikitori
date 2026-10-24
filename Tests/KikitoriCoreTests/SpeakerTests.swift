@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import KikitoriCore
 
@@ -341,6 +342,18 @@ actor FakeTracker: SpeakerTracking {
         let f = await tracker.frames(from: 0, to: 1.5)
         #expect(Date().timeIntervalSince(start) < 1)
         #expect(f.frames.count >= 12 && f.frames.allSatisfy { $0.start < 1.05 })
+    }
+
+    @Test func modelLoadsTakeTurns() async {
+        let gate = SpeakerTracker.Gate()
+        let order = Mutex<[String]>([])
+        await gate.enter()
+        let second = Task { await gate.enter(); order.withLock { $0.append("second in") }; await gate.leave() }
+        try? await Task.sleep(for: .milliseconds(100))
+        order.withLock { $0.append("first out") }
+        await gate.leave()
+        await second.value
+        #expect(order.withLock { $0 } == ["first out", "second in"])
     }
 
     @Test func finishStopsTheWaiting() async {

@@ -136,7 +136,13 @@ public actor SpeakerTracker: SpeakerTracking {
 
     public static func load(voices: [(name: String, samples: [Float])] = [], variant: Variant = .fast) async throws -> (SpeakerTracker, [Int: String]) {
         let config = variant.config
-        let models = try await SortformerModels.loadFromHuggingFace(config: config)
+        // One load at a time (a player session has two trackers, and a quick Stop and Start adds
+        // more): loads at once would download the same files into the same place, and a clash
+        // there makes FluidAudio delete its cache. Later loads find the files there.
+        await loading.enter()
+        let models: SortformerModels
+        do { models = try await SortformerModels.loadFromHuggingFace(config: config) } catch { await loading.leave(); throw error }
+        await loading.leave()
         let diarizer = SortformerDiarizer(config: config, timelineConfig: .init(
             numSpeakers: config.numSpeakers, frameDurationSeconds: config.frameDurationSeconds,
             maxStoredFrames: 7_500, storeSegments: false))
@@ -144,6 +150,20 @@ public actor SpeakerTracker: SpeakerTracking {
         let box = Box(diarizer)
         let names = enroll(voices, in: box)
         return (SpeakerTracker(box: box, voices: voices), names)
+    }
+
+    private static let loading = Gate()
+
+    /// Lets one caller through at a time, in order.
+    actor Gate {
+        private var busy = false
+        private var waiting: [CheckedContinuation<Void, Never>] = []
+        func enter() async {
+            if busy { await withCheckedContinuation { waiting.append($0) } } else { busy = true }
+        }
+        func leave() {
+            if waiting.isEmpty { busy = false } else { waiting.removeFirst().resume() }
+        }
     }
 
     static func enroll(_ voices: [(name: String, samples: [Float])], in box: Box) -> [Int: String] {
