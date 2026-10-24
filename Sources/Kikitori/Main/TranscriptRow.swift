@@ -44,42 +44,23 @@ struct TranscriptRow: View {
                         marked(line.ja).font(.japanese(textSize)).japaneseText()
                         if let term = line.term { NoteChip(term: term) }
                     }
-                case .both, .english where line.en == nil && !pending:
-                    // No English is coming (translation off, or a filler): the Japanese is the line.
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        if let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
-                        marked(line.ja).font(.japanese(textSize)).japaneseText()
-                        if let term = line.term { NoteChip(term: term) }
-                    }
                 case .both, .english:
-                    if mode == .both || line.en == nil {
-                        HStack(spacing: 6) {
-                            if let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
-                            marked(line.ja).font(.japanese(textSize - 2)).foregroundStyle(.secondary).japaneseText()
-                        }
-                    }
-                    if let en = line.en {
+                    // (A `where` on a multi-pattern case guards only the last pattern, so this is an `if`.)
+                    if line.en == nil && !pending {
+                        // No English is coming (translation off, or a filler): the Japanese is the line.
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            if mode == .english, let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
-                            marked(en).font(.system(size: textSize))
+                            if let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
+                            marked(line.ja).font(.japanese(textSize)).japaneseText()
                             if let term = line.term { NoteChip(term: term) }
                         }
-                    } else if pending {
-                        TranslatingDots().frame(height: textSize)
+                    } else {
+                        bilingual
                     }
                 }
             }
             .textSelection(.enabled)
             Spacer(minLength: 0)
-            if let replay, hovering || replay.playing {
-                Button(action: replay.toggle) {
-                    Image(systemName: replay.playing ? "stop.circle.fill" : "play.circle")
-                        .font(.system(size: 16)).foregroundStyle(replay.playing ? Color.kkAccent : .secondary)
-                }
-                .buttonStyle(.borderless)
-                .help(replay.playing ? "Stop" : "Hear this line again")
-                .accessibilityLabel(replay.playing ? "Stop playing" : "Play this line")
-            }
+            replayButton
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
@@ -88,6 +69,37 @@ struct TranscriptRow: View {
         .onHover { hovering = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
+    }
+
+    /// Japanese above English, or English alone; dots while the English is on its way.
+    @ViewBuilder var bilingual: some View {
+        if mode == .both || line.en == nil {
+            HStack(spacing: 6) {
+                if let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
+                marked(line.ja).font(.japanese(textSize - 2)).foregroundStyle(.secondary).japaneseText()
+            }
+        }
+        if let en = line.en {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if mode == .english, let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
+                marked(en).font(.system(size: textSize))
+                if let term = line.term { NoteChip(term: term) }
+            }
+        } else if pending {
+            TranslatingDots().frame(height: textSize)
+        }
+    }
+
+    @ViewBuilder var replayButton: some View {
+        if let replay, hovering || replay.playing {
+            Button(action: replay.toggle) {
+                Image(systemName: replay.playing ? "stop.circle.fill" : "play.circle")
+                    .font(.system(size: 16)).foregroundStyle(replay.playing ? Color.kkAccent : .secondary)
+            }
+            .buttonStyle(.borderless)
+            .help(replay.playing ? "Stop" : "Hear this line again")
+            .accessibilityLabel(replay.playing ? "Stop playing" : "Play this line")
+        }
     }
 
     func marked(_ s: String) -> Text {
