@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import KikitoriCore
 
@@ -215,6 +216,18 @@ actor FakeTracker: SpeakerTracking {
         #expect(await tracker.appended > 102)   // the tracker heard the audio the chunker read, in video time
     }
 
+    @Test func aTranslatedLineWithoutJapaneseGetsItsOwnCharacters() async {
+        let answer = #"{"lines":[{"ja":"あいうえお","en":"Line one","note":"","term":""},{"ja":"","en":"Line two","note":"","term":""}]}"#
+        let stub = StubTransport([(200, messageJSON(text: answer), [:])])
+        var pipeline = LivePipeline(engine: FakeTimedEngine(),
+                                    translator: LiveTranslator(client: ClaudeClient(apiKey: "k", transport: stub), profile: nil), vad: EnergyVAD())
+        pipeline.speakers = FakeTracker(change: 2.0)
+        let audio = AsyncStream<[Float]> { c in c.yield(signal([(false, 1), (true, 2), (false, 2)])); c.finish() }
+        var translated: [TranscriptLine] = []
+        for await event in pipeline.run(audio) { if case let .translated(_, lines, _, _, _) = event { translated = lines } }
+        #expect(translated.map(\.ja).joined() == "あいうえおかきくけこ")   // not the whole chunk again on line two
+    }
+
     @Test func withoutTimedRecognitionThereAreNoTurns() async {
         var pipeline = LivePipeline(engine: FakeEngine(), translator: nil, vad: EnergyVAD())
         pipeline.speakers = FakeTracker(change: 1.5)
@@ -275,6 +288,24 @@ actor FakeTracker: SpeakerTracking {
         #expect(!f.frames.isEmpty && f.frames.allSatisfy { $0.probs[1] > 0.5 })
     }
 
+    @Test func afterAPauseTheRunBeforeItNeverStandsInForTheNewOne() async {
+        // Run 1: A for 10 s. Resumed 12 s into the session, its clock at 0 again: B, diarized
+        // only to 2 s when a chunk to 3 s asks. The second's gap gets no frames, not A's.
+        let tracker = SpeakerTracker.unloaded()
+        await tracker.setMaxWait(0.2)
+        let run1 = ShiftedSpeakerTracker(tracker, by: 0), run2 = ShiftedSpeakerTracker(tracker, by: 12)
+        await run1.append(tone(10), at: 0)
+        await tracker.receive(settled: rows(125, slot: 0), tentative: [], from: 0)
+        await run2.append(tone(3), at: 0)
+        await tracker.receive(settled: rows(25, slot: 1), tentative: [], from: 125)
+        let f = await run2.frames(from: 0, to: 3)
+        #expect(!f.frames.isEmpty && f.frames.allSatisfy { $0.probs[1] > 0.5 })
+        #expect(f.frames.allSatisfy { $0.start > -0.01 && $0.start < 2.1 })   // in the run's own clock
+        let chars = timed("あいうえおかきくけこさしすせ", from: 0.1, step: 0.2)
+        let turns = SpeakerLabeler.turns(chars, speakers: SpeakerLabeler.speakers(for: chars, in: f))
+        #expect(turns.map { $0.speaker.map(SpeakerLabeler.label) } == ["B"])
+    }
+
     @Test func aChunkWaitsUntilTheDiarizerHasRunOnIt() async {
         let tracker = SpeakerTracker.unloaded()
         await tracker.setMaxWait(5)
@@ -311,6 +342,18 @@ actor FakeTracker: SpeakerTracking {
         let f = await tracker.frames(from: 0, to: 1.5)
         #expect(Date().timeIntervalSince(start) < 1)
         #expect(f.frames.count >= 12 && f.frames.allSatisfy { $0.start < 1.05 })
+    }
+
+    @Test func modelLoadsTakeTurns() async {
+        let gate = SpeakerTracker.Gate()
+        let order = Mutex<[String]>([])
+        await gate.enter()
+        let second = Task { await gate.enter(); order.withLock { $0.append("second in") }; await gate.leave() }
+        try? await Task.sleep(for: .milliseconds(100))
+        order.withLock { $0.append("first out") }
+        await gate.leave()
+        await second.value
+        #expect(order.withLock { $0 } == ["first out", "second in"])
     }
 
     @Test func finishStopsTheWaiting() async {

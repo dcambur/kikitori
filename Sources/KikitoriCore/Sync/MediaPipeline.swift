@@ -82,7 +82,10 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
         let cutter = Cutter(vad: vad, maxChunk: maxChunk, horizon: horizon, keep: keepBehind, playhead: playhead) { toRecognize.yield($0) }
         if speakers != nil { cutter.read = { toSpeakers.yield(($0, $1, $2)) } }
         let cut = Task {
-            for await input in inputs { await cutter.take(input) }
+            for await input in inputs {
+                if Task.isCancelled { break }   // a stream keeps handing out what it buffered
+                await cutter.take(input)
+            }
             toRecognize.finish()
             toSpeakers.finish()
         }
@@ -90,6 +93,7 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
             guard let speakers else { return }
             var video: String?
             for await (samples, time, videoID) in speakerAudio {
+                if Task.isCancelled { break }
                 if let v = video, v != videoID { await speakers.reset() }
                 video = videoID
                 await speakers.append(samples, at: time)
@@ -98,12 +102,14 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         let recognize = Task { [engine, contextTerms] in
             for await chunk in chunks {
+                if Task.isCancelled { break }   // stopped: the chunks still queued are not recognized
                 if playhead.passed(chunk.videoID, chunk.end, by: staleAfter) {
+                    playhead.dropped(chunk.videoID, chunk.start, chunk.end)   // not done: seeking back redoes it
                     log.notice("sync: dropped a chunk at \(chunk.start, format: .fixed(precision: 1)) s before recognition, \(playhead.behind(chunk.end), format: .fixed(precision: 1)) s behind the playhead")
                     continue
                 }
                 let began = Date()
-                let pieces = (try? await engine.transcribeTimed(chunk.samples, context: contextTerms)) ?? []
+                let pieces = await recognized([]) { try await engine.transcribeTimed(chunk.samples, context: contextTerms) }
                 let cleaned = TranscriptFilter.clean(pieces)
                 guard !cleaned.isEmpty else { continue }
                 let chars = OnsetRefiner.refine(cleaned, samples: chunk.samples).shifted(by: chunk.start)
@@ -121,6 +127,7 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         let translate = Task { [translator] in
             for await h in heard {
+                if Task.isCancelled { break }
                 let id = h.cue.id
                 // Long past (the translator fell behind, or a seek): its Japanese stays without English.
                 if playhead.passed(h.cue.videoID, h.end, by: staleAfter) {
@@ -157,10 +164,15 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
     }
 }
 
-/// The latest playhead, for the stages after cutting.
+/// The latest playhead, for the stages after cutting; and back from them, the chunks they
+/// dropped before recognition, which the cutter must not count as done.
 final class Playhead: Sendable {
     private let value = Mutex<(videoID: String, time: Double)?>(nil)
+    private let undone = Mutex<[(videoID: String, start: Double, end: Double)]>([])
     func set(_ videoID: String, _ time: Double) { value.withLock { $0 = (videoID, time) } }
+    func dropped(_ videoID: String, _ start: Double, _ end: Double) { undone.withLock { $0.append((videoID, start, end)) } }
+    /// The chunks dropped since the last call.
+    func takeDropped() -> [(videoID: String, start: Double, end: Double)] { undone.withLock { v in defer { v = [] }; return v } }
     /// True for audio of another video, or ending more than `seconds` before the playhead.
     func passed(_ videoID: String, _ end: Double, by seconds: Double) -> Bool {
         value.withLock { v in v.map { $0.videoID != videoID || end < $0.time - seconds } ?? false }
@@ -185,6 +197,15 @@ struct Intervals: Sendable, Equatable {
             return true
         }
         spans.insert((lo, hi), at: spans.firstIndex { $0.0 > lo } ?? spans.count)
+    }
+
+    /// No longer worked on (its chunk was dropped before recognition).
+    mutating func remove(_ a: Double, _ b: Double) {
+        guard b > a else { return }
+        spans = spans.flatMap { s -> [(Double, Double)] in
+            guard s.0 < b, s.1 > a else { return [s] }
+            return [(s.0, a), (b, s.1)].filter { $0.1 - $0.0 > 0.001 }
+        }
     }
 
     /// The first time at or after `t` not worked on.
@@ -226,6 +247,7 @@ final class Cutter<VAD: VoiceActivityDetector>: @unchecked Sendable {
     }
 
     func take(_ input: MediaPipeline<VAD>.Input) async {
+        for d in playhead.takeDropped() { done[d.videoID]?.remove(d.start, d.end) }
         switch input {
         case .packet(let p):
             let resampler = resamplers[p.stream] ?? MediaResampler()
@@ -259,13 +281,13 @@ final class Cutter<VAD: VoiceActivityDetector>: @unchecked Sendable {
             // A run at a gap in the audio (audio further on, none here): the speech before it ends
             // here; the next run starts after it. At the end of all the audio, it waits for more.
             if let r = run, r.videoID == head.videoID, timeline.range(at: r.cursor) == nil,
-               timeline.ranges.contains(where: { $0.start > r.cursor }) { finishRun(flush: true) }
+               timeline.ranges.contains(where: { $0.start > r.cursor && $0.start < limit }) { finishRun(flush: true) }
             var claimed = done[head.videoID] ?? Intervals()
             if let r = run, r.videoID == head.videoID { claimed.add(r.start, r.cursor) }
             // The first time from the playhead on that is not done and has audio: a hole in the audio
             // (before its first sample, or a gap) is skipped, never waited in.
             var from = claimed.free(from: head.time)
-            while timeline.range(at: from) == nil, let next = timeline.ranges.first(where: { $0.start > from }) {
+            while timeline.range(at: from) == nil, let next = timeline.ranges.first(where: { $0.start > from && $0.start < limit }) {
                 from = claimed.free(from: next.start)
             }
             if let r = run, r.videoID != head.videoID || abs(r.cursor - from) > 0.001 { finishRun(flush: false) }
@@ -288,7 +310,9 @@ final class Cutter<VAD: VoiceActivityDetector>: @unchecked Sendable {
                 emit(.init(videoID: r.videoID, start: r.start + chunk.start, samples: chunk.samples))
                 r.emitted = r.start + chunk.start + chunk.duration
             }
-            r.cursor += Double(samples.count) / MediaTimeline.rate
+            // At the range's end exactly: a cursor off the 16 kHz grid could stop a fraction of a
+            // sample short, read nothing ever after, and never reach the gap.
+            r.cursor = stop == range.end ? range.end : r.cursor + Double(samples.count) / MediaTimeline.rate
             run = r
             if stop == range.end { continue }   // reached a gap or the end of the audio: see the top
             // Reached a stretch already done (after seeking back): close this run, carry on after it.

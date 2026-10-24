@@ -98,6 +98,7 @@ public struct ClaudeClient: Sendable {
         case rateLimited(retryAfter: Double?)   // 429
         case overloaded                         // 500/529/503
         case offline                            // no network
+        case timedOut                           // connected, but no answer within `timeout`
         case refusal                            // stop_reason "refusal"
         case truncated                          // stop_reason "max_tokens": the answer was cut off
         case badRequest(String)                 // 400 other than credits: a bug on our side
@@ -115,6 +116,8 @@ public struct ClaudeClient: Sendable {
     public static let fallbackBeta = "server-side-fallback-2026-07-01"
 
     public var apiKey: String
+    /// Longest wait for a whole answer (requests are not streamed).
+    public var timeout: TimeInterval = 60
     public var baseURL = URL(string: "https://api.anthropic.com/v1/messages")!
     public var transport: any HTTPTransport
 
@@ -146,7 +149,7 @@ public struct ClaudeClient: Sendable {
     public func send(_ request: Request) async throws -> Response {
         var req = URLRequest(url: baseURL)
         req.httpMethod = "POST"
-        req.timeoutInterval = 60
+        req.timeoutInterval = timeout
         req.setValue("application/json", forHTTPHeaderField: "content-type")
         req.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
@@ -158,8 +161,10 @@ public struct ClaudeClient: Sendable {
         let data: Data, http: HTTPURLResponse
         do {
             (data, http) = try await transport.send(req)
+        } catch let error as URLError where error.code == .timedOut {
+            throw Failure.timedOut
         } catch let error as URLError
-            where [.notConnectedToInternet, .networkConnectionLost, .timedOut,
+            where [.notConnectedToInternet, .networkConnectionLost,
                    .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed].contains(error.code) {
             throw Failure.offline
         }

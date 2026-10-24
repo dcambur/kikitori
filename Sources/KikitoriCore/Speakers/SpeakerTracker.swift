@@ -18,6 +18,26 @@ public protocol SpeakerTracking: Sendable {
     func reset() async
 }
 
+/// A tracker on a clock `offset` seconds behind its own. A live pipeline's clock starts at 0 on
+/// every run (after each pause), while its tracker lasts the whole session: shifted by each run's
+/// start, the tracker's times keep increasing, so audio from before a pause never stands in for
+/// audio after it.
+public struct ShiftedSpeakerTracker: SpeakerTracking {
+    public let inner: any SpeakerTracking
+    public let offset: Double
+
+    public init(_ inner: any SpeakerTracking, by offset: Double) { self.inner = inner; self.offset = offset }
+
+    public func append(_ samples: [Float], at time: Double) async { await inner.append(samples, at: time + offset) }
+    public func frames(from: Double, to: Double) async -> SpeakerFrames {
+        var f = await inner.frames(from: from + offset, to: to + offset)
+        for k in f.frames.indices { f.frames[k].start -= offset }
+        return f
+    }
+    public func finish() async { await inner.finish() }
+    public func reset() async { await inner.reset() }
+}
+
 /// A tracker that loads in the background: until the model is ready (a download of ~230 MB
 /// the first time, a few seconds after that), audio goes unlabelled. `onLoad` gets the names of
 /// enrolled voices by slot; a failed load leaves labels off (logged).
@@ -116,7 +136,13 @@ public actor SpeakerTracker: SpeakerTracking {
 
     public static func load(voices: [(name: String, samples: [Float])] = [], variant: Variant = .fast) async throws -> (SpeakerTracker, [Int: String]) {
         let config = variant.config
-        let models = try await SortformerModels.loadFromHuggingFace(config: config)
+        // One load at a time (a player session has two trackers, and a quick Stop and Start adds
+        // more): loads at once would download the same files into the same place, and a clash
+        // there makes FluidAudio delete its cache. Later loads find the files there.
+        await loading.enter()
+        let models: SortformerModels
+        do { models = try await SortformerModels.loadFromHuggingFace(config: config) } catch { await loading.leave(); throw error }
+        await loading.leave()
         let diarizer = SortformerDiarizer(config: config, timelineConfig: .init(
             numSpeakers: config.numSpeakers, frameDurationSeconds: config.frameDurationSeconds,
             maxStoredFrames: 7_500, storeSegments: false))
@@ -124,6 +150,20 @@ public actor SpeakerTracker: SpeakerTracking {
         let box = Box(diarizer)
         let names = enroll(voices, in: box)
         return (SpeakerTracker(box: box, voices: voices), names)
+    }
+
+    private static let loading = Gate()
+
+    /// Lets one caller through at a time, in order.
+    actor Gate {
+        private var busy = false
+        private var waiting: [CheckedContinuation<Void, Never>] = []
+        func enter() async {
+            if busy { await withCheckedContinuation { waiting.append($0) } } else { busy = true }
+        }
+        func leave() {
+            if waiting.isEmpty { busy = false } else { waiting.removeFirst().resume() }
+        }
     }
 
     static func enroll(_ voices: [(name: String, samples: [Float])], in box: Box) -> [Int: String] {

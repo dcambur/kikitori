@@ -52,7 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationWillTerminate(_ notification: Notification) {
-        MainActor.assumeIsolated { AppModel.shared.stop() }
+        MainActor.assumeIsolated {
+            AppModel.shared.stop()
+            AppModel.shared.saveLedgerNow()   // the delayed save (2 s) would never run
+        }
     }
 }
 

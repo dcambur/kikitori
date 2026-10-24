@@ -59,6 +59,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
             // silence. A quarter-second step is fine enough for that.
             var fed = 0, clock = 0.0
             for await samples in audio {
+                if Task.isCancelled { break }   // a stream keeps handing out what it buffered
                 if speakers != nil { toSpeakers.yield((samples, Double(fed) / 16_000)) }
                 fed += samples.count
                 if preview != nil {
@@ -87,15 +88,16 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         let tracking = Task {
             guard let speakers else { return }
             // Its own stage, so a slow diarizer run never holds up chunking.
-            for await (samples, time) in speakerAudio { await speakers.append(samples, at: time) }
+            for await (samples, time) in speakerAudio where !Task.isCancelled { await speakers.append(samples, at: time) }
             await speakers.finish()
         }
         let recognize = Task { [engine, contextTerms] in
             for await chunk in chunks {
+                if Task.isCancelled { break }   // stopped: the chunks still queued are not recognized
                 let start = Date()
                 var spoken = Spoken(ja: "")
                 if let speakers, let timed = engine as? any TimedSpeechEngine {
-                    let pieces = TranscriptFilter.clean((try? await timed.transcribeTimed(chunk.samples, context: contextTerms)) ?? [])
+                    let pieces = TranscriptFilter.clean(await recognized([]) { try await timed.transcribeTimed(chunk.samples, context: contextTerms) })
                     spoken = Spoken(ja: pieces.text, chars: OnsetRefiner.refine(pieces, samples: chunk.samples).shifted(by: chunk.start))
                     let asr = Date().timeIntervalSince(start)
                     if let last = spoken.chars.last {
@@ -109,7 +111,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                                           audio: chunk.samples, turns: spoken.turnLines(at: chunk.start)))
                     }
                 } else {
-                    let raw = (try? await engine.transcribe(chunk.samples, context: contextTerms)) ?? ""
+                    let raw = await recognized("") { try await engine.transcribe(chunk.samples, context: contextTerms) }
                     spoken.ja = TranscriptFilter.clean(raw)
                     if !spoken.ja.isEmpty {
                         emit.yield(.heard(time: chunk.start, duration: chunk.duration, ja: spoken.ja,
@@ -123,6 +125,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         let translate = Task { [translator] in
             for await (time, spoken) in heard {
+                if Task.isCancelled { break }
                 let ja = spoken.ja
                 guard let translator, await shouldTranslate() else {
                     emit.yield(.translationSkipped(time: time))
@@ -131,11 +134,14 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                 let start = Date()
                 do {
                     let r = try await translator.translate(spoken.translatorInput)
-                    let speakers = spoken.cueLines(r.lines).map(\.speaker)
+                    // Each line on its own characters (with speakers tracked): its speaker, and its
+                    // Japanese if the translator gave none.
+                    let placed = spoken.cueLines(r.lines)
                     let lines = r.lines.enumerated().map { k, l in
-                        var line = TranscriptLine(time: time, ja: l.ja.isEmpty ? ja : l.ja, en: l.en,
+                        let own = placed.count == r.lines.count ? placed[k] : nil
+                        var line = TranscriptLine(time: time, ja: l.ja.isEmpty ? own?.ja ?? ja : l.ja, en: l.en,
                                                   note: l.note.isEmpty ? nil : l.note, term: l.term.isEmpty ? nil : l.term)
-                        line.speaker = speakers.count == r.lines.count ? speakers[k] : speakers.first ?? nil
+                        line.speaker = own.map(\.speaker) ?? placed.first?.speaker
                         return line
                     }
                     emit.yield(.translated(time: time, lines: lines, cost: r.cost,
@@ -155,6 +161,14 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         emit.onTermination = { _ in cut.cancel(); recognize.cancel(); translate.cancel(); previewing.cancel(); tracking.cancel() }
         return events
+    }
+}
+
+/// A chunk whose recognition failed is lost (and logged); the next one tries again.
+func recognized<T>(_ fallback: T, _ work: () async throws -> T) async -> T {
+    do { return try await work() } catch {
+        Logger(subsystem: "app.kikitori", category: "pipeline").error("recognition failed: \(error, privacy: .public)")
+        return fallback
     }
 }
 

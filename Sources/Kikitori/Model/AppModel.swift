@@ -5,6 +5,7 @@ import Foundation
 import KikitoriCore
 import Observation
 import os
+import Synchronization
 
 /// The app's single source of truth: the live session, its status, stores and settings.
 /// Every status surface (overlay pill, menu bar, banners) reads `status` (spec §4).
@@ -103,12 +104,13 @@ final class AppModel {
     private var consecutiveFailures = 0
     private var watchdog: Timer?
     private var sourceQuitAt: Date?
-    @ObservationIgnored nonisolated(unsafe) private var lastSoundAt = Date.now
+    // These three are also read or written by the audio task (`metered`), off the main actor.
+    private nonisolated let lastSound = OSAllocatedUnfairLock(initialState: Date.now)
     /// Set while a clip plays from a microphone source, which would hear it again: capture
     /// passes silence instead (keeping the timeline) until it stops.
-    @ObservationIgnored nonisolated(unsafe) private var muteInput = false
+    private nonisolated let muteInput = Atomic(false)
     /// Set while synced: the player's sound is recognized from its buffered audio instead.
-    @ObservationIgnored nonisolated(unsafe) private var muteForSync = false
+    private nonisolated let muteForSync = Atomic(false)
     // Synced subtitles: the media pipeline's input, its events, and the cues not yet in the transcript.
     @ObservationIgnored private var mediaFeed: AsyncStream<MediaPipeline<SileroVAD>.Input>.Continuation?
     @ObservationIgnored private var mediaTask: Task<Void, Never>?
@@ -281,6 +283,7 @@ final class AppModel {
         sourceQuitAt = nil
         session?.end = .now
         saveSession()
+        saveLedgerNow()
         session = nil
         source = nil
         translator = nil
@@ -300,13 +303,17 @@ final class AppModel {
         let generation = captureGeneration
         let engine = AppleSpeechEngine()
         let vad: SileroVAD
+        // After each await, a newer decision (stop, another start) wins over this start's own
+        // failure, which would otherwise tear down the newer session.
         do {
             try await engine.prepare()
             vad = try await SileroVAD.load()
         } catch {
+            guard generation == captureGeneration else { throw CancellationError() }
             throw ModelUnavailable(message: error.localizedDescription)
         }
         if source.id.hasPrefix("mic:"), !(await AVCaptureDevice.requestAccess(for: .audio)) {
+            guard generation == captureGeneration else { throw CancellationError() }
             throw CocoaError(.userCancelled)
         }
         // No awaits from here on, so nothing can change between this check and the install.
@@ -326,16 +333,36 @@ final class AppModel {
             capture = tap
         }
         self.capture = capture
-        lastSoundAt = .now
+        lastSound.withLock { $0 = .now }
         var pipeline = LivePipeline(engine: engine, translator: translator, vad: vad, contextTerms: [])
         pipeline.maxChunk = prefs.maxChunk
         pipeline.preview = AppleLivePreview()
-        pipeline.speakers = liveSpeakers
+        // The tracker lasts the session, the pipeline's clock restarts with each run: on the
+        // session's clock, audio before a pause never stands in for audio after it.
+        let installed = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
+        pipeline.speakers = liveSpeakers.map { ShiftedSpeakerTracker($0, by: installed) }
         pipeline.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
-        let offset = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
-        let events = pipeline.run(metered(capture.samples))
+        // The run's clock starts at its first audio, which for the built-in player comes only once
+        // the page first plays sound: line times count from then.
+        let firstAudio = OSAllocatedUnfairLock<Date?>(initialState: nil)
+        let sessionStart = session?.start ?? .now
+        let events = pipeline.run(metered(capture.samples, firstAudio: firstAudio))
+        let sessionID = session?.id
         pipelineTask = Task { [weak self] in
-            for await event in events { self?.handle(event, offset: offset) }
+            for await event in events {
+                // Paused or stopped: what is still queued belongs to the run that ended (its lines
+                // would wait for English forever, or land in the next session); only its bills
+                // count. The stream ends once its buffer is empty, and that stops the stages.
+                guard !Task.isCancelled else {
+                    switch event {
+                    case let .translated(_, _, cost, _, tokens), let .translationFailed(_, _, cost, tokens):
+                        self?.billLate(cost, tokens: tokens, session: sessionID)
+                    default: break
+                    }
+                    continue
+                }
+                self?.handle(event, offset: (firstAudio.withLock { $0 } ?? .now).timeIntervalSince(sessionStart))
+            }
         }
         if source.id == PlayerController.sourceID { startSyncedSubtitles(engine: engine, vad: vad) }
     }
@@ -351,8 +378,19 @@ final class AppModel {
         let (inputs, feed) = AsyncStream.makeStream(of: MediaPipeline<SileroVAD>.Input.self)
         let events = media.run(inputs)
         mediaFeed = feed
+        let sessionID = session?.id
         mediaTask = Task { [weak self] in
-            for await event in events { self?.handleSynced(event) }
+            for await event in events {
+                guard !Task.isCancelled else {   // as for the tap's pipeline (startCapture)
+                    switch event {
+                    case let .translation(_, _, cost, tokens), let .translationFailed(_, _, cost, tokens):
+                        self?.billLate(cost, tokens: tokens, session: sessionID)
+                    default: break
+                    }
+                    continue
+                }
+                self?.handleSynced(event)
+            }
         }
         PlayerController.shared.setMediaTap(true)
     }
@@ -366,7 +404,7 @@ final class AppModel {
         mediaTask = nil
         PlayerController.shared.setMediaTap(false)
         if synced { synced = false; PlayerController.shared.setSynced(false, lines: prefs.overlayLines) }
-        muteForSync = false
+        muteForSync.store(false, ordering: .relaxed)
         PlayerController.shared.addCues([], reset: true)
         cues = [:]
         cueAudio = [:]
@@ -394,13 +432,17 @@ final class AppModel {
         if want != synced {
             syncLog.notice("sync: \(want ? "synced" : "not synced", privacy: .public) (decoded audio at the playhead: \(hasAudio), live: \(live))")
             synced = want
-            muteForSync = want
+            muteForSync.store(want, ordering: .relaxed)
             PlayerController.shared.setSynced(want, lines: prefs.overlayLines)
         }
         feed.yield(.playhead(videoID: videoID, time: time, process: want))
-        // Audio of cues long past (revealed, or skipped by a seek) is no longer needed.
-        for (id, cue) in cues where cue.end < time - 60 {
-            cues[id] = nil; cueAudio[id] = nil; settledCues.remove(id)
+        // Audio of cues long past (revealed, or skipped by a seek) is no longer needed. The cues
+        // themselves stay as long as the page keeps them (30 min): a seek back can still reveal
+        // one, and a translation still on its way finds its lines.
+        for id in Array(cueAudio.keys) where cues[id].map({ $0.end < time - 60 }) ?? true { cueAudio[id] = nil }
+        for (id, cue) in cues where cue.end < time - 1800 {
+            settleCue(id)
+            cues[id] = nil; settledCues.remove(id)
             releasedLines = releasedLines.filter { !$0.key.hasPrefix("\(id):") }
         }
     }
@@ -409,7 +451,7 @@ final class AppModel {
     func mediaArrived(_ packet: MediaPacket) {
         guard let feed = mediaFeed else { return }
         mediaPackets += 1
-        if packet.samples.contains(where: { abs($0) > 0.003 }) { lastSoundAt = .now }
+        if packet.samples.contains(where: { abs($0) > 0.003 }) { lastSound.withLock { $0 = .now } }
         feed.yield(.packet(packet))
     }
 
@@ -494,17 +536,19 @@ final class AppModel {
         }
     }
 
-    /// Passes audio through and notes when it was last audible (at most one store per second).
-    private func metered(_ input: AsyncStream<[Float]>) -> AsyncStream<[Float]> {
+    /// Passes audio through and notes when it was last audible (at most one store per second),
+    /// and when the first audio came (`firstAudio`).
+    private func metered(_ input: AsyncStream<[Float]>, firstAudio: OSAllocatedUnfairLock<Date?>) -> AsyncStream<[Float]> {
         let (output, feed) = AsyncStream.makeStream(of: [Float].self, bufferingPolicy: .bufferingNewest(400))
         Task.detached { [weak self] in
             var lastStore = Date.distantPast
             for await samples in input {
-                let silent = self?.muteInput == true || self?.muteForSync == true
+                if lastStore == .distantPast { firstAudio.withLock { $0 = $0 ?? .now } }
+                let silent = self.map { $0.muteInput.load(ordering: .relaxed) || $0.muteForSync.load(ordering: .relaxed) } ?? false
                 feed.yield(silent ? [Float](repeating: 0, count: samples.count) : samples)
                 if Date.now.timeIntervalSince(lastStore) > 1, samples.contains(where: { abs($0) > 0.003 }) {
                     lastStore = .now
-                    self?.lastSoundAt = .now
+                    self?.lastSound.withLock { $0 = .now }
                 }
             }
             feed.finish()
@@ -523,7 +567,7 @@ final class AppModel {
             return
         }
         guard state == .listening else { return }
-        let silent = Date.now.timeIntervalSince(lastSoundAt)
+        let silent = Date.now.timeIntervalSince(lastSound.withLock { $0 })
         if silent > 60 { raise(.noAudio(name: source?.name ?? "the source")) } else { clear(.noAudio(name: source?.name ?? "the source")) }
         if prefs.endAfterSilenceMinutes > 0, silent > Double(prefs.endAfterSilenceMinutes * 60) {
             stop()
@@ -653,6 +697,15 @@ final class AppModel {
         saveLedgerSoon()
     }
 
+    /// A translation that came back after its run was paused or stopped: nothing shows it, but
+    /// it was billed.
+    private func billLate(_ cost: Double, tokens: Int, session id: UUID?) {
+        guard tokens > 0 else { return }
+        if session?.id == id { session?.cost += cost }
+        ledger.add(UsageEntry(session: id, model: LiveTranslator.model, kind: .live, cost: cost, tokens: tokens))
+        saveLedgerNow()   // it may come just before the app quits
+    }
+
     private func noteFailure(_ failure: ClaudeClient.Failure, cost: Double, tokens: Int, in record: inout SessionRecord) {
         if tokens > 0 {   // billed even though there is nothing to show: it still counts toward the cap
             record.cost += cost
@@ -665,7 +718,7 @@ final class AppModel {
         case .creditsExhausted: raise(.creditsExhausted)
         case .rateLimited: raise(.rateLimited)
         case .offline: raise(.offline)
-        case .overloaded: if consecutiveFailures >= 3 { raise(.apiOutage) }
+        case .overloaded, .timedOut: if consecutiveFailures >= 3 { raise(.apiOutage) }
         default: break
         }
     }
@@ -714,17 +767,18 @@ final class AppModel {
         explainTasks[line.id] = Task {
             do {
                 let r = try await Explainer(client: ClaudeClient(apiKey: key)).explain(line, context: context, profile: profile, streamInfo: info)
+                // Billed even if it was cancelled meanwhile (another Explain): it counts toward the cap.
+                ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
+                                                 cost: r.cost, tokens: r.usage.total))
+                session?.cost += r.cost
+                saveLedgerSoon()
                 guard !Task.isCancelled else { return }
                 explain[line.id] = .result(previous + [r.explanation], cost: r.cost)
-                ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
-                                                 cost: r.cost, tokens: r.usage.inputTokens + r.usage.outputTokens))
-                session?.cost += r.cost
                 if prefs.saveExplanations { session?.explanations[line.id, default: []].append(r.explanation) }
-                saveLedgerSoon()
             } catch {
                 if let billed = error as? ClaudeClient.BilledFailure {   // billed with nothing to show: still counts
                     ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
-                                                     cost: billed.cost, tokens: billed.usage.inputTokens + billed.usage.outputTokens))
+                                                     cost: billed.cost, tokens: billed.usage.total))
                     session?.cost += billed.cost
                     saveLedgerSoon()
                 }
@@ -792,7 +846,7 @@ final class AppModel {
         guard let clip = clips.clip(at: line.time) else { return }
         clipPlayer.onFinish = { [weak self] in self?.replayEnded() }
         guard clipPlayer.play(clip, rate: rate, loop: loop) else { replayEnded(); return }
-        muteInput = source?.id.hasPrefix("mic:") == true
+        muteInput.store(source?.id.hasPrefix("mic:") == true, ordering: .relaxed)
         replaying = line.time
     }
 
@@ -809,7 +863,7 @@ final class AppModel {
 
     private func replayEnded() {
         replaying = nil
-        muteInput = false
+        muteInput.store(false, ordering: .relaxed)
     }
 
     // MARK: Profiles
@@ -888,7 +942,7 @@ final class AppModel {
 
     func saveSession() {
         guard let session else { return }
-        try? sessionStore.save(session)
+        do { try sessionStore.save(session) } catch { Self.storeLog.error("session not saved: \(error, privacy: .public)") }
         sessions = sessionStore.summaries()
     }
 
@@ -905,6 +959,11 @@ final class AppModel {
             guard !Task.isCancelled else { return }
             Self.save(ledger.entries, to: supportURL.appending(path: "usage.json"))
         }
+    }
+
+    func saveLedgerNow() {
+        ledgerSave?.cancel()
+        Self.save(ledger.entries, to: supportURL.appending(path: "usage.json"))
     }
 
     func setCycleStartDay(_ day: Int) {
@@ -925,15 +984,30 @@ final class AppModel {
         deleteSessions(sessions.map(\.id))
         profiles = []
         saveProfiles()
+        try? FileManager.default.removeItem(at: supportURL.appending(path: "voices"))   // the profiles' voice samples
         ledger.entries = []
         Self.save(ledger.entries, to: supportURL.appending(path: "usage.json"))
     }
 
+    /// A file that can't be read is moved aside, not left for the next save to overwrite: wiping
+    /// profiles, or the spend the monthly cap counts.
     static func load<T: Decodable>(_ type: T.Type, from url: URL) -> T? {
-        (try? Data(contentsOf: url)).flatMap { try? JSONDecoder.kikitori.decode(T.self, from: $0) }
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        do {
+            return try JSONDecoder.kikitori.decode(T.self, from: data)
+        } catch {
+            let aside = url.deletingPathExtension().appendingPathExtension("unreadable-\(Int(Date.now.timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: url, to: aside)
+            storeLog.error("\(url.lastPathComponent, privacy: .public) can't be read, kept as \(aside.lastPathComponent, privacy: .public): \(error, privacy: .public)")
+            return nil
+        }
     }
 
     static func save<T: Encodable>(_ value: T, to url: URL) {
-        try? JSONEncoder.kikitori.encode(value).write(to: url, options: .atomic)
+        do { try JSONEncoder.kikitori.encode(value).write(to: url, options: .atomic) } catch {
+            storeLog.error("\(url.lastPathComponent, privacy: .public) not saved: \(error, privacy: .public)")
+        }
     }
+
+    private static let storeLog = Logger(subsystem: "app.kikitori", category: "store")
 }

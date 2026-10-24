@@ -26,7 +26,7 @@ public enum KeyCheck {
         } catch let f as ClaudeClient.Failure {
             switch f {
             case .invalidKey: return .invalid
-            case .rateLimited, .overloaded: return .busy
+            case .rateLimited, .overloaded, .timedOut: return .busy
             case .creditsExhausted: return .noCredit
             case .offline: return .network
             case .refusal, .truncated, .badRequest, .unexpected: return .valid

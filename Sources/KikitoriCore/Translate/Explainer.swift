@@ -74,6 +74,9 @@ public struct Explainer: Sendable {
     let pricing: Pricing
 
     public init(client: ClaudeClient, pricing: Pricing = .bundled) {
+        var client = client
+        // Sonnet thinks before it answers (up to 8192 tokens, not streamed): over a minute at times.
+        client.timeout = max(client.timeout, 150)
         self.client = client
         self.pricing = pricing
     }

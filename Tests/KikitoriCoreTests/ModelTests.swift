@@ -78,6 +78,24 @@ func day(_ s: String, _ hour: Int = 12) -> Date {
         #expect(store.summaries().isEmpty && store.load(r.id) == nil)
     }
 
+    @Test func aDamagedIndexLosesNoSessions() throws {
+        let dir = TempDir()
+        let store = SessionStore(directory: dir.url)
+        func session(_ ago: Double) -> SessionRecord {
+            var r = SessionRecord(start: .now.addingTimeInterval(-ago), sourceName: "Firefox", sourceID: "f", profileName: nil)
+            r.lines = [TranscriptLine(time: 1, ja: "おはよう")]
+            return r
+        }
+        let a = session(900), b = session(600)
+        try store.save(a)
+        try store.save(b)
+        try Data("{".utf8).write(to: store.indexURL)   // cut off by a crash or a full disk
+        #expect(store.summaries().map(\.id) == [b.id, a.id])
+        let c = session(300)
+        try store.save(c)
+        #expect(store.summaries().map(\.id) == [c.id, b.id, a.id])
+    }
+
     @Test func shortEmptySessionsAreNotKept() throws {
         let dir = TempDir()
         let store = SessionStore(directory: dir.url)
