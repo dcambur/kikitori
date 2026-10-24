@@ -419,9 +419,13 @@ final class AppModel {
             PlayerController.shared.setSynced(want, lines: prefs.overlayLines)
         }
         feed.yield(.playhead(videoID: videoID, time: time, process: want))
-        // Audio of cues long past (revealed, or skipped by a seek) is no longer needed.
-        for (id, cue) in cues where cue.end < time - 60 {
-            cues[id] = nil; cueAudio[id] = nil; settledCues.remove(id)
+        // Audio of cues long past (revealed, or skipped by a seek) is no longer needed. The cues
+        // themselves stay as long as the page keeps them (30 min): a seek back can still reveal
+        // one, and a translation still on its way finds its lines.
+        for id in Array(cueAudio.keys) where cues[id].map({ $0.end < time - 60 }) ?? true { cueAudio[id] = nil }
+        for (id, cue) in cues where cue.end < time - 1800 {
+            settleCue(id)
+            cues[id] = nil; settledCues.remove(id)
             releasedLines = releasedLines.filter { !$0.key.hasPrefix("\(id):") }
         }
     }
