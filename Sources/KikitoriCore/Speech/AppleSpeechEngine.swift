@@ -4,7 +4,7 @@ import Speech
 
 /// Apple's on-device SpeechTranscriber (macOS 26+), Japanese. The model is a system asset:
 /// `prepare()` asks macOS to install it once; nothing is bundled with the app.
-public struct AppleSpeechEngine: SpeechEngine {
+public struct AppleSpeechEngine: TimedSpeechEngine {
     public let name = "Apple Speech"
     let locale = Locale(identifier: "ja_JP")
 
@@ -18,7 +18,19 @@ public struct AppleSpeechEngine: SpeechEngine {
     }
 
     public func transcribe(_ samples: [Float], context: [String]) async throws -> String {
-        let transcriber = SpeechTranscriber(locale: locale, preset: .transcription)
+        try await recognize(samples, context: context, timed: false).text
+    }
+
+    /// The same recognition with `.audioTimeRange` on: identical text (checked on 55 chunks of
+    /// stream audio), one piece per character, times on a 60 ms grid.
+    public func transcribeTimed(_ samples: [Float], context: [String]) async throws -> [TimedChar] {
+        try await recognize(samples, context: context, timed: true).pieces
+    }
+
+    private func recognize(_ samples: [Float], context: [String], timed: Bool) async throws -> (text: String, pieces: [TimedChar]) {
+        var preset = SpeechTranscriber.Preset.transcription
+        if timed { preset.attributeOptions.insert(.audioTimeRange) }
+        let transcriber = SpeechTranscriber(locale: locale, preset: preset)
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         if !context.isEmpty {
             let analysisContext = AnalysisContext()
@@ -30,11 +42,17 @@ public struct AppleSpeechEngine: SpeechEngine {
         let buffer = try Self.buffer(samples, as: format)
 
         let collect = Task {
-            var text = ""
+            var text = "", pieces: [TimedChar] = []
             for try await result in transcriber.results where result.isFinal {
                 text += String(result.text.characters)
+                guard timed else { continue }
+                for run in result.text.runs {
+                    let range = run.audioTimeRange ?? result.range
+                    pieces.append(TimedChar(text: String(result.text[run.range].characters),
+                                            start: range.start.seconds, end: range.end.seconds))
+                }
             }
-            return text
+            return (text, pieces)
         }
         let (input, feed) = AsyncStream.makeStream(of: AnalyzerInput.self)
         feed.yield(AnalyzerInput(buffer: buffer))

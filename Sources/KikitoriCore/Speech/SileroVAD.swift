@@ -13,6 +13,8 @@ public struct SileroVAD: VoiceActivityDetector {
         return SileroVAD(manager: manager, state: await manager.makeStreamState())
     }
 
+    public mutating func reset() async { state = await manager.makeStreamState() }
+
     public mutating func probability(_ frame: ArraySlice<Float>) async -> Float {
         guard let result = try? await manager.processStreamingChunk(Array(frame), state: state) else { return 0 }
         state = result.state

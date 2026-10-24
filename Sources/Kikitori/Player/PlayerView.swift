@@ -67,7 +67,8 @@ struct PlayerView: View {
         if model.state == .paused { return "Subtitles paused" }
         if player.paused { return "Press play" }
         let lines = model.session?.lines.count ?? 0
-        return lines == 0 ? "Listening…" : "Listening · \(lines) line\(lines == 1 ? "" : "s")"
+        let mode = model.synced ? "Synced" : "Listening"
+        return lines == 0 ? "\(mode)…" : "\(mode) · \(lines) line\(lines == 1 ? "" : "s")"
     }
 
     func toggleListening() {

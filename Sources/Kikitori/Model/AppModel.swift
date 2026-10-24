@@ -83,6 +83,10 @@ final class AppModel {
     var recentHeard: [TranscriptLine] = []
     /// The clip playing now (its chunk's start time), for the rows' play buttons.
     var replaying: Double?
+    /// The built-in player shows synced subtitles: cues made from the video's buffered audio,
+    /// revealed as it plays (docs/design/realtime-sync.md). Meanwhile the process tap passes
+    /// silence, so nothing is recognized or translated twice.
+    var synced = false
     var hasAPIKey = KeychainStore.apiKey() != nil
     var overlayRevision = 0
 
@@ -100,6 +104,15 @@ final class AppModel {
     /// Set while a clip plays from a microphone source, which would hear it again: capture
     /// passes silence instead (keeping the timeline) until it stops.
     @ObservationIgnored nonisolated(unsafe) private var muteInput = false
+    /// Set while synced: the player's sound is recognized from its buffered audio instead.
+    @ObservationIgnored nonisolated(unsafe) private var muteForSync = false
+    // Synced subtitles: the media pipeline's input, its events, and the cues not yet in the transcript.
+    @ObservationIgnored private var mediaFeed: AsyncStream<MediaPipeline<SileroVAD>.Input>.Continuation?
+    @ObservationIgnored private var mediaTask: Task<Void, Never>?
+    @ObservationIgnored private var cues: [UUID: Cue] = [:]
+    @ObservationIgnored private var cueAudio: [UUID: [Float]] = [:]
+    @ObservationIgnored private var revealedLines: Set<String> = []
+    @ObservationIgnored private var playerVideo = ""
     @ObservationIgnored private var clips = LineClips()
     @ObservationIgnored private let clipPlayer = ClipPlayer()
     private var warned80Cycle: Date?
@@ -306,6 +319,109 @@ final class AppModel {
         pipelineTask = Task { [weak self] in
             for await event in events { self?.handle(event, offset: offset) }
         }
+        if source.id == PlayerController.sourceID { startSyncedSubtitles(engine: engine, vad: vad) }
+    }
+
+    /// The built-in player's synced subtitles run beside the tap: the page decodes the audio the
+    /// site has buffered ahead, and the media pipeline makes cues from it before they are spoken.
+    /// Which of the two shows depends on the video (`playerState`).
+    private func startSyncedSubtitles(engine: AppleSpeechEngine, vad: SileroVAD) {
+        var media = MediaPipeline(engine: engine, translator: translator, vad: vad)
+        media.maxChunk = prefs.maxChunk
+        media.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
+        let (inputs, feed) = AsyncStream.makeStream(of: MediaPipeline<SileroVAD>.Input.self)
+        let events = media.run(inputs)
+        mediaFeed = feed
+        mediaTask = Task { [weak self] in
+            for await event in events { self?.handleSynced(event) }
+        }
+        PlayerController.shared.setMediaTap(true)
+    }
+
+    private func stopSyncedSubtitles() {
+        guard mediaFeed != nil else { return }
+        mediaFeed?.finish()
+        mediaFeed = nil
+        mediaTask?.cancel()
+        mediaTask = nil
+        PlayerController.shared.setMediaTap(false)
+        if synced { synced = false; PlayerController.shared.setSynced(false, lines: prefs.overlayLines) }
+        muteForSync = false
+        PlayerController.shared.addCues([], reset: true)
+        cues = [:]
+        cueAudio = [:]
+        revealedLines = []
+        playerVideo = ""
+    }
+
+    /// The player's state, every 500 ms. Synced while the video's buffered audio is coming in and
+    /// it isn't a live stream: live streams keep the unsynced subtitles until the player can be
+    /// held behind the live edge (design doc §9 phase 5, decision 3 in §10). While an ad plays,
+    /// its time is not the video's: nothing changes until it ends.
+    func playerState(videoID: String, time: Double, live: Bool, hasAudio: Bool, ad: Bool) {
+        guard let feed = mediaFeed, state == .listening, !videoID.isEmpty, time >= 0, !ad else { return }
+        if videoID != playerVideo {   // a new video: the old one's cues are of no use
+            playerVideo = videoID
+            cues = cues.filter { $0.value.videoID == videoID }
+            cueAudio = cueAudio.filter { cues[$0.key] != nil }
+        }
+        let want = hasAudio && !live
+        if want != synced {
+            synced = want
+            muteForSync = want
+            PlayerController.shared.setSynced(want, lines: prefs.overlayLines)
+        }
+        feed.yield(.playhead(videoID: videoID, time: time, process: want))
+        // Audio of cues long past (revealed, or skipped by a seek) is no longer needed.
+        for (id, cue) in cues where cue.end < time - 60 { cues[id] = nil; cueAudio[id] = nil }
+    }
+
+    /// Decoded audio from the player's page.
+    func mediaArrived(_ packet: MediaPacket) {
+        guard let feed = mediaFeed else { return }
+        if packet.samples.contains(where: { abs($0) > 0.003 }) { lastSoundAt = .now }
+        feed.yield(.packet(packet))
+    }
+
+    /// The page reloaded: tell it again what it has to do.
+    func playerPageLoaded() {
+        guard mediaFeed != nil else { return }
+        PlayerController.shared.setMediaTap(true)
+        if synced { PlayerController.shared.setSynced(true, lines: prefs.overlayLines) }
+        PlayerController.shared.addCues(Array(cues.values).sorted { $0.start < $1.start }, reset: true)
+    }
+
+    /// A cue line began on the video: now it goes into the transcript (and the English with it).
+    func revealed(cue id: UUID, line: Int) {
+        guard let cue = cues[id], cue.lines.indices.contains(line), revealedLines.insert("\(id):\(line)").inserted,
+              var record = session else { return }
+        let l = cue.lines[line]
+        let t = Date.now.timeIntervalSince(record.start)
+        record.lines.append(TranscriptLine(time: t, ja: l.ja, en: l.en, note: l.note, term: l.term))
+        if let audio = cueAudio[id] { clips.store(audio, at: t) }
+        if (0..<cue.lines.count).allSatisfy({ revealedLines.contains("\(id):\($0)") }) { cueAudio[id] = nil }
+        session = record
+        overlayRevision += 1
+    }
+
+    private func handleSynced(_ event: MediaPipeline<SileroVAD>.Event) {
+        switch event {
+        case let .cue(cue, audio):
+            guard cue.videoID == playerVideo else { return }
+            cues[cue.id] = cue
+            cueAudio[cue.id] = audio
+            PlayerController.shared.addCues([cue])
+            clear(.noAudio(name: source?.name ?? ""))
+        case let .translated(cost, tokens):
+            guard var record = session else { return }
+            noteTranslated(cost: cost, tokens: tokens, in: &record)
+            session = record
+        case let .translationFailed(failure, cost, tokens):
+            guard var record = session else { return }
+            noteFailure(failure, cost: cost, tokens: tokens, in: &record)
+            session = record
+        case .translationSkipped: break
+        }
     }
 
     /// Passes audio through and notes when it was last audible (at most one store per second).
@@ -314,7 +430,8 @@ final class AppModel {
         Task.detached { [weak self] in
             var lastStore = Date.distantPast
             for await samples in input {
-                feed.yield(self?.muteInput == true ? [Float](repeating: 0, count: samples.count) : samples)
+                let silent = self?.muteInput == true || self?.muteForSync == true
+                feed.yield(silent ? [Float](repeating: 0, count: samples.count) : samples)
                 if Date.now.timeIntervalSince(lastStore) > 1, samples.contains(where: { abs($0) > 0.003 }) {
                     lastStore = .now
                     self?.lastSoundAt = .now
@@ -376,6 +493,7 @@ final class AppModel {
 
     private func stopCapture() {
         captureGeneration += 1   // a start still awaiting gives up instead of installing its capture
+        stopSyncedSubtitles()
         capture?.stop()
         capture = nil
         pipelineTask?.cancel()
@@ -427,34 +545,41 @@ final class AppModel {
                 if !translated.isEmpty { record.lines.replaceSubrange(i...i, with: translated) }
             }
             if let end = pendingEnds.removeValue(forKey: t) { latencies.append(Date.now.timeIntervalSince(end)) }
-            record.cost += cost
-            ledger.add(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live,
-                                             cost: cost, tokens: tokens))
-            consecutiveFailures = 0
-            for issue in [Issue.offline, .apiOutage, .rateLimited, .keyInvalid, .creditsExhausted] { clear(issue) }
-            saveLedgerSoon()
+            noteTranslated(cost: cost, tokens: tokens, in: &record)
         case let .translationSkipped(time):
             settle(time + offset, in: &record)
         case let .translationFailed(time, failure, cost, tokens):
             settle(time + offset, in: &record)
-            if tokens > 0 {   // billed even though there is nothing to show: it still counts toward the cap
-                record.cost += cost
-                ledger.add(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live,
-                                                 cost: cost, tokens: tokens))
-                saveLedgerSoon()
-            }
-            consecutiveFailures += 1
-            switch failure {
-            case .invalidKey: raise(.keyInvalid)
-            case .creditsExhausted: raise(.creditsExhausted)
-            case .rateLimited: raise(.rateLimited)
-            case .offline: raise(.offline)
-            case .overloaded: if consecutiveFailures >= 3 { raise(.apiOutage) }
-            default: break
-            }
+            noteFailure(failure, cost: cost, tokens: tokens, in: &record)
         }
         session = record
         overlayRevision += 1
+    }
+
+    /// A translation came back (unsynced or synced): its cost, and the issues it clears.
+    private func noteTranslated(cost: Double, tokens: Int, in record: inout SessionRecord) {
+        record.cost += cost
+        ledger.add(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live, cost: cost, tokens: tokens))
+        consecutiveFailures = 0
+        for issue in [Issue.offline, .apiOutage, .rateLimited, .keyInvalid, .creditsExhausted] { clear(issue) }
+        saveLedgerSoon()
+    }
+
+    private func noteFailure(_ failure: ClaudeClient.Failure, cost: Double, tokens: Int, in record: inout SessionRecord) {
+        if tokens > 0 {   // billed even though there is nothing to show: it still counts toward the cap
+            record.cost += cost
+            ledger.add(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live, cost: cost, tokens: tokens))
+            saveLedgerSoon()
+        }
+        consecutiveFailures += 1
+        switch failure {
+        case .invalidKey: raise(.keyInvalid)
+        case .creditsExhausted: raise(.creditsExhausted)
+        case .rateLimited: raise(.rateLimited)
+        case .offline: raise(.offline)
+        case .overloaded: if consecutiveFailures >= 3 { raise(.apiOutage) }
+        default: break
+        }
     }
 
     private func settle(_ time: Double, in record: inout SessionRecord) {

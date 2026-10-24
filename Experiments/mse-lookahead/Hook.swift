@@ -104,6 +104,7 @@ enum Hook {
       return {
         t: v ? +v.currentTime.toFixed(2) : null, paused: v ? v.paused : null, rate: v ? v.playbackRate : null, muted: v ? v.muted : null,
         ad: isAd(), attachedMs: attached ? attached.__kkid : null,
+        vid: (() => { try { return p.getVideoData().video_id; } catch (e) { return null; } })(),
         seekable: v && v.seekable.length ? [+v.seekable.start(0).toFixed(1), +v.seekable.end(v.seekable.length - 1).toFixed(1)] : null,
         liveEdge: prog ? { seekableEnd: prog.seekableEnd, ingestion: prog.ingestionTime, current: prog.current, isAtLiveHead: p.isAtLiveHead ? p.isAtLiveHead() : null } : null,
         audio: S.bufs.filter(b => b.type.startsWith('audio')).map(b => ({ id: b.id, ms: b.ms, appends: b.appends, kb: Math.round(b.bytes / 1024), buffered: ranges(b.sb),
@@ -115,7 +116,10 @@ enum Hook {
     // in pieces through the 'bytes' handler; returns the number of pieces.
     S.dump = (id) => {
       const rec = S.bufs[id]; if (!rec) return 0;
+      // From the last init for WebM (a track switch appends a new one); from the first for live
+      // fMP4, which repeats its init in every fragment.
       let first = 0; rec.segs.forEach((s, i) => { if (s.d && s.d.init) first = i; });
+      if (rec.type.includes('mp4')) first = Math.max(0, rec.segs.findIndex(s => s.d && s.d.init));
       const segs = rec.segs.slice(first);
       const total = segs.reduce((n, s) => n + s.bytes.length, 0);
       const all = new Uint8Array(total); let o = 0; for (const s of segs) { all.set(s.bytes, o); o += s.bytes.length; }

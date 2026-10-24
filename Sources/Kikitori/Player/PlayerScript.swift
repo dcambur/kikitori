@@ -4,12 +4,20 @@
 /// - Audio is NOT taken here: WebKit gives Web Audio silence for cross-origin video (YouTube
 ///   streams from googlevideo.com) and a routed element goes quiet. The app taps its own WebKit
 ///   process instead (`AudioSources.ownWebKitProcesses`).
-/// - State: `kkState` every 500 ms (time, paused, rate, live, title, url, channel).
+/// - State: `kkState` every 500 ms (time, paused, rate, live, title, url, channel, video id, and
+///   whether the media tap has this video's audio: `MediaTapScript`).
 /// - Audio track: YouTube may play an AI dub in the viewer's language (auto-dubbing); once per
 ///   video, an auto-dubbed track is switched to the original, so we hear the streamers themselves.
 /// - Subtitles: `__kikitori.show(lines, live)` draws the Japanese as heard (the newest lines, then
 ///   the words still being heard) in a layer inside the player element (so they follow theatre
 ///   mode, the miniplayer and full screen), bottom-centre on the picture itself.
+/// - Synced subtitles (`__kikitori.sync(true, lines)`): `__kikitori.cues(list, reset)` hands over
+///   cues ready before they are spoken, and each character appears when the video reaches its
+///   time (`currentTime`, every frame). A cue is final: it is drawn as it came, never changed.
+///   When a line begins, `kkReveal` {id, line} tells the app (the transcript gets it then; also
+///   checked every 500 ms, since frames stop while the window is hidden). Lines a seek jumps over
+///   are never posted. A cue that arrives after its start (just after a seek) is not drawn on the
+///   video; it still goes to the transcript. Seeking back before a cue makes it drawable again.
 ///   Built with DOM calls, never HTML strings: YouTube requires Trusted Types, so assigning
 ///   `innerHTML` throws and the layer would stay empty.
 enum PlayerScript {
@@ -25,6 +33,13 @@ enum PlayerScript {
             || v.closest('[data-a-target="video-player"]') || v.parentElement;
 
         const log = m => post('kkLog', String(m));
+        // The key cues belong to: the media tap's for the MediaSource playing (video id and track,
+        // see MediaTapScript), else the video id.
+        const currentVid = () => {
+          if (window.__kikitoriMedia && window.__kikitoriMedia.key) return window.__kikitoriMedia.key;
+          try { const p = document.getElementById('movie_player'), d = p && p.getVideoData && p.getVideoData(); if (d && d.video_id) return d.video_id; } catch (e) {}
+          return new URLSearchParams(location.search).get('v') || location.pathname;
+        };
         const channel = () => {
           const a = document.querySelector('ytd-watch-metadata ytd-channel-name a, #owner #channel-name a, [data-a-target="stream-title"] ~ * a');
           return a ? a.textContent.trim() : '';
@@ -33,14 +48,19 @@ enum PlayerScript {
         // ---- state -------------------------------------------------------------
         setInterval(() => {
           const v = video();
-          const live = !!document.querySelector('.ytp-live') || !!document.querySelector('[data-a-target="player-live-indicator"]');
+          let data = null; try { const p = document.getElementById('movie_player'); data = p && p.getVideoData ? p.getVideoData() : null; } catch (e) {}
+          const live = !!(data && data.isLive) || !!document.querySelector('.ytp-live') || !!document.querySelector('[data-a-target="player-live-indicator"]');
+          const media = window.__kikitoriMedia ? window.__kikitoriMedia.status() : null;
           post('kkState', { t: v ? v.currentTime : -1, paused: v ? v.paused : true, rate: v ? v.playbackRate : 1,
-                            live, title: document.title, url: location.href, hasVideo: !!v, channel: channel() });
+                            live, title: document.title, url: location.href, hasVideo: !!v, channel: channel(),
+                            vid: currentVid(), media: !!(media && media.ok),
+                            ad: !!document.querySelector('#movie_player.ad-showing') });
           // Lines pushed while there was no video (a search page, a video still loading) or before
           // the site rebuilt its player are drawn as soon as the player is there.
-          if (lastShow) { const v = video(); if (v && (!layer || layer.parentElement !== playerBox(v))) kk.show(...lastShow); }
+          if (lastShow && !sync.on) { const v = video(); if (v && (!layer || layer.parentElement !== playerBox(v))) kk.show(...lastShow); }
           place();
           keepOriginalAudio();
+          if (sync.on) { const v = video(); if (v && !document.querySelector('#movie_player.ad-showing')) postReveals(v.currentTime); }
         }, 500);
 
         // ---- audio track ---------------------------------------------------------
@@ -83,6 +103,8 @@ enum PlayerScript {
           #kikitori-subs .kk-line.old { opacity: .62; }
           #kikitori-subs .kk-line.live { opacity: .86; }
           #kikitori-subs .kk-main { font: 600 clamp(14px, 3.4cqw, 40px)/1.3 "Hiragino Sans", -apple-system, sans-serif; }
+          #kikitori-subs .kk-c { opacity: 0; transition: opacity 60ms linear; }
+          #kikitori-subs .kk-c.on { opacity: 1; }
         `;
         document.documentElement.appendChild(style);
 
@@ -143,6 +165,7 @@ enum PlayerScript {
         };
         // lines: [{ja}], the newest lines as heard; live: words still being heard, drawn last.
         kk.show = (lines, live) => {
+          if (sync.on) return;
           lastShow = lines.length || live ? [lines, live] : null;
           try {
             const l = ensureLayer(); if (!l) return;
@@ -152,6 +175,104 @@ enum PlayerScript {
             place();
           } catch (e) { log('show failed: ' + e); }
         };
+
+        // ---- synced subtitles --------------------------------------------------------------
+        // cue: { id, vid, chars: [[text, start, end]], lines: [[from, to]] }, times in video seconds.
+        // Every frame: the newest lines that have begun (up to `lines`), each until 8 s after its
+        // last character, its characters shown from their own times. Unrevealed characters keep
+        // their place (transparent), so a line never moves while it fills.
+        const sync = { on: false, lines: 1, cues: [], posted: new Set(), lastT: null, postedT: null, raf: 0, rows: '', spans: [], els: new Map() };
+        // Lines that have begun by `t`, once each, to the app.
+        function postReveals(t) {
+          const vid = currentVid();
+          for (const c of sync.cues) {
+            if (c.vid !== vid || c.chars[0][1] > t) continue;
+            c.lines.forEach(([from, to], i) => {
+              const key = c.id + ':' + i;
+              if (from < to && c.chars[from][1] <= t && !sync.posted.has(key)) { sync.posted.add(key); post('kkReveal', { id: c.id, line: i }); }
+            });
+          }
+          sync.postedT = t;
+        }
+        // A seek: first what had begun before it, then the lines it jumps over are passed by.
+        document.addEventListener('seeking', e => {
+          const v = video();
+          if (!sync.on || e.target !== v || sync.postedT === null || document.querySelector('#movie_player.ad-showing')) return;
+          const from = sync.postedT, to = v.currentTime, vid = currentVid();
+          postReveals(from);
+          if (to > from) for (const c of sync.cues) {
+            if (c.vid !== vid) continue;
+            c.lines.forEach(([f], i) => { const s0 = c.chars[Math.min(f, c.chars.length - 1)][1]; if (s0 > from && s0 < to) sync.posted.add(c.id + ':' + i); });
+          }
+          sync.postedT = to;
+        }, true);
+        kk.sync = (on, lines) => {
+          sync.lines = Math.max(1, lines || 1);
+          if (on === sync.on) return;
+          sync.on = on; sync.rows = ''; sync.spans = []; sync.els = new Map();
+          cancelAnimationFrame(sync.raf);
+          if (layer) layer.replaceChildren();
+          if (on) { lastShow = null; sync.raf = requestAnimationFrame(frame); }
+        };
+        kk.cues = (list, reset) => {
+          if (reset) { sync.cues = []; sync.posted.clear(); sync.rows = ''; sync.els = new Map(); sync.postedT = null; }
+          const v = video(), t = v ? v.currentTime : 0, vid = currentVid(), ad = !!document.querySelector('#movie_player.ad-showing');
+          for (const c of list) { c.late = !ad && c.vid === vid && c.chars[0][1] < t - 0.05; sync.cues.push(c); }
+          sync.cues.sort((a, b) => a.chars[0][1] - b.chars[0][1]);
+        };
+        function frame() {
+          sync.raf = requestAnimationFrame(frame);
+          try {
+            const v = video(); if (!v) return;
+            // An ad plays in the same element on its own clock: nothing of the video shows meanwhile.
+            if (document.querySelector('#movie_player.ad-showing')) { if (sync.rows) { sync.rows = ''; sync.spans = []; sync.els = new Map(); if (layer) layer.replaceChildren(); } sync.lastT = null; return; }
+            const t = v.currentTime, vid = currentVid();
+            // A seek (or the end of an ad): the cues ahead of the new position are on time again.
+            if (sync.lastT === null || t < sync.lastT - 0.3 || t > sync.lastT + 1.5) for (const c of sync.cues) if (c.chars[0][1] >= t) c.late = false;
+            sync.lastT = t;
+            if (sync.cues.length > 2000) sync.cues = sync.cues.filter(c => c.chars[c.chars.length - 1][2] > t - 1800);
+            postReveals(t);
+            const shown = [];
+            for (const c of sync.cues) {
+              if (c.vid !== vid || c.chars[0][1] > t) continue;
+              c.lines.forEach(([from, to], i) => {
+                if (from >= to) return;
+                const start = c.chars[from][1], end = c.chars[to - 1][2], key = c.id + ':' + i;
+                if (start <= t && !c.late && t < end + 8) shown.push({ c, from, to, key });
+              });
+            }
+            const rows = shown.slice(-sync.lines);
+            const key = rows.map(r => r.key).join('|');
+            const l = ensureLayer(); if (!l) return;
+            if (key !== sync.rows) {
+              // A line already on screen keeps its element, so its characters don't fade in again.
+              const made = new Map();
+              sync.rows = key; sync.spans = [];
+              l.replaceChildren(...rows.map((r, i) => {
+                let el = sync.els.get(r.key);
+                if (!el) {
+                  const row = document.createElement('div'), main = document.createElement('div'), spans = [];
+                  main.className = 'kk-main';
+                  for (let k = r.from; k < r.to; k++) {
+                    const span = document.createElement('span'), start = r.c.chars[k][1];
+                    span.className = start <= t ? 'kk-c on' : 'kk-c';   // already due: shown at once, no fade
+                    span.textContent = r.c.chars[k][0];
+                    span.dataset.t = start;   // its time, for checks (--player-test, kk-check-sync)
+                    main.append(span); spans.push([span, start]);
+                  }
+                  row.append(main);
+                  el = { row, spans };
+                }
+                el.row.className = 'kk-line' + (i < rows.length - 1 ? ' old' : '');
+                made.set(r.key, el); sync.spans.push(...el.spans);
+                return el.row;
+              }));
+              sync.els = made;
+              place();
+            }
+            for (const [span, start] of sync.spans) { const on = start <= t; if (span.classList.contains('on') !== on) span.classList.toggle('on', on); }
+          } catch (e) { log('sync frame: ' + e); }
+        }
         })();
         """
 }

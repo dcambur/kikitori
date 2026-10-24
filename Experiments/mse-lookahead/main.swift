@@ -108,8 +108,8 @@ func wav(_ pcm: Data, rate: Int = 16_000) -> Data {
         }
         var lag = ""
         if let seekable = state["seekable"] as? [Double], seekable.count == 2 { lag = String(format: " behind-seekable-end %.1f s", seekable[1] - t) }
-        print(String(format: "[%5.1f] t=%.2f paused=%@ rate=%@ ad=%@ attached=ms%@%@ | %@", elapsed, t, "\(state["paused"] ?? "?")",
-                     "\(state["rate"] ?? "?")", "\(state["ad"] ?? "?")", "\(state["attachedMs"] ?? "nil")", lag, ahead.joined(separator: " | ")))
+        print(String(format: "[%5.1f] t=%.2f paused=%@ rate=%@ ad=%@ vid=%@ attached=ms%@%@ | %@", elapsed, t, "\(state["paused"] ?? "?")",
+                     "\(state["rate"] ?? "?")", "\(state["ad"] ?? "?")", "\(state["vid"] ?? "nil")", "\(state["attachedMs"] ?? "nil")", lag, ahead.joined(separator: " | ")))
         if let live = state["liveEdge"] as? [String: Any], let end = live["seekableEnd"] as? Double, let cur = live["current"] as? Double, end - cur < 3600 {
             print(String(format: "        live: %.1f s behind YouTube's live edge, at live head: %@, ingestion %@", end - cur, "\(live["isAtLiveHead"] ?? "?")", "\(live["ingestion"] ?? "?")"))
         }

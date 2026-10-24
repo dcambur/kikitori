@@ -25,6 +25,12 @@ let package = Package(
                           swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(name: "kk-spike-gpu", path: "Experiments/gpu-process",
                           swiftSettings: [.swiftLanguageMode(.v5)]),
+        .executableTarget(name: "kk-check-mediatap", path: "Experiments/mediatap-check",
+                          swiftSettings: [.swiftLanguageMode(.v5)]),
+        .executableTarget(name: "kk-check-reveal", path: "Experiments/reveal-check",
+                          swiftSettings: [.swiftLanguageMode(.v5)]),
+        .executableTarget(name: "kk-check-sync", dependencies: ["KikitoriCore"], path: "Experiments/sync-check",
+                          swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(name: "KikitoriCoreTests", dependencies: ["KikitoriCore"],
                     resources: [.copy("Fixtures")]),
     ]

@@ -5,6 +5,12 @@ public protocol VoiceActivityDetector: Sendable {
     var frameSize: Int { get }
     /// Probability of speech in this frame, 0…1. Called in order; may keep state.
     mutating func probability(_ frame: ArraySlice<Float>) async -> Float
+    /// Forget the frames so far: the next one starts a new, unrelated stream.
+    mutating func reset() async
+}
+
+extension VoiceActivityDetector {
+    public mutating func reset() async {}
 }
 
 /// Loudness-based stand-in used in tests and as a fallback when no model is available.

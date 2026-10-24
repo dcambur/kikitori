@@ -39,6 +39,9 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         config.mediaTypesRequiringUserActionForPlayback = []
         config.preferences.isElementFullscreenEnabled = true
         let controller = WKUserContentController()
+        // Before the site's scripts: it wraps Media Source Extensions (synced subtitles' audio).
+        controller.addUserScript(WKUserScript(source: MediaTapScript.source, injectionTime: .atDocumentStart,
+                                              forMainFrameOnly: true, in: .page))
         controller.addUserScript(WKUserScript(source: PlayerScript.source, injectionTime: .atDocumentEnd,
                                               forMainFrameOnly: true, in: .page))
         config.userContentController = controller
@@ -47,7 +50,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
         webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
         webView.allowsBackForwardNavigationGestures = true
         super.init()
-        for name in ["kkState", "kkLog"] { controller.add(self, contentWorld: .page, name: name) }
+        for name in ["kkState", "kkLog", "kkMedia", "kkReveal"] { controller.add(self, contentWorld: .page, name: name) }
         webView.navigationDelegate = self
         load("https://www.youtube.com")
         observeSubtitles()
@@ -121,12 +124,23 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
                 self.channel = channel
                 useAsStreamInfo(title: title, replacing: old)
             }
+            AppModel.shared.playerState(videoID: body["vid"] as? String ?? "", time: body["t"] as? Double ?? -1,
+                                        live: body["live"] as? Bool ?? false, hasAudio: body["media"] as? Bool ?? false,
+                                        ad: body["ad"] as? Bool ?? false)
             if Date.now.timeIntervalSince(lastStateLog) > 5 {
                 lastStateLog = .now
                 log.notice("state video=\(hasVideo) paused=\(paused) lines=\(AppModel.shared.session?.lines.count ?? 0)")
             }
         case "kkLog":
             log.notice("page: \(body["message"] as? String ?? "", privacy: .public)")
+        case "kkMedia":
+            guard let vid = body["vid"] as? String, let t = body["t"] as? Double, let rate = body["r"] as? Double,
+                  let data = (body["pcm"] as? String).flatMap({ Data(base64Encoded: $0) }) else { return }
+            let samples = data.withUnsafeBytes { raw in raw.bindMemory(to: Int16.self).map { Float(Int16(littleEndian: $0)) / 32_768 } }
+            AppModel.shared.mediaArrived(MediaPacket(videoID: vid, stream: body["s"] as? Int ?? 0, time: t, rate: rate, samples: samples))
+        case "kkReveal":
+            guard let id = (body["id"] as? String).flatMap(UUID.init(uuidString:)), let line = body["line"] as? Int else { return }
+            AppModel.shared.revealed(cue: id, line: line)
         default: break
         }
     }
@@ -177,6 +191,7 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     /// live line, under the newest lines (up to the overlay's line count in all).
     func pushSubtitles() {
         let model = AppModel.shared
+        guard !model.synced else { return }   // the page draws the cues itself
         guard model.source?.id == Self.sourceID, model.isLive else { if !lastShown.isEmpty { show([], live: "") }; return }
         let live = model.hearing
         let count = max(model.prefs.overlayLines - (live.isEmpty ? 0 : 1), live.isEmpty ? 1 : 0)
@@ -196,6 +211,35 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     }
 
     nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        MainActor.assumeIsolated { lastShown = ""; pushSubtitles() }
+        MainActor.assumeIsolated {
+            lastShown = ""
+            pushSubtitles()
+            AppModel.shared.playerPageLoaded()   // a new page knows nothing of the tap, sync mode or cues
+        }
+    }
+
+    // MARK: Synced subtitles
+
+    /// Decode the video's buffered audio for the session (`MediaTapScript`), or stop.
+    func setMediaTap(_ on: Bool) {
+        webView.evaluateJavaScript("window.__kikitoriMedia && window.__kikitoriMedia.setActive(\(on))", in: nil, in: .page)
+    }
+
+    /// Draw cues in time on the video instead of the lines as heard.
+    func setSynced(_ on: Bool, lines: Int) {
+        lastShown = ""
+        webView.evaluateJavaScript("window.__kikitori && window.__kikitori.sync(\(on), \(lines))", in: nil, in: .page)
+        if !on { pushSubtitles() }
+    }
+
+    /// Hand cues to the page (`reset` first forgets the ones it has).
+    func addCues(_ cues: [Cue], reset: Bool = false) {
+        let list: [[String: Any]] = cues.map { cue in
+            ["id": cue.id.uuidString, "vid": cue.videoID,
+             "chars": cue.chars.map { [$0.text, $0.start, $0.end] as [Any] },
+             "lines": cue.lines.map { [$0.from, $0.to] }]
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: list), let json = String(data: data, encoding: .utf8) else { return }
+        webView.evaluateJavaScript("window.__kikitori && window.__kikitori.cues(\(json), \(reset))", in: nil, in: .page)
     }
 }

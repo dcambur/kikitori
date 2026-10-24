@@ -22,6 +22,10 @@ public actor LiveTranslator {
         public var note: String
         public var term: String
 
+        public init(ja: String = "", en: String, note: String = "", term: String = "") {
+            self.ja = ja; self.en = en; self.note = note; self.term = term
+        }
+
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             ja = try c.decodeIfPresent(String.self, forKey: .ja) ?? ""
