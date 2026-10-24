@@ -17,7 +17,9 @@ import KikitoriCore
 //                                    KIKITORI_SPEAKER_WAIT=<s> how long a chunk may wait for it,
 //                                    KIKITORI_NO_SPEAKERS=1 runs without it (to see what it costs).
 //                                    --enroll: a known voice from that stretch (seconds) of the file,
-//                                    or of another one (name@file:from-to)
+//                                    or of another one (name@file:from-to), put in a slot first
+//                                    --remember: the same, as a voiceprint matched to the voices heard
+//   voiceprints <name@file:from-to> ...  pairwise similarity of the stretches' voiceprints
 //                                    --json also writes <out>.chars.json: every character's time
 //                                    and shown speaker, for Experiments/speakers/score.py
 let args = Array(CommandLine.arguments.dropFirst())
@@ -134,23 +136,20 @@ actor TimedTracker: SpeakerTracking {
     }
 }
 
-func speakers(_ path: String, realTime: Bool, json: String?, enroll: [String]) async throws {
+func speakers(_ path: String, realTime: Bool, json: String?, enroll: [String], remember: [String]) async throws {
     let url = URL(fileURLWithPath: path)
     var all: [Float] = []
     for await piece in try FileAudioSource.stream(url) { all += piece }
     var voices: [(name: String, samples: [Float])] = []
-    for spec in enroll {   // name@from-to, or name@file:from-to
-        guard let at = spec.firstIndex(of: "@") else { continue }
-        var rest = spec[spec.index(after: at)...], source = all
-        if let colon = rest.lastIndex(of: ":") {
-            source = []
-            for await piece in try FileAudioSource.stream(URL(fileURLWithPath: String(rest[..<colon]))) { source += piece }
-            rest = rest[rest.index(after: colon)...]
-        }
-        let range = rest.split(separator: "-").compactMap { Double($0) }
-        guard range.count == 2 else { continue }
-        let a = Int(range[0] * 16_000), b = min(source.count, Int(range[1] * 16_000))
-        if a < b { voices.append((String(spec[..<at]), Array(source[a..<b]))) }
+    for spec in enroll { if let v = try await voiceSpec(spec, fallback: all) { voices.append(v) } }
+    // Remembered voices: voiceprints made from these stretches, matched as the session goes.
+    var namer: SpeakerNamer?
+    if !remember.isEmpty {
+        let maker = try await VoiceprintMaker.load()
+        var known: [String: Voiceprint] = [:]
+        for spec in remember { if let v = try await voiceSpec(spec, fallback: all), let p = try await maker.voiceprint(v.samples) { known[v.name] = p } }
+        namer = SpeakerNamer(maker: maker, known: known)
+        print("remembered voiceprints (\(maker.model)): \(known.keys.sorted().joined(separator: ", "))")
     }
     let recorder = Recorder()
     let engine = RecordingEngine(inner: AppleSpeechEngine(), recorder: recorder)
@@ -173,6 +172,11 @@ func speakers(_ path: String, realTime: Bool, json: String?, enroll: [String]) a
     let usage0 = cpuSeconds()
     for await event in pipeline.run(try FileAudioSource.stream(url, realTime: realTime)) {
         guard case let .heard(time, duration, ja, asr, _, turns) = event else { continue }
+        if let namer {
+            for (slot, name) in await namer.check(voice: { await tracker.voice(slot: $0) }) {
+                print(String(format: "    >> %@ is %@ (from %.0f s of audio)", SpeakerLabeler.label(slot), name, time + duration))
+            }
+        }
         let wait = await timed.waits.last ?? 0
         print(String(format: "[%6.1f +%4.1f] asr %.2fs, speakers +%.2fs", time, duration, asr, wait))
         for t in turns { print("    \(t.speaker ?? "?")  \(t.ja)") }
@@ -194,6 +198,21 @@ func speakers(_ path: String, realTime: Bool, json: String?, enroll: [String]) a
         try out.write(toFile: json, atomically: true, encoding: .utf8)
         try JSONEncoder().encode(await recorder.chunks).write(to: URL(fileURLWithPath: json + ".chars.json"))
     }
+}
+
+/// Audio for `name@file:from-to` (or `name@from-to` of `fallback`), for --enroll, --remember, voiceprints.
+func voiceSpec(_ spec: String, fallback: [Float] = []) async throws -> (name: String, samples: [Float])? {
+    guard let at = spec.firstIndex(of: "@") else { return nil }
+    var rest = spec[spec.index(after: at)...], source = fallback
+    if let colon = rest.lastIndex(of: ":") {
+        source = []
+        for await piece in try FileAudioSource.stream(URL(fileURLWithPath: String(rest[..<colon]))) { source += piece }
+        rest = rest[rest.index(after: colon)...]
+    }
+    let range = rest.split(separator: "-").compactMap { Double($0) }
+    guard range.count == 2 else { return nil }
+    let a = Int(range[0] * 16_000), b = min(source.count, Int(range[1] * 16_000))
+    return a < b ? (String(spec[..<at]), Array(source[a..<b])) : nil
 }
 
 func cpuSeconds() -> Double {
@@ -236,7 +255,17 @@ case "preview" where args.count >= 2:
     }
 case "speakers" where args.count >= 2:
     func values(_ name: String) -> [String] { args.indices.filter { args[$0] == name && $0 + 1 < args.count }.map { args[$0 + 1] } }
-    try await speakers(args[1], realTime: args.contains("--realtime"), json: values("--json").first, enroll: values("--enroll"))
+    try await speakers(args[1], realTime: args.contains("--realtime"), json: values("--json").first,
+                       enroll: values("--enroll"), remember: values("--remember"))
+case "voiceprints" where args.count >= 3:
+    // Pairwise similarity of the voiceprints of stretches of audio (name@file:from-to ...).
+    let maker = try await VoiceprintMaker.load()
+    var prints: [(String, Voiceprint)] = []
+    for spec in args.dropFirst() { if let v = try await voiceSpec(spec), let p = try await maker.voiceprint(v.samples) { prints.append((v.name, p)) } }
+    print("model: \(maker.model)")
+    for (i, a) in prints.enumerated() {
+        print(a.0.padding(toLength: 14, withPad: " ", startingAt: 0) + prints[...i].map { String(format: "%6.2f", a.1.similarity($0.1)) }.joined())
+    }
 default:
     print("usage: kikitori-cli sources | translate <chunks.jsonl> [n] | run <audio> [--realtime] | preview <audio> | speakers <audio> [--realtime] [--json out] [--enroll name@from-to]")
 }

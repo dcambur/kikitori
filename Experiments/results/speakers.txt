@@ -105,3 +105,33 @@ character accuracy: 98.0%
 ### L-2-absent
 characters scored: 898 (of 918); labels ['A', 'B'] → {'A': 'pekora', 'B': 'miko'}
 character accuracy: 90.5%
+
+## Voiceprints (WeSpeaker), kikitori-cli voiceprints
+model: wespeaker_v2 8ba0f1353606
+pekora1         1.00
+pekora2         0.76  1.00
+pekora3         0.73  0.78  1.00
+pekora-collab   0.69  0.59  0.61  1.00
+miko1           0.10  0.19  0.19  0.10  1.00
+miko2           0.11  0.15  0.18  0.11  0.82  1.00
+miko3           0.17  0.21  0.27  0.20  0.87  0.86  1.00
+marine1         0.51  0.45  0.51  0.58  0.07  0.12  0.11  1.00
+marine2         0.37  0.28  0.36  0.34  0.12  0.16  0.15  0.58  1.00
+marine3         0.56  0.45  0.52  0.62  0.09  0.17  0.15  0.83  0.57  1.00
+
+## Naming from remembered voiceprints (kikitori-cli speakers --remember, prints from pekora 285-300, miko 380-395, marine 225-239)
+### L-2 remember Pekora Miko
+remembered voiceprints (wespeaker_v2 8ba0f1353606): Miko, Pekora
+    >> A is Pekora (from 6 s of audio)
+    >> B is Miko (from 29 s of audio)
+### L-2 remember Marine 
+remembered voiceprints (wespeaker_v2 8ba0f1353606): Marine
+### L-mm remember Miko Marine
+remembered voiceprints (wespeaker_v2 8ba0f1353606): Marine, Miko
+    >> A is Marine (from 11 s of audio)
+    >> B is Miko (from 21 s of audio)
+### L-pm remember Pekora Marine
+remembered voiceprints (wespeaker_v2 8ba0f1353606): Marine, Pekora
+    >> A is Marine (from 6 s of audio)
+### real collab remember Pekora Miko
+remembered voiceprints (wespeaker_v2 8ba0f1353606): Miko, Pekora

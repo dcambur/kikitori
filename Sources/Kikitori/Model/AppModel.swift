@@ -118,6 +118,12 @@ final class AppModel {
     /// read-ahead), kept for the whole session so a voice keeps its letter across pauses.
     @ObservationIgnored private var liveSpeakers: DeferredSpeakerTracker?
     @ObservationIgnored private var mediaSpeakers: DeferredSpeakerTracker?
+    /// Puts remembered names on this session's voices, every few seconds.
+    @ObservationIgnored private var namingTask: Task<Void, Never>?
+    /// Makes voiceprints (loaded when first needed).
+    @ObservationIgnored private var voiceprints: Task<VoiceprintMaker?, Never>?
+    /// The profiles' remembered voices: voiceprints only, never audio.
+    @ObservationIgnored private lazy var voiceStore = VoiceStore(directory: supportURL.appending(path: "voices"))
     @ObservationIgnored private var cues: [UUID: Cue] = [:]
     @ObservationIgnored private var cueAudio: [UUID: [Float]] = [:]
     /// Cue lines in the transcript ("<cue>:<first character>" → its transcript line), and the
@@ -143,6 +149,7 @@ final class AppModel {
         profiles = Self.load([Profile].self, from: supportURL.appending(path: "profiles.json")) ?? []
         sessions = sessionStore.summaries()
         applyRetention()
+        migrateVoiceAudio()
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didLaunchApplicationNotification,
                                                           object: nil, queue: .main) { [weak self] note in
             let id = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
@@ -291,6 +298,8 @@ final class AppModel {
         stopReplay()
         liveSpeakers = nil
         mediaSpeakers = nil
+        namingTask?.cancel()
+        namingTask = nil
         clips.removeAll()
         recentHeard = []
         state = .idle
@@ -871,58 +880,93 @@ final class AppModel {
     // MARK: Speaker labels
 
     /// Speaker labels for this session, when the setting is on: the trackers load in the
-    /// background (lines stay unlabelled until then). The active profile's saved voice, if any,
-    /// gets a slot first and its name.
+    /// background (lines stay unlabelled until then). Profiles with a remembered voice name the
+    /// voice that matches it, once it has said a few seconds on its own.
     private func startSpeakerTracking(player: Bool) {
         liveSpeakers = nil
         mediaSpeakers = nil
+        namingTask?.cancel()
+        namingTask = nil
         guard prefs.speakerLabels else { return }
-        let voices = activeProfile.flatMap { p in voiceSample(for: p).map { [(name: p.name, samples: $0)] } } ?? []
-        let sessionID = session?.id
-        let named: @Sendable ([Int: String]) -> Void = { [weak self] names in
-            Task { @MainActor in
-                guard let self, self.session?.id == sessionID else { return }
-                for (slot, name) in names { self.session?.speakerNames = (self.session?.speakerNames ?? [:]).merging([SpeakerLabeler.label(slot): name]) { $1 } }
+        let live = DeferredSpeakerTracker(), media = player ? DeferredSpeakerTracker() : nil
+        liveSpeakers = live
+        mediaSpeakers = media
+        var known: [String: Voiceprint] = [:]
+        for p in profiles { if let print = voiceStore.load(p.id) { known[p.name] = print } }
+        guard !known.isEmpty, let sessionID = session?.id else { return }
+        let maker = voiceprintMaker()
+        namingTask = Task { [weak self] in
+            guard let maker = await maker.value else { return }
+            let current = known.filter { $0.value.model == maker.model }   // prints of another model can't match
+            guard !current.isEmpty else { return }
+            let namers = [(live, SpeakerNamer(maker: maker, known: current))] + (media.map { [($0, SpeakerNamer(maker: maker, known: current))] } ?? [])
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                for (tracker, namer) in namers {
+                    let found = await namer.check(voice: { await tracker.voice(slot: $0) })
+                    guard let self, self.session?.id == sessionID else { return }
+                    for (slot, name) in found where self.session?.speakerNames?[SpeakerLabeler.label(slot)] == nil {
+                        self.session?.speakerNames = (self.session?.speakerNames ?? [:]).merging([SpeakerLabeler.label(slot): name]) { $1 }
+                    }
+                }
             }
         }
-        liveSpeakers = DeferredSpeakerTracker(voices: voices, onLoad: named)
-        if player { mediaSpeakers = DeferredSpeakerTracker(voices: voices, onLoad: named) }
+    }
+
+    private func voiceprintMaker() -> Task<VoiceprintMaker?, Never> {
+        if let voiceprints { return voiceprints }
+        let task = Task<VoiceprintMaker?, Never> {
+            do { return try await VoiceprintMaker.load() } catch {
+                Logger(subsystem: "app.kikitori", category: "speakers").error("voiceprints unavailable: \(error, privacy: .public)")
+                return nil
+            }
+        }
+        voiceprints = task
+        return task
     }
 
     /// Names a speaker label for the rest of this session ("A" → "Fubuki"). With a profile, also
-    /// remembers the voice (experimental, asked for separately): the newest seconds where only that
-    /// voice spoke become the profile's voice sample, and the next session with this profile puts
-    /// it in a slot from the start.
+    /// remembers the voice (experimental, asked for separately): a voiceprint of the newest seconds
+    /// where only that voice spoke (kept in memory by the tracker) is saved with the profile, never
+    /// the audio; later sessions name the voice that matches it.
     func nameSpeaker(_ label: String, as name: String, profile: Profile? = nil) {
         let name = name.trimmingCharacters(in: .whitespaces)
         guard session != nil, !name.isEmpty else { return }
         session?.speakerNames = (session?.speakerNames ?? [:]).merging([label: name]) { $1 }
         guard let profile, let slot = label.unicodeScalars.first.map({ Int($0.value) - 65 }) else { return }
         let tracker = synced ? mediaSpeakers : liveSpeakers
+        let maker = voiceprintMaker(), store = voiceStore
         Task { [weak self] in
             let samples = await tracker?.voice(slot: slot) ?? []
-            guard samples.count >= 16_000 * 3 else { return }   // too little to tell a voice by
-            self?.saveVoice(samples, for: profile)
+            guard let maker = await maker.value, let print = try? await maker.voiceprint(samples) else { return }   // too little to tell a voice by
+            try? store.save(print, for: profile.id)
+            self?.voicesRevision += 1
         }
     }
 
-    private func voiceURL(_ profile: Profile) -> URL { supportURL.appending(path: "voices/\(profile.id.uuidString).f32") }
+    /// Bumped when a voice is remembered or forgotten, for the profile editor.
+    var voicesRevision = 0
 
-    /// A profile's saved voice sample (16 kHz mono), if one was saved.
-    func voiceSample(for profile: Profile) -> [Float]? {
-        guard let data = try? Data(contentsOf: voiceURL(profile)), !data.isEmpty else { return nil }
-        return data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+    /// Whether a voice is remembered for this profile (by the current model or an earlier one).
+    func hasVoice(_ profile: Profile) -> Bool { voiceStore.load(profile.id) != nil }
+
+    func forgetVoice(_ profile: Profile) {
+        voiceStore.forget(profile.id)
+        voicesRevision += 1
     }
 
-    func hasVoice(_ profile: Profile) -> Bool { FileManager.default.fileExists(atPath: voiceURL(profile).path) }
-
-    private func saveVoice(_ samples: [Float], for profile: Profile) {
-        let url = voiceURL(profile)
-        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? samples.withUnsafeBytes { Data($0) }.write(to: url)
+    /// Before voiceprints, remembered voices were kept as audio (`voices/<profile>.f32`). Each
+    /// becomes a voiceprint once and the audio is deleted (deleted anyway if no print can be made).
+    private func migrateVoiceAudio() {
+        let store = voiceStore
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: store.directory.path)) ?? []
+        guard files.contains(where: { $0.hasSuffix(".f32") }) else { return }
+        let maker = voiceprintMaker()
+        Task { [weak self] in
+            await store.migrateAudio(with: await maker.value)
+            self?.voicesRevision += 1
+        }
     }
-
-    func forgetVoice(_ profile: Profile) { try? FileManager.default.removeItem(at: voiceURL(profile)) }
 
     func saveProfiles() { Self.save(profiles, to: supportURL.appending(path: "profiles.json")) }
 
@@ -984,7 +1028,7 @@ final class AppModel {
         deleteSessions(sessions.map(\.id))
         profiles = []
         saveProfiles()
-        try? FileManager.default.removeItem(at: supportURL.appending(path: "voices"))   // the profiles' voice samples
+        try? FileManager.default.removeItem(at: supportURL.appending(path: "voices"))   // the profiles' voiceprints
         ledger.entries = []
         Self.save(ledger.entries, to: supportURL.appending(path: "usage.json"))
     }

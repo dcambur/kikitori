@@ -2,8 +2,8 @@
 
 Status: **built, behind a setting (off by default)**, 2026-10-24. Settings › Audio › Speech
 detection › "Label speakers in collabs". Measured on a real collab and on spliced collabs with
-known turns (§6). The scripts are in `Experiments/speakers/`. One decision is open for the user
-(§9): whether to keep the experimental cross-session voice memory.
+known turns (§6). The scripts are in `Experiments/speakers/`. Remembered voices are kept as
+voiceprints, never audio (§4, decided after the code review).
 
 ## In short
 
@@ -18,9 +18,9 @@ subtitles (synced and unsynced).
   (`transcribeTimed`, the same recognition with `.audioTimeRange`). Each character gets the
   speaker most active while it was said; a chunk is split into turns where the voice changes.
 - **Names:** right-click a line › Speaker › "This Is Pekora" (any profile) or "Name for This
-  Session…": every line of that voice, past and future, shows the name. Remembering a voice for
-  later sessions works when the mic is the same, and mixed voices up on a real offline collab, so
-  it is a separate, experimental action (§4).
+  Session…": every line of that voice, past and future, shows the name. "Remember This Voice"
+  keeps a **voiceprint** (a WeSpeaker speaker embedding, never audio); later sessions put the name
+  on the voice that matches it, once it is clearly that person (§4).
 - **Accuracy:** on two-voice splices of real stream audio, 97–98 % of lines get the right speaker
   and 66–80 % of speaker changes are found within 1 s (90–96 % of the shown ones are real). Some
   voice pairs are too alike for the model: Pekora and Marine are merged (§6).
@@ -101,19 +101,29 @@ All in `SpeakerLabeler` (pure functions, unit-tested) and `Spoken`:
   in the transcript, the overlay and the player. Export writes names (or "Speaker A").
 - **Naming in a session** is reliable: it relies only on the slot staying the same, which it did
   in every run (with the same input the labels are identical run to run).
-- **Remembering a voice across sessions** (Speaker › Remember This Voice › As ‹profile›) saves
-  the newest ≤ 15 s of frames where that slot alone was confidently speaking (> 0.8, all others
-  < 0.2), so another voice in the same chunk never pollutes it; at least 3 s. It is stored on this
-  Mac only (`voices/<profile id>.f32` next to `profiles.json`, not in exported profile files); the
-  profile editor shows it and can forget it. The next session with that profile **enrolls** it
-  before any audio (`SortformerDiarizer.enrollSpeaker`): it takes a slot and its name. Only the
-  active profile (the channel being watched, so the host, who is always there) is enrolled:
-  an enrolled voice that isn't there can capture a similar one (§6.3).
-- It is **experimental** because of §6.3: enrollment named the right voice in all 5 runs where
-  the voices could be told apart, and left accuracy unchanged when the sample came from the same
-  recording conditions, but with a
-  sample from Pekora's solo stream, her voice drifted to the other slot halfway through the
-  real collab (an offline collab at Miko's place, so another mic and room).
+- **Remembering a voice across sessions** (Speaker › Remember This Voice › As ‹profile›) keeps a
+  **voiceprint, never audio**: FluidAudio's WeSpeaker model (`DiarizerManager.extractSpeakerEmbedding`,
+  ~22 MB, Neural Engine) turns the newest ≤ 15 s where that voice alone was confidently speaking
+  (> 0.8, all others < 0.2, held in memory by the tracker) into 256 numbers (10 s pieces,
+  averaged). Saved as `voices/<profile id>.json` with the model's id (name + a hash of its files):
+  a print from another model is never compared. Stored on this Mac only, not in exported
+  profiles; the profile editor shows "Voice saved" and can forget it.
+- **Later sessions** don't feed it to the diarizer. Every 10 s, each voice not named yet that has
+  ≥ 5 s of its own audio is printed and compared (cosine) with every profile's remembered print;
+  it gets a name when it is ≥ 0.65 similar to it and ≥ 0.1 more than to any other remembered
+  name, each name going to one voice at most. Its earlier lines get the name too (names belong
+  to the letter). A name the user gave is never replaced.
+- Why not enroll the voice into Sortformer (the first version): enrollment needs the audio itself
+  (`enrollSpeaker(withAudio:)`; its streaming state can be read but not restored), and it
+  changed the diarization: with a sample from another setting, Pekora's voice drifted to the
+  other slot halfway through the real collab (§6.3). Matching prints names voices but never moves
+  a line from one voice to another.
+- Old files: before voiceprints, the voice was saved as audio (`voices/<profile>.f32`). At launch,
+  each is turned into a voiceprint once and deleted; if the model can't load (offline), the audio
+  is deleted anyway and the voice can be remembered again.
+- It stays **experimental**: a voice is named only when it is clearly that person, so with
+  another mic it may stay unnamed (§6.3), and voices too alike to tell apart (Pekora and Marine)
+  can't be named apart either.
 
 ## 5. Latency and cost
 
@@ -209,7 +219,32 @@ turn it was spoken in (labels matched to people by the best mapping).
 - Variants on the easy pairs: balanced ≈ fast (97.7 %, 98.0 %), high-context no better
   (95.3 %, 94.9 %). Shipped: fast (FluidAudio's default).
 
-### 6.3 Enrollment (remembering a voice)
+### 6.3 Remembering a voice
+
+**Voiceprints (shipped).** Similarity of WeSpeaker prints of 15 s stretches (`kikitori-cli
+voiceprints`):
+
+| | similarity |
+|---|---|
+| same person, same stream (3 stretches each of Pekora, Miko, Marine) | 0.57–0.87, mostly 0.73–0.87 |
+| Pekora: solo stream vs the offline collab (another mic and room) | 0.59–0.69 |
+| Miko vs Pekora or Marine | 0.07–0.27 |
+| **Pekora vs Marine** | 0.28–0.62 |
+
+Hence the threshold 0.65 with a 0.1 margin. End to end (`kikitori-cli speakers --remember`,
+prints made from other stretches of the solo streams):
+
+| Run | Named |
+|---|---|
+| Pekora + Miko, both remembered | A = Pekora after 6 s, B = Miko after 29 s: right |
+| Miko + Marine, both remembered | A = Marine after 11 s, B = Miko after 21 s: right |
+| Pekora + Miko, only **Marine** (absent) remembered | nobody: right |
+| Pekora + Marine (merged into one letter by the diarizer), both remembered | the merged letter named Marine |
+| Real collab, Pekora and Miko remembered from their solo streams | nobody (other mic: below 0.65); name by hand |
+
+Diarization is the same with or without remembered voices (96.4–96.8 % of characters right).
+
+**Enrollment (the first version, replaced).**
 
 | Run | Named | Characters right |
 |---|---|---|
@@ -218,10 +253,6 @@ turn it was spoken in (labels matched to people by the best mapping).
 | Pekora + Miko with **Marine** (absent) enrolled | Pekora's lines named "Marine" | 90.5 % |
 | Real collab, Pekora enrolled from her solo stream | A = Pekora, right | 22 % of characters change: from mid-clip her voice moves to B |
 
-The splice samples came from the same recordings as the test audio, the friendliest case. On
-the real collab the sample was from another setting and labels got worse. Hence: only the
-active profile is enrolled, and remembering is a separate, experimental action.
-
 ## 7. Where the code is
 
 | File | What |
@@ -229,11 +260,12 @@ active profile is enrolled, and remembering is a separate, experimental action.
 | `Sources/KikitoriCore/Speakers/SpeakerTracker.swift` | `SpeakerTracking`, `SpeakerTracker` (Sortformer), `DeferredSpeakerTracker` |
 | `Sources/KikitoriCore/Speakers/SpeakerLabeler.swift` | frames → characters → turns → line speaker |
 | `Sources/KikitoriCore/Speakers/Spoken.swift` | a chunk's turns as lines, translator input, cue lines |
+| `Sources/KikitoriCore/Speakers/Voiceprint.swift` | `Voiceprint`, `VoiceprintMaker` (WeSpeaker), `VoiceMatcher`, `SpeakerNamer`, `VoiceStore` (+ migration of old audio files) |
 | `LivePipeline`, `MediaPipeline` | `speakers` property; feeding the tracker; timed recognition when on |
 | `LiveTranslator` | one sentence about line breaks in the prompt |
-| `AppModel` | trackers per session, lines per turn, names, voice samples |
+| `AppModel` | trackers per session, lines per turn, names, remembered voices |
 | `TranscriptRow` (`SpeakerChip`, `SpeakerMenu`), `OverlayView`, `PlayerScript`/`PlayerController`, `ProfilesView`, `SettingsView` | UI |
-| `kikitori-cli speakers` | headless runs: turns, wait per chunk, diarizer time; `--json` for scoring; `--enroll`; env knobs for the model, the wait and a run without the tracker |
+| `kikitori-cli speakers`, `voiceprints` | headless runs: turns, wait per chunk, diarizer time; `--json` for scoring; `--remember` (voiceprints), `--enroll` (the old enrollment); env knobs for the model, the wait and a run without the tracker; pairwise voiceprint similarity |
 | `Experiments/speakers/splice.py`, `score.py`, `kk-spike-diar` | spliced collab with known turns; scoring; the offline embedding pipeline for comparison |
 
 ## 8. Limits and follow-ups
@@ -248,12 +280,12 @@ active profile is enrolled, and remembering is a separate, experimental action.
   of the same session (rare: a video is either synced or not). Names given apply to the letter.
 - **Overlapping speech** goes to the more confident voice; the spec's "?" row for overlap is
   not built.
-- **Cross-session voices** are experimental (§4, §6.3).
+- **Cross-session voices** are experimental (§4, §6.3): conservative, so often unnamed with
+  another mic.
 - Not tested in the app with audio playing (the CLI runs the same pipeline code on files; the
   app's wiring, menus and views were built and compiled, not exercised by hand).
 
-## 9. Decision for the user
+## 9. Decisions
 
-Keep "Remember This Voice" (experimental, works with the same mic, can mislabel when the
-setting differs), or remove it and keep only naming within a session? Built as the former, since
-naming a voice every session is the main cost of the feature otherwise.
+- **Remembered voices keep a voiceprint only, never audio** (decided 2026-10-24, from the code
+  review): §4.

@@ -39,17 +39,16 @@ public struct ShiftedSpeakerTracker: SpeakerTracking {
 }
 
 /// A tracker that loads in the background: until the model is ready (a download of ~230 MB
-/// the first time, a few seconds after that), audio goes unlabelled. `onLoad` gets the names of
-/// enrolled voices by slot; a failed load leaves labels off (logged).
+/// the first time, a few seconds after that), audio goes unlabelled. A failed load leaves labels
+/// off (logged).
 public actor DeferredSpeakerTracker: SpeakerTracking {
     var inner: SpeakerTracker?
 
-    public init(voices: [(name: String, samples: [Float])] = [], onLoad: @escaping @Sendable ([Int: String]) -> Void) {
+    public init() {
         Task { [weak self] in
             do {
-                let (tracker, names) = try await SpeakerTracker.load(voices: voices)
+                let (tracker, _) = try await SpeakerTracker.load()
                 await self?.loaded(tracker)
-                onLoad(names)
             } catch {
                 Logger(subsystem: "app.kikitori", category: "speakers").error("speaker labels off: \(error, privacy: .public)")
             }
@@ -118,8 +117,6 @@ public actor SpeakerTracker: SpeakerTracking {
         slots = box.diarizer.config.numSpeakers
     }
 
-    /// Downloads the model (~250 MB, once) and loads it. `voices` are known speakers to put in slots
-    /// first: their names come back with the slots they got.
     /// FluidAudio's Sortformer models (docs/design/speaker-labels.md §6.4): `fast` and `balanced`
     /// settle ~1 s after the audio, `efficient` ~2.6 s, `highContext` ~30 s.
     public enum Variant: String, Sendable, CaseIterable {
@@ -134,6 +131,9 @@ public actor SpeakerTracker: SpeakerTracking {
         }
     }
 
+    /// Downloads the model (~234 MB, once) and loads it. `voices` are known speakers to put in slots
+    /// first (enrollment, for `kikitori-cli` experiments: the app remembers voices as voiceprints
+    /// instead, `SpeakerNamer`); their names come back with the slots they got.
     public static func load(voices: [(name: String, samples: [Float])] = [], variant: Variant = .fast) async throws -> (SpeakerTracker, [Int: String]) {
         let config = variant.config
         // One load at a time (a player session has two trackers, and a quick Stop and Start adds

@@ -80,7 +80,8 @@ no kikitori server. Transcripts, profiles and usage stay in `~/Library/Applicati
 Audio is never saved: so you can hear a line again, the last half hour or so of speech stays in
 memory during a session and is dropped when it stops. In Watch, the page also keeps the last few
 minutes of the video's own buffered audio (what the site's player already downloaded) in memory,
-so synced subtitles can start from it; it goes with the page. The stream title (for the built-in
+so synced subtitles can start from it; it goes with the page. A voice remembered for speaker
+labels is kept as a voiceprint (256 numbers that describe the voice), not as audio. The stream title (for the built-in
 player, the video's title and channel) is sent as context.
 
 ## Status

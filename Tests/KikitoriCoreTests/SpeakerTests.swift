@@ -366,3 +366,75 @@ actor FakeTracker: SpeakerTracking {
         _ = await asked.value   // returns instead of waiting 30 s
     }
 }
+
+@Suite struct VoiceprintTests {
+    func print(_ v: [Float], model: String = "m") -> Voiceprint { Voiceprint(model: model, vector: Voiceprint.mean([v])) }
+    func folder() -> URL {
+        let url = FileManager.default.temporaryDirectory.appending(path: "kk-voices-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test func similarityIsCosineAndOnlyWithinOneModel() {
+        let a = print([1, 0, 0]), b = print([1, 1, 0])
+        #expect(abs(a.similarity(a) - 1) < 1e-6)
+        #expect(abs(a.similarity(b) - 0.7071) < 1e-3)
+        #expect(a.similarity(print([1, 0, 0], model: "other")) == 0)   // another model's print can't be compared
+        #expect(Voiceprint.mean([[2, 0], [0, 2]]).map { ($0 * 1000).rounded() } == [707, 707])
+    }
+
+    @Test func aVoiceIsNamedOnlyWhenItIsClearlyThatPerson() {
+        let pekora = print([1, 0, 0]), miko = print([0, 1, 0])
+        let known = ["Pekora": pekora, "Miko": miko]
+        // A is close to Pekora; B is nobody we know; C is between both (too close to call).
+        let heard = [0: print([0.95, 0.1, 0.05]), 1: print([0, 0, 1]), 2: print([1, 1, 0])]
+        #expect(VoiceMatcher.names(heard: heard, known: known) == [0: "Pekora"])
+    }
+
+    @Test func eachNameGoesToTheClosestVoiceOnly() {
+        let known = ["Pekora": print([1, 0, 0])]
+        let heard = [0: print([0.9, 0.3, 0]), 1: print([0.99, 0.05, 0])]
+        #expect(VoiceMatcher.names(heard: heard, known: known) == [1: "Pekora"])
+    }
+
+    @Test func voiceprintsAreSavedAsJSONAndForgotten() throws {
+        let store = VoiceStore(directory: folder())
+        let id = UUID(), p = print([0.6, 0.8])
+        try store.save(p, for: id)
+        #expect(store.load(id) == p)
+        let files = try FileManager.default.contentsOfDirectory(atPath: store.directory.path)
+        #expect(files == ["\(id.uuidString).json"])
+        store.forget(id)
+        #expect(store.load(id) == nil)
+    }
+
+    @Test(.enabled(if: VoiceprintMaker.isDownloaded, "needs FluidAudio's WeSpeaker model on this Mac"))
+    func oldAudioFilesBecomeVoiceprints() async throws {
+        let store = VoiceStore(directory: folder())
+        let id = UUID()
+        let audio = signal([(true, 2), (false, 0.5), (true, 2)]).withUnsafeBytes { Data($0) }
+        try audio.write(to: store.directory.appending(path: "\(id.uuidString).f32"))
+        let maker = try await VoiceprintMaker.load()
+        #expect(await store.migrateAudio(with: maker) == [id])
+        let files = try FileManager.default.contentsOfDirectory(atPath: store.directory.path)
+        #expect(files == ["\(id.uuidString).json"])   // the audio is gone
+        let saved = try #require(store.load(id))
+        #expect(saved.model == maker.model && saved.vector.count == 256)
+        // The same audio printed again matches its saved print.
+        let again = try #require(try await maker.voiceprint(signal([(true, 2), (false, 0.5), (true, 2)])))
+        #expect(saved.similarity(again) > 0.99)
+    }
+
+    @Test func oldAudioFilesAreDeletedWhenTheyCannotBePrinted() async throws {
+        // No voiceprint model (offline, say): the audio goes anyway; a saved print stays.
+        let store = VoiceStore(directory: folder())
+        let old = UUID(), kept = UUID()
+        let audio = [Float](repeating: 0.1, count: 16_000 * 4).withUnsafeBytes { Data($0) }
+        try audio.write(to: store.directory.appending(path: "\(old.uuidString).f32"))
+        try store.save(print([1, 0]), for: kept)
+        let migrated = await store.migrateAudio(with: nil)
+        #expect(migrated.isEmpty)
+        let files = try FileManager.default.contentsOfDirectory(atPath: store.directory.path)
+        #expect(files == ["\(kept.uuidString).json"])
+    }
+}

@@ -105,8 +105,6 @@ struct ProfileEditor: View {
     let importAction: () -> Void
     @State private var selectedTerms: Set<GlossaryTerm.ID> = []
     @State private var confirmDelete = false
-    /// Bumped when the voice sample is forgotten, so the row redraws.
-    @State private var voiceRevision = 0
 
     var tokens: Int { profile.promptBlock.count / 2 }
 
@@ -157,17 +155,17 @@ struct ProfileEditor: View {
                 // Only meaningful with speaker labels on; its instructions are visible, not a tooltip.
                 if model.prefs.speakerLabels {
                     LabeledContent("Voice") {
-                        let _ = voiceRevision
-                        if let voice = model.voiceSample(for: profile) {
+                        let _ = model.voicesRevision
+                        if model.hasVoice(profile) {
                             HStack {
-                                Text("\(voice.count / 16_000) s sample").foregroundStyle(.secondary)
-                                Button("Forget") { model.forgetVoice(profile); voiceRevision += 1 }
+                                Text("Voice saved").foregroundStyle(.secondary)
+                                Button("Forget") { model.forgetVoice(profile) }
                             }
                         } else {
                             Text("None").foregroundStyle(.secondary)
                         }
                     }
-                    Text("Experimental. A session using this profile labels this voice with \(profile.name) from the start. To save it, right-click one of their lines and choose Speaker › Remember This Voice › As \(profile.name). Works best with the same mic as when it was saved.")
+                    Text("Experimental. A session names this voice \(profile.name) once they have spoken a few seconds on their own (their earlier lines too). To save it, right-click one of their lines and choose Speaker › Remember This Voice › As \(profile.name). Only a voiceprint is kept, never audio. Works best with the same mic as when it was saved.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
