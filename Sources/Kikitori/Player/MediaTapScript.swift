@@ -305,13 +305,15 @@ enum MediaTapScript {
                 // ad: null until the MediaSource is seen attached (classify, below).
                 const st = { id: ++M.made, sb, ms: this, type: String(type), codec, ad: null,
                              head: null, kept: [], keptBytes: 0, trimmed: false, demux: null, decoder: null, cfg: null,
-                             out: null, timer: 0, decoded: 0, until: -1, offset: 0 };
+                             out: null, timer: 0, decoded: 0, until: -1, offset: 0, bytes: 0 };
                 sb.__kikitori = st;
                 M.streams.push(st);
+                log('stream ' + st.id + ': ' + st.type);
                 const ms = this;
                 this.addEventListener('sourceclose', () => {
                   close(st); st.head = null; st.kept = []; st.keptBytes = 0;
                   M.streams = M.streams.filter(x => x !== st);
+                  log('stream ' + st.id + ' closed after ' + Math.round(st.bytes / 1024) + ' kB, ' + st.decoded.toFixed(0) + ' s decoded');
                   for (const [url, obj] of M.urls) if (obj === ms) M.urls.delete(url);
                 });
                 classify();
@@ -329,6 +331,7 @@ enum MediaTapScript {
             if (st) {
               const u8 = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
               const bytes = u8.slice();
+              st.bytes += bytes.length;
               if (!st.head) st.head = bytes;
               else {
                 st.kept.push(bytes); st.keptBytes += bytes.length;
@@ -345,7 +348,7 @@ enum MediaTapScript {
           SourceBuffer.prototype[name] = function (type) {
             try {
               const st = this.__kikitori;
-              if (st && name === 'changeType') { st.type = String(type); st.codec = (/codecs="?([^",]+)/.exec(type) || [])[1] || ''; if (st.demux) open(st); }
+              if (st && name === 'changeType') { log('stream ' + st.id + ' changes to ' + type); st.type = String(type); st.codec = (/codecs="?([^",]+)/.exec(type) || [])[1] || ''; if (st.demux) open(st); }
               else if (st) {   // abort(): the partial segment is dropped; replays of kept bytes reset here too
                 st.kept.push(null);
                 if (st.demux) { flush(st); st.demux.reset(); }
@@ -377,6 +380,7 @@ enum MediaTapScript {
           for (const st of M.streams) {
             if (st.ms !== ms || st.ad === ad) continue;
             st.ad = ad;
+            log('stream ' + st.id + (ad ? ': an ad' : ': the video, ' + ms.__kkKey));
             if (ad) close(st);   // its bytes stay (ads are short), in case this call is undone
             else if (M.active) replay(st);
           }
@@ -405,8 +409,9 @@ enum MediaTapScript {
         M.status = () => {
           const v = document.querySelector('#movie_player video') || document.querySelector('video');
           const t = v ? v.currentTime : 0;
-          return { key: M.key, ok: M.active && M.streams.some(s => s.ad === false && s.ms.__kkKey === M.key && s.until >= t - 2),
-                   until: M.lastEnd };
+          const mine = M.streams.filter(s => s.ad === false && s.ms.__kkKey === M.key);
+          return { key: M.key, ok: M.active && mine.some(s => s.until >= t - 2),
+                   until: mine.reduce((u, s) => Math.max(u, s.until), -1), kb: Math.round(mine.reduce((n, s) => n + s.bytes, 0) / 1024) };
         };
         })();
         """#

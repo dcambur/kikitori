@@ -129,7 +129,12 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
                                         ad: body["ad"] as? Bool ?? false)
             if Date.now.timeIntervalSince(lastStateLog) > 5 {
                 lastStateLog = .now
-                log.notice("state video=\(hasVideo) paused=\(paused) lines=\(AppModel.shared.session?.lines.count ?? 0)")
+                let model = AppModel.shared
+                // Synced subtitles' read-ahead: how far the decoded audio reaches past the playhead.
+                let until = body["mediaUntil"] as? Double ?? -1, t = body["t"] as? Double ?? -1
+                let media = until >= 0 ? String(format: " synced=%@ audio-lead=%.1fs media=%dkB packets=%d", "\(model.synced)", until - t,
+                                                body["mediaKB"] as? Int ?? 0, model.mediaPackets) : ""
+                log.notice("state video=\(hasVideo) paused=\(paused) lines=\(model.session?.lines.count ?? 0)\(media, privacy: .public)")
             }
         case "kkLog":
             log.notice("page: \(body["message"] as? String ?? "", privacy: .public)")
@@ -139,8 +144,9 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
             let samples = data.withUnsafeBytes { raw in raw.bindMemory(to: Int16.self).map { Float(Int16(littleEndian: $0)) / 32_768 } }
             AppModel.shared.mediaArrived(MediaPacket(videoID: vid, stream: body["s"] as? Int ?? 0, time: t, rate: rate, samples: samples))
         case "kkReveal":
-            guard let id = (body["id"] as? String).flatMap(UUID.init(uuidString:)), let line = body["line"] as? Int else { return }
-            AppModel.shared.revealed(cue: id, line: line)
+            guard let id = (body["id"] as? String).flatMap(UUID.init(uuidString:)), let from = body["from"] as? Int,
+                  let to = body["to"] as? Int else { return }
+            AppModel.shared.revealed(cue: id, from: from, to: to)
         default: break
         }
     }

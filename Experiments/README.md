@@ -18,6 +18,8 @@ come from these runs; trimmed logs are in `results/`.
 ```bash
 swift run kk-spike-mse "<youtube url>" <seconds> <out prefix> [--behind <s>] [--seek <to>@<at>]
 swift run kk-spike-timing <audio> [--truth truth.json] [--json out.json] [--ass out.ass]
+swift run kk-spike-timing <audio> --vad [--reset <frames>]   # Silero's speech probability per second
+swift run kk-spike-timing <audio> --fixed                     # the recognizer on plain 6 s windows, no VAD
 python3 Experiments/timing/make_truth.py <dir>
 python3 Experiments/timing/karaoke.py <timing.json> <audio> <out.html>
 swift run kk-spike-gpu [url]
