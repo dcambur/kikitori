@@ -332,8 +332,18 @@ final class AppModel {
         pipeline.shouldTranslate = { [weak self] in await self?.translationAllowed() ?? false }
         let offset = session.map { Date.now.timeIntervalSince($0.start) } ?? 0
         let events = pipeline.run(metered(capture.samples))
+        let sessionID = session?.id
         pipelineTask = Task { [weak self] in
-            for await event in events { self?.handle(event, offset: offset) }
+            for await event in events {
+                // Paused or stopped: what is still queued belongs to the run that ended (its lines
+                // would wait for English forever, or land in the next session). Ending the loop
+                // also stops the pipeline's stages.
+                guard !Task.isCancelled else {
+                    if case let .translated(_, _, cost, _, tokens) = event { self?.billLate(cost, tokens: tokens, session: sessionID) }
+                    break
+                }
+                self?.handle(event, offset: offset)
+            }
         }
         if source.id == PlayerController.sourceID { startSyncedSubtitles(engine: engine, vad: vad) }
     }
@@ -349,8 +359,15 @@ final class AppModel {
         let (inputs, feed) = AsyncStream.makeStream(of: MediaPipeline<SileroVAD>.Input.self)
         let events = media.run(inputs)
         mediaFeed = feed
+        let sessionID = session?.id
         mediaTask = Task { [weak self] in
-            for await event in events { self?.handleSynced(event) }
+            for await event in events {
+                guard !Task.isCancelled else {   // as for the tap's pipeline (startCapture)
+                    if case let .translation(_, _, cost, tokens) = event { self?.billLate(cost, tokens: tokens, session: sessionID) }
+                    break
+                }
+                self?.handleSynced(event)
+            }
         }
         PlayerController.shared.setMediaTap(true)
     }
@@ -648,6 +665,15 @@ final class AppModel {
         ledger.add(UsageEntry(session: record.id, model: LiveTranslator.model, kind: .live, cost: cost, tokens: tokens))
         consecutiveFailures = 0
         for issue in [Issue.offline, .apiOutage, .rateLimited, .keyInvalid, .creditsExhausted] { clear(issue) }
+        saveLedgerSoon()
+    }
+
+    /// A translation that came back after its run was paused or stopped: nothing shows it, but
+    /// it was billed.
+    private func billLate(_ cost: Double, tokens: Int, session id: UUID?) {
+        guard tokens > 0 else { return }
+        if session?.id == id { session?.cost += cost }
+        ledger.add(UsageEntry(session: id, model: LiveTranslator.model, kind: .live, cost: cost, tokens: tokens))
         saveLedgerSoon()
     }
 

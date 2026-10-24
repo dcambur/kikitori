@@ -82,7 +82,10 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
         let cutter = Cutter(vad: vad, maxChunk: maxChunk, horizon: horizon, keep: keepBehind, playhead: playhead) { toRecognize.yield($0) }
         if speakers != nil { cutter.read = { toSpeakers.yield(($0, $1, $2)) } }
         let cut = Task {
-            for await input in inputs { await cutter.take(input) }
+            for await input in inputs {
+                if Task.isCancelled { break }   // a stream keeps handing out what it buffered
+                await cutter.take(input)
+            }
             toRecognize.finish()
             toSpeakers.finish()
         }
@@ -90,6 +93,7 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
             guard let speakers else { return }
             var video: String?
             for await (samples, time, videoID) in speakerAudio {
+                if Task.isCancelled { break }
                 if let v = video, v != videoID { await speakers.reset() }
                 video = videoID
                 await speakers.append(samples, at: time)
@@ -98,6 +102,7 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         let recognize = Task { [engine, contextTerms] in
             for await chunk in chunks {
+                if Task.isCancelled { break }   // stopped: the chunks still queued are not recognized
                 if playhead.passed(chunk.videoID, chunk.end, by: staleAfter) {
                     log.notice("sync: dropped a chunk at \(chunk.start, format: .fixed(precision: 1)) s before recognition, \(playhead.behind(chunk.end), format: .fixed(precision: 1)) s behind the playhead")
                     continue
@@ -121,6 +126,7 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         let translate = Task { [translator] in
             for await h in heard {
+                if Task.isCancelled { break }
                 let id = h.cue.id
                 // Long past (the translator fell behind, or a seek): its Japanese stays without English.
                 if playhead.passed(h.cue.videoID, h.end, by: staleAfter) {

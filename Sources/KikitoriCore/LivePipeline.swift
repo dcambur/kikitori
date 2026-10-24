@@ -59,6 +59,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
             // silence. A quarter-second step is fine enough for that.
             var fed = 0, clock = 0.0
             for await samples in audio {
+                if Task.isCancelled { break }   // a stream keeps handing out what it buffered
                 if speakers != nil { toSpeakers.yield((samples, Double(fed) / 16_000)) }
                 fed += samples.count
                 if preview != nil {
@@ -87,11 +88,12 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         let tracking = Task {
             guard let speakers else { return }
             // Its own stage, so a slow diarizer run never holds up chunking.
-            for await (samples, time) in speakerAudio { await speakers.append(samples, at: time) }
+            for await (samples, time) in speakerAudio where !Task.isCancelled { await speakers.append(samples, at: time) }
             await speakers.finish()
         }
         let recognize = Task { [engine, contextTerms] in
             for await chunk in chunks {
+                if Task.isCancelled { break }   // stopped: the chunks still queued are not recognized
                 let start = Date()
                 var spoken = Spoken(ja: "")
                 if let speakers, let timed = engine as? any TimedSpeechEngine {
@@ -123,6 +125,7 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
         }
         let translate = Task { [translator] in
             for await (time, spoken) in heard {
+                if Task.isCancelled { break }
                 let ja = spoken.ja
                 guard let translator, await shouldTranslate() else {
                     emit.yield(.translationSkipped(time: time))

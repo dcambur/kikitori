@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import KikitoriCore
 
@@ -125,6 +126,37 @@ struct FakeEngine: SpeechEngine {
         #expect(heard.count == 3)
         // Speech starts at 1, 4 and 7 s; each chunk begins about 0.2 s of padding earlier.
         for (time, speech) in zip(heard, [1.0, 4.0, 7.0]) { #expect(abs(time - (speech - 0.2)) < 0.1) }
+    }
+}
+
+extension LivePipelineTests {
+    /// Pause and Stop cancel the pipeline: chunks still queued for recognition are dropped, not
+    /// recognized one after another while the next run competes for the same CPU and models.
+    @Test func aStoppedPipelineDoesNotWorkThroughItsBacklog() async throws {
+        let engine = CountingEngine()
+        var pipeline = LivePipeline(engine: engine, translator: nil, vad: EnergyVAD())
+        pipeline.maxChunk = 2
+        let (audio, feed) = AsyncStream.makeStream(of: [Float].self)
+        for _ in 0..<20 { feed.yield(signal([(true, 2), (false, 0.6)])) }   // recognition lags far behind
+        let consumer = Task { for await _ in pipeline.run(audio) {} }
+        try await Task.sleep(for: .milliseconds(150))
+        consumer.cancel()
+        let atStop = engine.calls.withLock { $0 }
+        try await Task.sleep(for: .seconds(1.5))
+        #expect(engine.calls.withLock { $0 } - atStop <= 1)   // at most the one running when it stopped
+        feed.finish()
+    }
+}
+
+/// A model run that takes 50 ms of CPU and, like Apple's recognizer, ignores cancellation.
+final class CountingEngine: SpeechEngine, Sendable {
+    let name = "counting"
+    let calls = Mutex(0)
+    func prepare() async throws {}
+    func transcribe(_ samples: [Float], context: [String]) async throws -> String {
+        calls.withLock { $0 += 1 }
+        usleep(50_000)
+        return "こんにちは"
     }
 }
 
