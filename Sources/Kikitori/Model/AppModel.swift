@@ -4,6 +4,7 @@ import CoreAudio
 import Foundation
 import KikitoriCore
 import Observation
+import os
 
 /// The app's single source of truth: the live session, its status, stores and settings.
 /// Every status surface (overlay pill, menu bar, banners) reads `status` (spec §4).
@@ -111,9 +112,15 @@ final class AppModel {
     @ObservationIgnored private var mediaTask: Task<Void, Never>?
     @ObservationIgnored private var cues: [UUID: Cue] = [:]
     @ObservationIgnored private var cueAudio: [UUID: [Float]] = [:]
-    @ObservationIgnored private var revealedLines: Set<String> = []
+    /// Cue lines in the transcript ("<cue>:<first character>" → its transcript line), and the
+    /// cues whose translation has come back (or won't).
+    @ObservationIgnored private var releasedLines: [String: UUID] = [:]
+    @ObservationIgnored private var settledCues: Set<UUID> = []
     @ObservationIgnored private var playerVideo = ""
     @ObservationIgnored private var lastMediaAudio = Date.distantPast
+    /// Audio packets from the page this session (for the player's log).
+    @ObservationIgnored private(set) var mediaPackets = 0
+    @ObservationIgnored private let syncLog = Logger(subsystem: "app.kikitori", category: "sync")
     @ObservationIgnored private var clips = LineClips()
     @ObservationIgnored private let clipPlayer = ClipPlayer()
     private var warned80Cycle: Date?
@@ -343,6 +350,7 @@ final class AppModel {
         guard mediaFeed != nil else { return }
         mediaFeed?.finish()
         mediaFeed = nil
+        mediaPackets = 0
         mediaTask?.cancel()
         mediaTask = nil
         PlayerController.shared.setMediaTap(false)
@@ -351,7 +359,8 @@ final class AppModel {
         PlayerController.shared.addCues([], reset: true)
         cues = [:]
         cueAudio = [:]
-        revealedLines = []
+        releasedLines = [:]
+        settledCues = []
         playerVideo = ""
     }
 
@@ -362,6 +371,7 @@ final class AppModel {
     func playerState(videoID: String, time: Double, live: Bool, hasAudio: Bool, ad: Bool) {
         guard let feed = mediaFeed, state == .listening, !videoID.isEmpty, time >= 0, !ad else { return }
         if videoID != playerVideo {   // a new video: the old one's cues are of no use
+            syncLog.notice("sync: now playing \(videoID, privacy: .public) (a new video, audio track, MediaSource after an ad, or a reload)")
             playerVideo = videoID
             cues = cues.filter { $0.value.videoID == videoID }
             cueAudio = cueAudio.filter { cues[$0.key] != nil }
@@ -371,18 +381,23 @@ final class AppModel {
         if hasAudio { lastMediaAudio = .now }
         let want = !live && (hasAudio || (synced && Date.now.timeIntervalSince(lastMediaAudio) < 5))
         if want != synced {
+            syncLog.notice("sync: \(want ? "synced" : "not synced", privacy: .public) (decoded audio at the playhead: \(hasAudio), live: \(live))")
             synced = want
             muteForSync = want
             PlayerController.shared.setSynced(want, lines: prefs.overlayLines)
         }
         feed.yield(.playhead(videoID: videoID, time: time, process: want))
         // Audio of cues long past (revealed, or skipped by a seek) is no longer needed.
-        for (id, cue) in cues where cue.end < time - 60 { cues[id] = nil; cueAudio[id] = nil }
+        for (id, cue) in cues where cue.end < time - 60 {
+            cues[id] = nil; cueAudio[id] = nil; settledCues.remove(id)
+            releasedLines = releasedLines.filter { !$0.key.hasPrefix("\(id):") }
+        }
     }
 
     /// Decoded audio from the player's page.
     func mediaArrived(_ packet: MediaPacket) {
         guard let feed = mediaFeed else { return }
+        mediaPackets += 1
         if packet.samples.contains(where: { abs($0) > 0.003 }) { lastSoundAt = .now }
         feed.yield(.packet(packet))
     }
@@ -395,17 +410,48 @@ final class AppModel {
         PlayerController.shared.addCues(Array(cues.values).sorted { $0.start < $1.start }, reset: true)
     }
 
-    /// A cue line began on the video: now it goes into the transcript (and the English with it).
-    func revealed(cue id: UUID, line: Int) {
-        guard let cue = cues[id], cue.lines.indices.contains(line), revealedLines.insert("\(id):\(line)").inserted,
-              var record = session else { return }
-        let l = cue.lines[line]
+    /// A line began on the video (characters `from..<to` of the cue as the page has it): the
+    /// cue's lines starting there go into the transcript, with their English if it has come.
+    /// The page may still have the cue as one Japanese line while the app already has the
+    /// translator's lines (the English came just as it began): then they all go in at once.
+    func revealed(cue id: UUID, from: Int, to: Int) {
+        guard let cue = cues[id], var record = session else { return }
         let t = Date.now.timeIntervalSince(record.start)
-        record.lines.append(TranscriptLine(time: t, ja: l.ja, en: l.en, note: l.note, term: l.term))
-        if let audio = cueAudio[id] { clips.store(audio, at: t) }
-        if (0..<cue.lines.count).allSatisfy({ revealedLines.contains("\(id):\($0)") }) { cueAudio[id] = nil }
+        for l in cue.lines where l.from >= from && l.from < max(to, from + 1) && releasedLines["\(id):\(l.from)"] == nil {
+            let line = TranscriptLine(time: t, ja: l.ja, en: l.en, note: l.note, term: l.term)
+            record.lines.append(line)
+            releasedLines["\(id):\(l.from)"] = line.id
+            if !settledCues.contains(id) { pendingLines.insert(line.id) }   // its English is on the way
+            if let audio = cueAudio[id] { clips.store(audio, at: t) }
+        }
+        if settledCues.contains(id), cue.lines.allSatisfy({ releasedLines["\(id):\($0.from)"] != nil }) { cueAudio[id] = nil }
         session = record
         overlayRevision += 1
+    }
+
+    /// The translation of a cue came back: the page gets its lines, unless it has begun showing
+    /// it (then the video stays as it is) and its Japanese is in the transcript already: those
+    /// lines take the English instead.
+    private func cueTranslated(_ id: UUID, lines: [Cue.Line], in record: inout SessionRecord) {
+        guard var cue = cues[id] else { return }
+        let released = Set(releasedLines.filter { $0.key.hasPrefix("\(id):") }.values)
+        cue.lines = lines
+        cues[id] = cue
+        settledCues.insert(id)
+        guard !released.isEmpty else { PlayerController.shared.addCues([cue]); return }
+        guard let i = record.lines.firstIndex(where: { released.contains($0.id) }) else { return }
+        let time = record.lines[i].time
+        record.lines.removeAll { released.contains($0.id) }
+        let translated = lines.map { TranscriptLine(time: time, ja: $0.ja, en: $0.en, note: $0.note, term: $0.term) }
+        record.lines.insert(contentsOf: translated, at: min(i, record.lines.count))
+        for (l, line) in zip(lines, translated) { releasedLines["\(id):\(l.from)"] = line.id }
+        pendingLines.subtract(released)
+    }
+
+    /// No English is coming for this cue: its lines in the transcript stop waiting for it.
+    private func settleCue(_ id: UUID) {
+        settledCues.insert(id)
+        pendingLines.subtract(releasedLines.filter { $0.key.hasPrefix("\(id):") }.values)
     }
 
     private func handleSynced(_ event: MediaPipeline<SileroVAD>.Event) {
@@ -416,15 +462,19 @@ final class AppModel {
             cueAudio[cue.id] = audio
             PlayerController.shared.addCues([cue])
             clear(.noAudio(name: source?.name ?? ""))
-        case let .translated(cost, tokens):
+        case let .translation(id, lines, cost, tokens):
             guard var record = session else { return }
             noteTranslated(cost: cost, tokens: tokens, in: &record)
+            cueTranslated(id, lines: lines, in: &record)
             session = record
-        case let .translationFailed(failure, cost, tokens):
+            overlayRevision += 1
+        case let .translationFailed(id, failure, cost, tokens):
             guard var record = session else { return }
             noteFailure(failure, cost: cost, tokens: tokens, in: &record)
+            settleCue(id)
             session = record
-        case .translationSkipped: break
+        case let .translationSkipped(id):
+            settleCue(id)
         }
     }
 
