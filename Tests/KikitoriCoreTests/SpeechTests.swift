@@ -207,19 +207,23 @@ struct SlowEngine: SpeechEngine {
         }
     }
 
-    @Test func pipelineShowsTheLiveLineAndClearsItAtTheEnd() async {
+    @Test(.timeLimit(.minutes(1))) func pipelineShowsTheLiveLineAndClearsItAtTheEnd() async {
         var pipeline = LivePipeline(engine: FakeEngine(), translator: nil, vad: EnergyVAD())
         pipeline.preview = EchoPreview()
-        let audio = AsyncStream<[Float]> { c in
-            for piece in stride(from: 0, to: 6 * 16_000, by: 1_600) {
-                _ = piece
-                c.yield([Float](repeating: 0.3, count: 1_600))   // 6 s of loud "speech", 0.1 s at a time
-            }
-            c.finish()
+        let (audio, feed) = AsyncStream.makeStream(of: [Float].self)
+        func speak(seconds: Int) {   // loud "speech", 0.1 s at a time
+            for _ in 0..<seconds * 10 { feed.yield([Float](repeating: 0.3, count: 1_600)) }
         }
+        // The second half comes only once the live line shows, as audio does live. Given all 6 s
+        // at once, the chunk can be recognized before the preview's first word arrives, and then
+        // that word (rightly) never shows: it is already part of a proper line.
+        speak(seconds: 3)
         var lines: [String] = [], heardAudio = 0
         for await event in pipeline.run(audio) {
-            if case let .hearing(text) = event { lines.append(text) }
+            if case let .hearing(text) = event {
+                if !text.isEmpty, lines.allSatisfy(\.isEmpty) { speak(seconds: 3); feed.finish() }
+                lines.append(text)
+            }
             if case let .heard(_, _, _, _, samples) = event { heardAudio += samples.count }
         }
         #expect(lines.contains { !$0.isEmpty })
