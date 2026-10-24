@@ -70,10 +70,11 @@ final class Preferences {
     /// is free and on-device, translation spends API credits on every line.
     var translate: Bool { didSet { save(translate, "translate") } }
     var transcriptMode: TranscriptMode { didSet { save(transcriptMode.rawValue, "transcriptMode") } }
-    /// The ⌃⌥J switch: Japanese shown (with English) or English only.
+    /// The ⌃⌥J switch and the menu bar's Japanese button: whether the floating subtitles show the
+    /// Japanese (spec §5.8). The transcript has its own picker (`transcriptMode`) in its toolbar.
     var showJapanese: Bool {
-        get { transcriptMode != .english }
-        set { transcriptMode = newValue ? .both : .english }
+        get { subtitleMode != .englishOnly }
+        set { subtitleMode = newValue ? .japaneseMain : .englishOnly }
     }
     var subtitleMode: SubtitleMode { didSet { save(subtitleMode.rawValue, "subtitleMode") } }
     var showFurigana: Bool { didSet { save(showFurigana, "showFurigana") } }

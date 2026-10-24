@@ -175,6 +175,9 @@ struct OverlayTab: View {
         @Bindable var prefs = model.prefs
         Form {
             Section("Text") {
+                Picker("Show", selection: $prefs.subtitleMode) {
+                    ForEach(Preferences.SubtitleMode.allCases, id: \.self) { Text($0.title) }
+                }
                 Picker("Size", selection: $prefs.textSize) {
                     ForEach(Preferences.TextSize.allCases, id: \.self) { Text($0.rawValue) }
                 }
@@ -207,10 +210,18 @@ struct HotkeysTab: View {
         Form {
             Section {
                 ForEach(Hotkeys.Action.allCases, id: \.self) { action in
-                    LabeledContent(action.title) { Text(action.label).font(.body.monospaced()) }
+                    LabeledContent(action.title) {
+                        if Hotkeys.failed.contains(action) {
+                            // Another app registered it first: say so instead of listing a key that does nothing.
+                            Label("\(action.label) is used by another app", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(Color.kkNote)
+                        } else {
+                            Text(action.label).font(.body.monospaced())
+                        }
+                    }
                 }
             } footer: {
-                Text("Shortcuts work in every app, also over full-screen video.")
+                Text("Shortcuts work in every app, also over full-screen video. A shortcut another app already uses can’t be taken over; quit that app or change its shortcut, then relaunch kikitori.")
             }
         }
         .formStyle(.grouped)

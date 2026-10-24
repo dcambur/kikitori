@@ -102,7 +102,15 @@ struct KikitoriCommands: Commands {
                 .keyboardShortcut("e", modifiers: [.control, .option]).disabled(model.lastLine == nil)
             Divider()
             Button("Watch in kikitori") { openWatch(openWindow) }
-                .keyboardShortcut("w", modifiers: [.command, .shift])
+                .keyboardShortcut("w", modifiers: [.control, .option])   // ⇧⌘W stays Close for windows
+        }
+        CommandGroup(after: .sidebar) {
+            // ⌘1–5 switch sections (spec §3 commands), listed here so they can be found.
+            ForEach(Array(SidebarSection.allCases.enumerated()), id: \.element) { i, s in
+                Button(s.rawValue) { selectSection(s); NSApp.activate(); openWindow(id: "main") }
+                    .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: .command)
+            }
+            Divider()
         }
         CommandGroup(after: .toolbar) {
             Button("Make Text Bigger") { model.prefs.transcriptTextSize = min(model.prefs.transcriptTextSize + 1, 24) }

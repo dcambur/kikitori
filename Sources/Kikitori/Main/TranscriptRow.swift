@@ -44,6 +44,13 @@ struct TranscriptRow: View {
                         marked(line.ja).font(.japanese(textSize)).japaneseText()
                         if let term = line.term { NoteChip(term: term) }
                     }
+                case .both, .english where line.en == nil && !pending:
+                    // No English is coming (translation off, or a filler): the Japanese is the line.
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        if let speaker = line.speaker { SpeakerChip(label: speaker, name: speakerNames[speaker]) }
+                        marked(line.ja).font(.japanese(textSize)).japaneseText()
+                        if let term = line.term { NoteChip(term: term) }
+                    }
                 case .both, .english:
                     if mode == .both || line.en == nil {
                         HStack(spacing: 6) {
@@ -93,9 +100,48 @@ struct TranscriptRow: View {
     var accessibilityText: String {
         var s = "\(TranscriptExport.clock(line.time)). "
         if let speaker = line.speaker { s += "Speaker \(speaker)\(speakerNames[speaker].map { ", \($0)" } ?? ""). " }
-        s += "\(line.en ?? "Translating"). Japanese: \(line.ja)."
+        if let en = line.en { s += "\(en). Japanese: \(line.ja)." }
+        else if pending { s += "Translating. Japanese: \(line.ja)." }
+        else { s += "\(line.ja)." }
         if let term = line.term { s += " Has a note: \(term)." }
         return s
+    }
+}
+
+/// Keyboard for a transcript (HIG): ↑/↓ move the selection, Return explains the selected line
+/// (the paid action, never a plain click), ⌘C copies it.
+struct TranscriptKeys: ViewModifier {
+    let lines: [TranscriptLine]
+    @Binding var selection: UUID?
+    let proxy: ScrollViewProxy
+    let explain: (TranscriptLine) -> Void
+
+    var selected: TranscriptLine? { lines.first { $0.id == selection } }
+
+    func body(content: Content) -> some View {
+        content
+            .focusable()
+            .focusEffectDisabled()
+            .onKeyPress(.upArrow) { move(-1) }
+            .onKeyPress(.downArrow) { move(1) }
+            .onKeyPress(.return) {
+                guard let line = selected else { return .ignored }
+                explain(line)
+                return .handled
+            }
+            .onCopyCommand {
+                guard let line = selected else { return [] }
+                return [NSItemProvider(object: ([line.ja] + (line.en.map { [$0] } ?? [])).joined(separator: "\n") as NSString)]
+            }
+    }
+
+    func move(_ step: Int) -> KeyPress.Result {
+        guard !lines.isEmpty else { return .ignored }
+        let i = lines.firstIndex { $0.id == selection }.map { $0 + step } ?? (step > 0 ? 0 : lines.count - 1)
+        let line = lines[min(max(i, 0), lines.count - 1)]
+        selection = line.id
+        proxy.scrollTo(line.id)
+        return .handled
     }
 }
 

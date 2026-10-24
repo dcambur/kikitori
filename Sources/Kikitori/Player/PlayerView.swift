@@ -42,13 +42,13 @@ struct PlayerView: View {
                         .textFieldStyle(.roundedBorder).frame(minWidth: 220, idealWidth: 380, maxWidth: 460)
                         .onSubmit { player.load(address) }
                 }
-                ToolbarItem {
-                    Toggle(isOn: $showInspector) {
-                        Label("Translation", systemImage: "sidebar.right").labelStyle(.titleAndIcon)
-                    }
-                    .toggleStyle(.button)
-                    .help("The transcript, translation and explanations, beside the video (⌥⌘I)")
-                    .keyboardShortcut("i", modifiers: [.command, .option])
+                // The same controls, in the same place, as Live's toolbar.
+                ToolbarItemGroup {
+                    TranslateToggle()
+                    TranscriptModeMenu()
+                    Button { showInspector.toggle() } label: { Label("Inspector", systemImage: "sidebar.right") }
+                        .help(showInspector ? "Hide Inspector (transcript and explanations)" : "Show Inspector (transcript and explanations)")
+                        .keyboardShortcut("i", modifiers: [.command, .option])
                 }
             }
             .inspector(isPresented: $showInspector) {
@@ -81,9 +81,8 @@ struct PlayerView: View {
     }
 }
 
-/// Beside the video: what the transcript shows (Japanese & English · Japanese · English), the
-/// explanation of the focused line (a clicked row, Explain Last Line) and the session's
-/// transcript, which follows the newest line.
+/// Beside the video: the explanation of the selected line (a clicked row, Explain Last Line) and
+/// the session's transcript, which follows the newest line. Translate and Show are in the toolbar.
 struct WatchInspector: View {
     @Environment(AppModel.self) var model
     /// True while the end of the transcript is in view: only then do new lines scroll it.
@@ -94,17 +93,6 @@ struct WatchInspector: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Translate new lines (uses API credits)",
-                       isOn: Binding(get: { model.prefs.translate }, set: { model.setTranslate($0) }))
-                    .toggleStyle(.switch).controlSize(.small)
-                Picker("Show", selection: Binding(get: { model.prefs.transcriptMode }, set: { model.prefs.transcriptMode = $0 })) {
-                    ForEach(Preferences.TranscriptMode.allCases, id: \.self) { Text($0.title) }
-                }
-                .pickerStyle(.segmented).labelsHidden().controlSize(.small)
-            }
-            .padding(10)
-            Divider()
             if let focused {
                 ExplanationView(line: focused, compact: true)
                     .frame(minHeight: 140, maxHeight: 340, alignment: .top)
@@ -127,6 +115,10 @@ struct WatchInspector: View {
                     .padding(8)
                 }
                 .defaultScrollAnchor(.bottom)
+                .modifier(TranscriptKeys(lines: lines, selection: Binding(get: { model.explainFocus }, set: { model.explainFocus = $0 }),
+                                         proxy: proxy) { line in
+                    if !model.pendingLines.contains(line.id) { model.focusExplanation(line) }
+                })
                 .onChange(of: lines.last?.id) {
                     if following { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) } }
                 }
@@ -139,7 +131,8 @@ struct WatchInspector: View {
                       textSize: model.prefs.transcriptTextSize - 1, mode: model.prefs.transcriptMode,
                       replay: model.replayControl(for: line), speakerNames: model.session?.speakerNames ?? [:])
             .id(line.id)
-            .onTapGesture { if !model.pendingLines.contains(line.id) { model.focusExplanation(line) } }
+            .onTapGesture(count: 2) { if !model.pendingLines.contains(line.id) { model.focusExplanation(line) } }
+            .onTapGesture { model.explainFocus = line.id }
             .contextMenu {
                 Button("Explain") { model.focusExplanation(line) }.disabled(model.pendingLines.contains(line.id))
                 ReplayMenuItems(line: line)

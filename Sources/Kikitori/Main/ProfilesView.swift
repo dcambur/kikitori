@@ -154,20 +154,22 @@ struct ProfileEditor: View {
                     }
                 }
                 TextField("Channel link (optional)", text: $profile.channel)
-                LabeledContent("Voice") {
-                    let _ = voiceRevision
-                    if let voice = model.voiceSample(for: profile) {
-                        HStack {
-                            Text("\(voice.count / 16_000) s sample").foregroundStyle(.secondary)
-                            Button("Forget") { model.forgetVoice(profile); voiceRevision += 1 }
+                // Only meaningful with speaker labels on; its instructions are visible, not a tooltip.
+                if model.prefs.speakerLabels {
+                    LabeledContent("Voice") {
+                        let _ = voiceRevision
+                        if let voice = model.voiceSample(for: profile) {
+                            HStack {
+                                Text("\(voice.count / 16_000) s sample").foregroundStyle(.secondary)
+                                Button("Forget") { model.forgetVoice(profile); voiceRevision += 1 }
+                            }
+                        } else {
+                            Text("None").foregroundStyle(.secondary)
                         }
-                    } else {
-                        Text("None").foregroundStyle(.secondary)
                     }
+                    Text("Experimental. A session using this profile labels this voice with \(profile.name) from the start. To save it, right-click one of their lines and choose Speaker › Remember This Voice › As \(profile.name). Works best with the same mic as when it was saved.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
-                .help("Experimental. With speaker labels on, a session using this profile puts this voice in a slot with its name from the start. "
-                      + "Works best when they use the same mic as when it was saved; elsewhere it can mix their lines up with another voice. "
-                      + "To save one, right-click a line of theirs and choose Speaker › Remember This Voice › As \(profile.name).")
             }
             Section {
                 Table($profile.glossary, selection: $selectedTerms) {

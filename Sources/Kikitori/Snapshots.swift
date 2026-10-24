@@ -40,7 +40,7 @@ enum Snapshots {
                        to: folder.appending(path: "settings-\(name)-\(suffix).png"))
             }
         }
-        for step in 0...5 {
+        for step in 0...4 {
             UserDefaults.standard.set(step, forKey: "onboardingStep")
             render(OnboardingView(), size: CGSize(width: 640, height: 520), appearance: .aqua, model: model,
                    to: folder.appending(path: "onboarding-\(step).png"))

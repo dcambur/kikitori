@@ -14,7 +14,7 @@ enum Hotkeys {
             case .explain: "Explain the last line"
             case .transcript: "Open transcript"
             case .clickThrough: "Click-through on or off"
-            case .japanese: "Show Japanese on or off"
+            case .japanese: "Japanese in the subtitles on or off"
             case .source: "Choose source"
             }
         }
@@ -57,7 +57,7 @@ enum Hotkeys {
         case .transcript: openMainWindow(.live)
         case .clickThrough: model.prefs.clickThrough.toggle()
         case .japanese: model.prefs.showJapanese.toggle()
-        case .source: openMainWindow(.live)
+        case .source: model.wantsSourcePicker = true; openMainWindow(.live)
         }
     }
 }

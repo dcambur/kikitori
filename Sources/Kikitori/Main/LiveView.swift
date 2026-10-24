@@ -39,6 +39,8 @@ struct LiveView: View {
                 .background(Color.kkInspector)
                 .inspectorColumnWidth(min: 280, ideal: 310, max: 400)
         }
+        .onAppear(perform: openRequestedPicker)
+        .onChange(of: model.wantsSourcePicker) { openRequestedPicker() }
         .onChange(of: model.focusRequests) {   // Explain Last Line (hotkey, menus): show it here
             selection = model.explainFocus
             showInspector = true
@@ -61,6 +63,7 @@ struct LiveView: View {
                                       highlight: search, replay: model.replayControl(for: line),
                                       speakerNames: model.session?.speakerNames ?? [:])
                             .id(line.id)
+                            .onTapGesture(count: 2) { explainLine(line) }
                             .onTapGesture { select(line) }
                             .contextMenu { rowMenu(line) }
                     }
@@ -78,6 +81,7 @@ struct LiveView: View {
                 .padding(.horizontal, 12).padding(.vertical, 8)
             }
             .defaultScrollAnchor(.bottom)
+            .modifier(TranscriptKeys(lines: shown, selection: $selection, proxy: proxy, explain: explainLine))
             .onChange(of: lines.count) { old, new in
                 if following { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) } }
                 else { newLines += max(new - old, 0) }
@@ -146,7 +150,7 @@ struct LiveView: View {
     }
 
     @ViewBuilder func rowMenu(_ line: TranscriptLine) -> some View {
-        Button("Explain") { select(line) }
+        Button("Explain") { explainLine(line) }
         Button("Explain Again") { model.explain(line, again: true) }
         ReplayMenuItems(line: line)
         Divider()
@@ -166,10 +170,22 @@ struct LiveView: View {
         }
     }
 
+    /// A click selects (the inspector shows its explanation, or what one would cost); explaining
+    /// asks Claude, so it takes a double-click, Return or the inspector's Explain button.
     func select(_ line: TranscriptLine) {
         selection = line.id
         showInspector = true
+    }
+
+    func explainLine(_ line: TranscriptLine) {
+        select(line)
         if !model.pendingLines.contains(line.id) { model.explain(line) }
+    }
+
+    func openRequestedPicker() {
+        guard model.wantsSourcePicker else { return }
+        model.wantsSourcePicker = false
+        showSourcePicker = true
     }
 
     func copy(_ s: String) {

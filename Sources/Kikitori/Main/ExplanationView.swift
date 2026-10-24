@@ -25,7 +25,11 @@ struct ExplanationView: View {
         case nil:
             VStack(spacing: 12) {
                 Text(line.term ?? line.ja).font(.japanese(20, weight: .bold)).japaneseText()
-                Button("Explain") { model.explain(line) }.buttonStyle(.borderedProminent)
+                Button(model.explainCost.map { "Explain · about \(Money.format($0))" } ?? "Explain") { model.explain(line) }
+                    .buttonStyle(.borderedProminent)
+                Text("Asks Claude Sonnet, using API credits. Double-click a line or press Return to explain it.")
+                    .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, maxHeight: compact ? nil : .infinity)
             .padding()

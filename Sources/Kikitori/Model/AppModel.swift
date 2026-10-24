@@ -75,6 +75,8 @@ final class AppModel {
     /// Live and Watch inspectors; `focusRequests` counts requests, so asking again reopens it.
     var explainFocus: UUID?
     var focusRequests = 0
+    /// ⌃⌥O: Live opens its source picker as soon as it is on screen.
+    var wantsSourcePicker = false
     /// Lines whose English is still on its way (everything else without English stays Japanese only).
     var pendingLines: Set<UUID> = []
     /// The live line: Japanese words heard since the last line, still changing ("" for none).
@@ -738,6 +740,12 @@ final class AppModel {
                 explain[line.id] = .failed(message)
             }
         }
+    }
+
+    /// What an explanation has cost on average so far, to show on the Explain button.
+    var explainCost: Double? {
+        let past = ledger.entries.filter { $0.kind == .explain && $0.cost > 0 }
+        return past.isEmpty ? nil : past.reduce(0) { $0 + $1.cost } / Double(past.count)
     }
 
     /// Explain `line` and bring its explanation into view.

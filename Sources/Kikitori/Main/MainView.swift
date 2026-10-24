@@ -44,12 +44,6 @@ struct MainView: View {
             }
         }
         .frame(minWidth: 860, minHeight: 520)
-        .background {
-            // ⌘1–5 switch sections (spec §3 commands).
-            ForEach(Array(SidebarSection.allCases.enumerated()), id: \.element) { i, s in
-                Button("") { section = s }.keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: .command).hidden()
-            }
-        }
     }
 
     func badge(for s: SidebarSection) -> Text? {

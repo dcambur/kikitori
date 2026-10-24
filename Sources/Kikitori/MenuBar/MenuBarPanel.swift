@@ -64,7 +64,7 @@ struct MenuBarPanel: View {
                     explainLastLine(open: show)
                 }
             }
-            menuItem("Watch in kikitori", "⇧⌘W") { openWatch(openWindow) }
+            menuItem("Watch in kikitori", "⌃⌥W") { openWatch(openWindow) }
             menuItem("Settings…", "⌘,") { NSApp.activate(); openSettings() }
             Divider()
             menuItem("Quit kikitori", "⌘Q") { model.stop(); NSApp.terminate(nil) }
