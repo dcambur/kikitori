@@ -13,9 +13,14 @@ struct LiveView: View {
     @State private var showStreamInfo = false
     @State private var following = true
     @State private var newLines = 0
+    /// The lines matching `search`, found off the main thread (nil: not searching).
+    @State private var matches: Set<UUID>?
 
     var lines: [TranscriptLine] { model.session?.lines ?? [] }
-    var shown: [TranscriptLine] { search.isEmpty ? lines : lines.filter { $0.matches(search) } }
+    var shown: [TranscriptLine] {
+        guard !search.isEmpty, let matches else { return lines }
+        return lines.filter { matches.contains($0.id) }
+    }
     var selectedLine: TranscriptLine? { lines.first { $0.id == selection } }
 
     var body: some View {
@@ -33,6 +38,16 @@ struct LiveView: View {
         .navigationSubtitle(model.session?.streamTitle ?? "")
         .toolbar { toolbar }
         .searchable(text: $search, placement: .toolbar, prompt: "Search transcript")
+        .task(id: "\(search)\u{0}\(model.overlayRevision)") {
+            // Matching every line takes ~30 ms in a 3-hour transcript: not on the main thread for
+            // each new line, and only after a pause in typing.
+            guard !search.isEmpty else { matches = nil; return }
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled else { return }
+            let lines = self.lines, query = search
+            let found = await Task.detached { Set(lines.lazy.filter { $0.matches(query) }.map(\.id)) }.value
+            if !Task.isCancelled { matches = found }
+        }
         .inspector(isPresented: $showInspector) {
             ExplanationView(line: selectedLine)
                 .frame(maxHeight: .infinity, alignment: .top)
@@ -53,6 +68,7 @@ struct LiveView: View {
 
     var transcript: some View {
         ScrollViewReader { proxy in
+            let shown = self.shown
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
                     ForEach(shown) { line in
