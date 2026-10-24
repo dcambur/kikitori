@@ -69,9 +69,17 @@ public struct SessionStore: Sendable {
     var indexURL: URL { directory.appending(path: "index.json") }
     func url(_ id: UUID) -> URL { directory.appending(path: "\(id.uuidString).json") }
 
+    /// Without a readable index (missing, or damaged), it is rebuilt from the session files:
+    /// otherwise the next save would write an index of one, and every other session would vanish
+    /// from the list, out of reach of retention and Delete All.
     public func summaries() -> [SessionSummary] {
-        guard let data = try? Data(contentsOf: indexURL),
-              let list = try? JSONDecoder.kikitori.decode([SessionSummary].self, from: data) else { return [] }
+        let list: [SessionSummary]
+        if let data = try? Data(contentsOf: indexURL), let index = try? JSONDecoder.kikitori.decode([SessionSummary].self, from: data) {
+            list = index
+        } else {
+            let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
+            list = files.compactMap { UUID(uuidString: $0.deletingPathExtension().lastPathComponent).flatMap(load)?.summary }
+        }
         return list.sorted { $0.start > $1.start }
     }
 

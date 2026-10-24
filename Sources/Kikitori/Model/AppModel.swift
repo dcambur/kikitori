@@ -918,7 +918,7 @@ final class AppModel {
 
     func saveSession() {
         guard let session else { return }
-        try? sessionStore.save(session)
+        do { try sessionStore.save(session) } catch { Self.storeLog.error("session not saved: \(error, privacy: .public)") }
         sessions = sessionStore.summaries()
     }
 
@@ -959,11 +959,25 @@ final class AppModel {
         Self.save(ledger.entries, to: supportURL.appending(path: "usage.json"))
     }
 
+    /// A file that can't be read is moved aside, not left for the next save to overwrite: wiping
+    /// profiles, or the spend the monthly cap counts.
     static func load<T: Decodable>(_ type: T.Type, from url: URL) -> T? {
-        (try? Data(contentsOf: url)).flatMap { try? JSONDecoder.kikitori.decode(T.self, from: $0) }
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        do {
+            return try JSONDecoder.kikitori.decode(T.self, from: data)
+        } catch {
+            let aside = url.deletingPathExtension().appendingPathExtension("unreadable-\(Int(Date.now.timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: url, to: aside)
+            storeLog.error("\(url.lastPathComponent, privacy: .public) can't be read, kept as \(aside.lastPathComponent, privacy: .public): \(error, privacy: .public)")
+            return nil
+        }
     }
 
     static func save<T: Encodable>(_ value: T, to url: URL) {
-        try? JSONEncoder.kikitori.encode(value).write(to: url, options: .atomic)
+        do { try JSONEncoder.kikitori.encode(value).write(to: url, options: .atomic) } catch {
+            storeLog.error("\(url.lastPathComponent, privacy: .public) not saved: \(error, privacy: .public)")
+        }
     }
+
+    private static let storeLog = Logger(subsystem: "app.kikitori", category: "store")
 }
