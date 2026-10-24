@@ -775,8 +775,9 @@ final class AppModel {
     }
 
     /// Names a speaker label for the rest of this session ("A" → "Fubuki"). With a profile, also
-    /// remembers the voice: the newest few seconds where only that voice spoke become the
-    /// profile's voice sample, so the next session with this profile labels it from the start.
+    /// remembers the voice (experimental, asked for separately): the newest seconds where only that
+    /// voice spoke become the profile's voice sample, and the next session with this profile puts
+    /// it in a slot from the start.
     func nameSpeaker(_ label: String, as name: String, profile: Profile? = nil) {
         let name = name.trimmingCharacters(in: .whitespaces)
         guard session != nil, !name.isEmpty else { return }

@@ -98,8 +98,10 @@ public struct LivePipeline<VAD: VoiceActivityDetector>: Sendable {
                     let pieces = TranscriptFilter.clean((try? await timed.transcribeTimed(chunk.samples, context: contextTerms)) ?? [])
                     spoken = Spoken(ja: pieces.text, chars: OnsetRefiner.refine(pieces, samples: chunk.samples).shifted(by: chunk.start))
                     let asr = Date().timeIntervalSince(start)
-                    if !pieces.isEmpty {
-                        let frames = await speakers.frames(from: chunk.start, to: chunk.start + chunk.duration)
+                    if let last = spoken.chars.last {
+                        // Up to the last character, not the chunk's end: the trailing pause needs no
+                        // speaker, and waiting for it to settle would delay the line by ~0.5 s.
+                        let frames = await speakers.frames(from: chunk.start, to: min(chunk.start + chunk.duration, last.end + 0.1))
                         spoken.speakers = SpeakerLabeler.speakers(for: spoken.chars, in: frames)
                     }
                     if !spoken.ja.isEmpty {

@@ -1,0 +1,107 @@
+# Speaker labels (docs/design/speaker-labels.md §5–6), 2026-10-24, M4 Pro, debug build
+
+## Real collab: Pekora x Miko, VtZfehdSHb4 25:00-32:50, real time (shipped tracker)
+audio 470 s, wall 502.7 s; diarizer busy 37.4 s (8.0% of real time); process CPU 28.4 s
+speaker wait per chunk: median 0.00 s, p90 0.31 s, max 0.44 s (90 chunks)
+
+## Splices (levelled unless noted), kikitori-cli speakers --json + score.py
+### L-2
+characters scored: 898 (of 918); labels ['A', 'B'] → {'A': 'pekora', 'B': 'miko'}
+character accuracy: 96.8%
+  miko: 89.2% of 204
+  pekora: 99.0% of 694
+speaker changes ±0.5 s: recall 34/53 = 64%, precision 34/41 = 83%
+speaker changes ±1.0 s: recall 38/53 = 72%, precision 38/41 = 93%
+lines (turns shown): 87/90 = 97% with the right speaker
+### splice2
+characters scored: 912 (of 936); labels ['', 'A', 'B'] → {'': None, 'A': 'pekora', 'B': 'miko'}
+character accuracy: 97.6%
+  miko: 90.6% of 213
+  pekora: 99.7% of 699
+speaker changes ±0.5 s: recall 40/55 = 73%, precision 40/47 = 85%
+speaker changes ±1.0 s: recall 44/55 = 80%, precision 44/47 = 94%
+lines (turns shown): 90/92 = 98% with the right speaker
+### L-mm
+characters scored: 758 (of 789); labels ['A', 'B'] → {'A': 'marine', 'B': 'miko'}
+character accuracy: 96.8%
+  marine: 98.2% of 602
+  miko: 91.7% of 156
+speaker changes ±0.5 s: recall 27/41 = 66%, precision 27/30 = 90%
+speaker changes ±1.0 s: recall 27/41 = 66%, precision 27/30 = 90%
+lines (turns shown): 69/70 = 99% with the right speaker
+### sp-mm
+characters scored: 768 (of 796); labels ['A', 'B'] → {'A': 'marine', 'B': 'miko'}
+character accuracy: 96.9%
+  marine: 97.9% of 608
+  miko: 93.1% of 160
+speaker changes ±0.5 s: recall 31/43 = 72%, precision 31/34 = 91%
+speaker changes ±1.0 s: recall 32/43 = 74%, precision 32/34 = 94%
+lines (turns shown): 72/73 = 99% with the right speaker
+### L-pm
+characters scored: 1333 (of 1380); labels ['', 'A', 'B'] → {'': None, 'A': 'pekora', 'B': 'marine'}
+character accuracy: 66.5%
+  marine: 25.7% of 596
+  pekora: 99.6% of 737
+speaker changes ±0.5 s: recall 19/67 = 28%, precision 19/27 = 70%
+speaker changes ±1.0 s: recall 21/67 = 31%, precision 21/27 = 78%
+lines (turns shown): 58/85 = 68% with the right speaker
+### sp-pm
+characters scored: 1325 (of 1370); labels ['', 'A', 'B'] → {'': None, 'A': 'pekora', 'B': 'marine'}
+character accuracy: 77.4%
+  marine: 50.5% of 598
+  pekora: 99.6% of 727
+speaker changes ±0.5 s: recall 29/64 = 45%, precision 29/38 = 76%
+speaker changes ±1.0 s: recall 34/64 = 53%, precision 34/38 = 89%
+lines (turns shown): 67/85 = 79% with the right speaker
+### L-3
+characters scored: 1100 (of 1149); labels ['A', 'B'] → {'A': 'pekora', 'B': 'miko'}
+character accuracy: 55.4%
+  marine: 0.0% of 475
+  miko: 91.6% of 143
+  pekora: 99.2% of 482
+speaker changes ±0.5 s: recall 23/62 = 37%, precision 23/26 = 88%
+speaker changes ±1.0 s: recall 25/62 = 40%, precision 25/26 = 96%
+lines (turns shown): 55/86 = 64% with the right speaker
+### splice3
+characters scored: 1107 (of 1159); labels ['A', 'B'] → {'A': 'marine', 'B': 'miko'}
+character accuracy: 55.8%
+  marine: 99.8% of 479
+  miko: 92.7% of 151
+  pekora: 0.0% of 477
+speaker changes ±0.5 s: recall 23/62 = 37%, precision 23/26 = 88%
+speaker changes ±1.0 s: recall 25/62 = 40%, precision 25/26 = 96%
+lines (turns shown): 50/86 = 58% with the right speaker
+
+## Offline VBx (kk-spike-diar) on the same characters
+### splice2
+characters scored: 912 (of 936); labels ['', 'S1', 'S2'] → {'': None, 'S1': 'pekora', 'S2': 'miko'}
+character accuracy: 78.6%
+speaker changes ±1.0 s: recall 46/55 = 84%, precision 54/94 = 57%
+lines (turns shown): 67/146 = 46% with the right speaker
+### L-pm
+characters scored: 1333 (of 1380); labels ['', 'S1'] → {'': 'marine', 'S1': 'pekora'}
+character accuracy: 54.2%
+speaker changes ±1.0 s: recall 21/67 = 31%, precision 22/62 = 35%
+lines (turns shown): 60/127 = 47% with the right speaker
+### L-3
+characters scored: 1100 (of 1149); labels ['', 'S1', 'S2'] → {'': 'marine', 'S1': 'miko', 'S2': 'pekora'}
+character accuracy: 48.3%
+speaker changes ±1.0 s: recall 46/62 = 74%, precision 52/98 = 53%
+lines (turns shown): 66/161 = 41% with the right speaker
+
+## Enrollment
+### L-2-Pekora
+characters scored: 898 (of 918); labels ['A', 'B'] → {'A': 'pekora', 'B': 'miko'}
+character accuracy: 96.4%
+### L-2-Miko
+characters scored: 898 (of 918); labels ['A', 'B'] → {'A': 'miko', 'B': 'pekora'}
+character accuracy: 97.1%
+### L-mm-Miko
+characters scored: 758 (of 789); labels ['A', 'B'] → {'A': 'miko', 'B': 'marine'}
+character accuracy: 97.1%
+### L-mm-Marine
+characters scored: 758 (of 789); labels ['A', 'B'] → {'A': 'marine', 'B': 'miko'}
+character accuracy: 98.0%
+### L-2-absent
+characters scored: 898 (of 918); labels ['A', 'B'] → {'A': 'pekora', 'B': 'miko'}
+character accuracy: 90.5%

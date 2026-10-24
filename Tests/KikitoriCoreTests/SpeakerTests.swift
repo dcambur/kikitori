@@ -217,3 +217,82 @@ actor FakeTracker: SpeakerTracking {
         #expect(decoded.speakerNames == nil)
     }
 }
+
+/// The tracker's bookkeeping, without the model: frames are handed in with `receive`.
+@Suite struct SpeakerTrackerTests {
+    /// `count` frames of 80 ms where `slot` speaks.
+    func rows(_ count: Int, slot: Int) -> [[Float]] {
+        (0..<count).map { _ in (0..<4).map { $0 == slot ? 0.9 : 0.05 } }
+    }
+    func tone(_ seconds: Double) -> [Float] { (0..<Int(seconds * 16_000)).map { Float(sin(Double($0) * 0.1)) * 0.1 } }
+
+    @Test func framesFollowTheCallersClockAcrossASeek() async {
+        let tracker = SpeakerTracker.unloaded()
+        await tracker.append(tone(2), at: 10)   // diarizer seconds 0–2
+        await tracker.append(tone(2), at: 50)   // a seek: diarizer seconds 2–4
+        await tracker.receive(settled: rows(25, slot: 0) + rows(25, slot: 1), tentative: [], from: 0)
+        let early = await tracker.frames(from: 10.5, to: 11.5)
+        let late = await tracker.frames(from: 50.5, to: 51.5)
+        #expect(early.frames.allSatisfy { $0.probs[0] > 0.5 } && !early.frames.isEmpty)
+        #expect(late.frames.allSatisfy { $0.probs[1] > 0.5 } && !late.frames.isEmpty)
+        #expect(late.frames.allSatisfy { $0.start >= 50.4 && $0.start < 51.5 })
+    }
+
+    @Test func theNewestAudioForATimeWins() async {
+        // A pipeline restarts its clock at 0 after a pause: the same times come again.
+        let tracker = SpeakerTracker.unloaded()
+        await tracker.append(tone(2), at: 0)
+        await tracker.append(tone(2), at: 0)
+        await tracker.receive(settled: rows(25, slot: 0) + rows(25, slot: 1), tentative: [], from: 0)
+        let f = await tracker.frames(from: 0.5, to: 1.5)
+        #expect(!f.frames.isEmpty && f.frames.allSatisfy { $0.probs[1] > 0.5 })
+    }
+
+    @Test func aChunkWaitsUntilTheDiarizerHasRunOnIt() async {
+        let tracker = SpeakerTracker.unloaded()
+        await tracker.setMaxWait(5)
+        await tracker.append(tone(2), at: 0)
+        await tracker.receive(settled: rows(10, slot: 0), tentative: [], from: 0)   // up to 0.8 s
+        let asked = Task { await tracker.frames(from: 0, to: 1.6) }
+        try? await Task.sleep(for: .milliseconds(100))
+        // Tentative frames up to 1.6 s are enough.
+        await tracker.receive(settled: rows(5, slot: 0), tentative: rows(5, slot: 1), from: 10)
+        let f = await asked.value
+        #expect(f.frames.count == 20)
+        #expect(f.frames.last.map { $0.probs[1] > 0.5 } == true)
+    }
+
+    @Test func aChunkDoesNotWaitLongerThanMaxWait() async {
+        let tracker = SpeakerTracker.unloaded()
+        await tracker.setMaxWait(0.2)
+        await tracker.append(tone(1), at: 0)
+        let start = Date()
+        let f = await tracker.frames(from: 0, to: 1)
+        #expect(f.frames.isEmpty)
+        #expect(Date().timeIntervalSince(start) < 2)
+    }
+
+    @Test func mutedAudioIsSkippedAndCountsAsDone() async {
+        let tracker = SpeakerTracker.unloaded()
+        await tracker.setMaxWait(5)
+        await tracker.append(tone(1), at: 0)
+        await tracker.append([Float](repeating: 0, count: 16_000), at: 1)   // muted: not run
+        await tracker.append(tone(1), at: 2)
+        await tracker.receive(settled: rows(13, slot: 0), tentative: [], from: 0)   // the first second
+        // Ends in the muted second: ready once the audio before it is done (later audio came).
+        let start = Date()
+        let f = await tracker.frames(from: 0, to: 1.5)
+        #expect(Date().timeIntervalSince(start) < 1)
+        #expect(f.frames.count >= 12 && f.frames.allSatisfy { $0.start < 1.05 })
+    }
+
+    @Test func finishStopsTheWaiting() async {
+        let tracker = SpeakerTracker.unloaded()
+        await tracker.setMaxWait(30)
+        await tracker.append(tone(1), at: 0)
+        let asked = Task { await tracker.frames(from: 0, to: 1) }
+        try? await Task.sleep(for: .milliseconds(100))
+        await tracker.finish()
+        _ = await asked.value   // returns instead of waiting 30 s
+    }
+}

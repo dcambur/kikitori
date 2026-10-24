@@ -98,7 +98,9 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
                 guard !cleaned.isEmpty else { continue }
                 let chars = OnsetRefiner.refine(cleaned, samples: chunk.samples).shifted(by: chunk.start)
                 var who: [Int?] = []
-                if let speakers { who = SpeakerLabeler.speakers(for: chars, in: await speakers.frames(from: chunk.start, to: chunk.end)) }
+                if let speakers, let last = chars.last {
+                    who = SpeakerLabeler.speakers(for: chars, in: await speakers.frames(from: chunk.start, to: min(chunk.end, last.end + 0.1)))
+                }
                 toTranslate.yield(Heard(videoID: chunk.videoID, chars: chars, speakers: who, audio: chunk.samples, end: chunk.end))
             }
             toTranslate.finish()

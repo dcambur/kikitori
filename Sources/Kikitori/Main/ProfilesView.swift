@@ -165,8 +165,9 @@ struct ProfileEditor: View {
                         Text("None").foregroundStyle(.secondary)
                     }
                 }
-                .help("With speaker labels on, a session using this profile labels this voice with its name from the start. "
-                      + "To save one, right-click a line of theirs in a collab and choose Speaker › This Is \(profile.name).")
+                .help("Experimental. With speaker labels on, a session using this profile puts this voice in a slot with its name from the start. "
+                      + "Works best when they use the same mic as when it was saved; elsewhere it can mix their lines up with another voice. "
+                      + "To save one, right-click a line of theirs and choose Speaker › Remember This Voice › As \(profile.name).")
             }
             Section {
                 Table($profile.glossary, selection: $selectedTerms) {

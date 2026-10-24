@@ -13,6 +13,9 @@ import KikitoriCore
 //                                    speaker labels: chunker → Apple Speech (timed) + Sortformer
 //                                    → turns, without translation; prints each chunk's turns, how
 //                                    long each chunk waited for the diarizer, and its cost.
+//                                    KIKITORI_SORTFORMER=fast|balanced|efficient|highContext picks the model,
+//                                    KIKITORI_SPEAKER_WAIT=<s> how long a chunk may wait for it,
+//                                    KIKITORI_NO_SPEAKERS=1 runs without it (to see what it costs).
 //                                    --enroll: a known voice from that stretch (seconds) of the file,
 //                                    or of another one (name@file:from-to)
 //                                    --json also writes <out>.chars.json: every character's time
@@ -153,15 +156,18 @@ func speakers(_ path: String, realTime: Bool, json: String?, enroll: [String]) a
     let engine = RecordingEngine(inner: AppleSpeechEngine(), recorder: recorder)
     try await engine.prepare()
     var began = Date()
-    let (tracker, names) = try await SpeakerTracker.load(voices: voices)
-    print(String(format: "Sortformer loaded in %.1f s; enrolled: %@", Date().timeIntervalSince(began),
+    let variant = SpeakerTracker.Variant(rawValue: ProcessInfo.processInfo.environment["KIKITORI_SORTFORMER"] ?? "") ?? .fast
+    let (tracker, names) = try await SpeakerTracker.load(voices: voices, variant: variant)
+    print(String(format: "Sortformer (%@) loaded in %.1f s; enrolled: %@", variant.rawValue, Date().timeIntervalSince(began),
                  names.sorted { $0.key < $1.key }.map { "\(SpeakerLabeler.label($0.key))=\($0.value)" }.joined(separator: " ")))
     // Faster than real time the diarizer falls behind the recognizer: let chunks wait for it.
     if !realTime { await tracker.setMaxWait(600) }
+    if let wait = ProcessInfo.processInfo.environment["KIKITORI_SPEAKER_WAIT"].flatMap(Double.init) { await tracker.setMaxWait(wait) }
     let timed = TimedTracker(tracker, recorder: recorder)
     var pipeline = LivePipeline(engine: engine, translator: nil, vad: try await SileroVAD.load())
     pipeline.maxChunk = Double(ProcessInfo.processInfo.environment["KIKITORI_MAX_CHUNK"] ?? "") ?? 6
-    pipeline.speakers = timed
+    // KIKITORI_NO_SPEAKERS: the same run without the tracker, to see what it costs.
+    if ProcessInfo.processInfo.environment["KIKITORI_NO_SPEAKERS"] == nil { pipeline.speakers = timed }
     var out = ""
     began = Date()
     let usage0 = cpuSeconds()

@@ -2,6 +2,11 @@
 # EXPERIMENT (for docs/design/speaker-labels.md), not product code.
 #
 #   python3 Experiments/speakers/score.py <run.jsonl.chars.json> <truth.json> [--skip <seconds>]
+#   python3 Experiments/speakers/score.py --segments <kk-spike-diar out.json> <run.jsonl.chars.json> <truth.json>
+#
+# With --segments, the characters' times are kept but their speakers come from another
+# diarizer's segments (the one active at the character's middle, else none), so both are scored
+# on exactly the same characters.
 #
 # Scores `kikitori-cli speakers --json` against a truth file from splice.py. Every recognized
 # character has the speaker shown for it (its turn's label); its truth is the turn its middle
@@ -15,7 +20,16 @@
 import itertools, json, sys
 
 args = sys.argv[1:]
+segments = None
+if args and args[0] == "--segments":
+    segments = json.load(open(args[1])); args = args[2:]
 chunks = json.load(open(args[0]))
+if segments is not None:
+    for chunk in chunks:
+        for c in chunk:
+            mid = (c["start"] + c["end"]) / 2
+            hit = [s for s in segments if s["start"] <= mid < s["end"]]
+            c["speaker"] = hit[0]["speaker"] if hit else ""
 truth = json.load(open(args[1]))
 skip = float(args[args.index("--skip") + 1]) if "--skip" in args else 0
 

@@ -29,6 +29,8 @@ let package = Package(
                           swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(name: "kk-check-reveal", path: "Experiments/reveal-check",
                           swiftSettings: [.swiftLanguageMode(.v5)]),
+        .executableTarget(name: "kk-spike-diar", dependencies: [.product(name: "FluidAudio", package: "FluidAudio")],
+                          path: "Experiments/speakers/offline", swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(name: "kk-check-sync", dependencies: ["KikitoriCore"], path: "Experiments/sync-check",
                           swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(name: "KikitoriCoreTests", dependencies: ["KikitoriCore"],

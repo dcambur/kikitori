@@ -156,8 +156,9 @@ struct SpeakerChip: View {
     }
 }
 
-/// A line's speaker in its context menu: say whose voice it is (a profile: remembered for next
-/// time too), or give it a name for this session.
+/// A line's speaker in its context menu: name the voice for this session (a profile's name, or
+/// any), or also remember it for the profile's next sessions (experimental: see
+/// docs/design/speaker-labels.md §4).
 struct SpeakerMenu: View {
     @Environment(AppModel.self) var model
     let label: String
@@ -165,10 +166,17 @@ struct SpeakerMenu: View {
     var body: some View {
         Menu("Speaker \(model.session?.speakerNames?[label] ?? label)") {
             ForEach(model.profiles) { profile in
-                Button("This Is \(profile.name)") { model.nameSpeaker(label, as: profile.name, profile: profile) }
+                Button("This Is \(profile.name)") { model.nameSpeaker(label, as: profile.name) }
             }
-            if !model.profiles.isEmpty { Divider() }
             Button("Name for This Session…") { if let name = ask() { model.nameSpeaker(label, as: name) } }
+            if !model.profiles.isEmpty {
+                Divider()
+                Menu("Remember This Voice") {
+                    ForEach(model.profiles) { profile in
+                        Button("As \(profile.name)") { model.nameSpeaker(label, as: profile.name, profile: profile) }
+                    }
+                }
+            }
         }
     }
 

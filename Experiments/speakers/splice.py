@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # EXPERIMENT (for docs/design/speaker-labels.md), not product code.
 #
-#   python3 Experiments/speakers/splice.py <out prefix> <name>=<solo.wav> <name>=<solo.wav> [...] [--seconds 360] [--seed 1]
+#   python3 Experiments/speakers/splice.py <out prefix> <name>=<solo.wav> <name>=<solo.wav> [...] [--seconds 360] [--seed 1] [--no-level]
 #
 # A "collab" with known speakers, made from solo streams: turns taken in order from each
 # speaker's recording (16 kHz mono 16-bit WAV), one after another. Turn lengths mimic chat:
 # a third are short (0.8–2 s, reactions), the rest 2–8 s. Half the changes have no pause (under
 # 0.15 s, so they fall inside one chunk), half a pause of 0.3–1 s. Each cut is moved to the
-# quietest 20 ms within 0.3 s, so words are rarely chopped. Writes <prefix>.wav and
+# quietest 20 ms within 0.3 s, so words are rarely chopped. Each source is first scaled to the
+# same RMS (-24 dBFS), as a collab's mix levels its voices (--no-level keeps them as they are:
+# solo recordings differ by 10 dB or more). Writes <prefix>.wav and
 # <prefix>.truth.json ([{speaker, start, end}] in seconds of the new file).
 import json, random, struct, sys, wave, math
 
@@ -34,6 +36,11 @@ def main():
     sources = dict(a.split("=", 1) for a in args[1:] if "=" in a)
     rnd = random.Random(seed)
     audio = {n: read(p) for n, p in sources.items()}
+    if "--no-level" not in args:
+        for n, s in audio.items():
+            rms = math.sqrt(sum(x * x for x in s) / len(s)) / 32768
+            gain = 10 ** (-24 / 20) / max(rms, 1e-6)
+            audio[n] = [max(-32768, min(32767, int(x * gain))) for x in s]
     cursor = {n: 0 for n in audio}
     names = list(audio)
     out, truth, speaker = [], [], rnd.choice(names)

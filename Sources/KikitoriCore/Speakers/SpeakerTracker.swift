@@ -8,8 +8,8 @@ public protocol SpeakerTracking: Sendable {
     /// `samples` (16 kHz mono) starting at `time` in the caller's clock. Audio that doesn't follow
     /// on from the last piece (a seek, a pause) starts a new stretch; speakers stay the same.
     func append(_ samples: [Float], at time: Double) async
-    /// Who spoke over `from..<to` (caller's clock), once the diarizer has settled it or after a
-    /// short wait (then with its tentative guesses).
+    /// Who spoke over `from..<to` (caller's clock), once the diarizer has run on it (settled or
+    /// tentative frames), or after a short wait with whatever it has.
     func frames(from: Double, to: Double) async -> SpeakerFrames
     /// No more audio for now (end of a file, a pause): chunks waiting for the diarizer take its
     /// tentative answer instead. Audio appended later carries on with the same speakers.
@@ -50,8 +50,9 @@ public actor DeferredSpeakerTracker: SpeakerTracking {
 
 /// Streaming Sortformer (FluidAudio, Core ML): four speaker slots that stay the same for the
 /// whole session, numbered in the order the voices first speak. Its answer for a stretch of audio
-/// settles ~1 s after the stretch (0.48 s steps plus 0.56 s of look-ahead); `frames` waits for that
-/// for at most `maxWait` seconds of wall time. See docs/design/speaker-labels.md.
+/// settles ~1 s after the stretch (0.48 s steps plus 0.56 s of look-ahead); before that it has a
+/// tentative answer, which labelled characters just as well (docs/design/speaker-labels.md §5).
+/// So `frames` waits only until the diarizer has run on the chunk, at most `maxWait` seconds.
 public actor SpeakerTracker: SpeakerTracking {
     /// The FluidAudio diarizer is a class with its own lock; only this actor touches it.
     final class Box: @unchecked Sendable { let diarizer: SortformerDiarizer; init(_ d: SortformerDiarizer) { diarizer = d } }
@@ -62,8 +63,8 @@ public actor SpeakerTracker: SpeakerTracking {
     let box: Box
     let frameLength: Double
     let slots: Int
-    /// Longest wall time `frames` waits for the diarizer to settle a chunk.
-    public var maxWait = 2.0
+    /// Longest wall time `frames` waits for the diarizer to reach the end of a chunk.
+    public var maxWait = 0.5
     /// Settled frames kept (and audio for voice samples): 10 minutes.
     let keepFrames = 7_500
 
@@ -76,7 +77,7 @@ public actor SpeakerTracker: SpeakerTracking {
     var tentative: [[Float]] = []
     /// Since `finish`, no more audio is coming: `frames` doesn't wait.
     var draining = false
-    /// `frames` calls waiting for the diarizer to settle up to a time (caller's clock).
+    /// `frames` calls waiting for the diarizer to reach a time (caller's clock).
     var waiters: [UUID: (until: Double, resume: CheckedContinuation<Void, Never>)] = [:]
     /// Recent audio (diarizer clock), for voice samples.
     var recent: [Float] = []
@@ -99,8 +100,22 @@ public actor SpeakerTracker: SpeakerTracking {
 
     /// Downloads the model (~250 MB, once) and loads it. `voices` are known speakers to put in slots
     /// first: their names come back with the slots they got.
-    public static func load(voices: [(name: String, samples: [Float])] = []) async throws -> (SpeakerTracker, [Int: String]) {
-        let config = SortformerConfig.default
+    /// FluidAudio's Sortformer models (docs/design/speaker-labels.md §6.4): `fast` and `balanced`
+    /// settle ~1 s after the audio, `efficient` ~2.6 s, `highContext` ~30 s.
+    public enum Variant: String, Sendable, CaseIterable {
+        case fast, balanced, efficient, highContext
+        var config: SortformerConfig {
+            switch self {
+            case .fast: .default
+            case .balanced: .balancedV2_1
+            case .efficient: .efficientV2_1
+            case .highContext: .highContextV2_1
+            }
+        }
+    }
+
+    public static func load(voices: [(name: String, samples: [Float])] = [], variant: Variant = .fast) async throws -> (SpeakerTracker, [Int: String]) {
+        let config = variant.config
         let models = try await SortformerModels.loadFromHuggingFace(config: config)
         let diarizer = SortformerDiarizer(config: config, timelineConfig: .init(
             numSpeakers: config.numSpeakers, frameDurationSeconds: config.frameDurationSeconds,
@@ -179,12 +194,14 @@ public actor SpeakerTracker: SpeakerTracking {
             guard b > a else { continue }
             let first = Int(((s.diar + a - s.caller) / frameLength).rounded(.down))
             let last = Int(((s.diar + b - s.caller) / frameLength).rounded(.up))
+            var lo = Double.infinity, hi = -Double.infinity
             for k in first..<last {
                 let start = s.caller + Double(k) * frameLength - s.diar
-                guard !covered.contains(where: { start >= $0.0 && start < $0.1 }), let probs = probs(at: k) else { continue }
+                guard !covered.contains(where: { start > $0.0 - frameLength / 2 && start < $0.1 }), let probs = probs(at: k) else { continue }
                 out.append(.init(start: start, probs: probs))
+                lo = min(lo, start); hi = max(hi, start + frameLength)
             }
-            covered.append((a, b))
+            if lo < hi { covered.append((lo, hi)) }
         }
         return SpeakerFrames(frames: out.sorted { $0.start < $1.start }, length: frameLength)
     }
@@ -195,13 +212,19 @@ public actor SpeakerTracker: SpeakerTracking {
     /// Up to 15 s of recent audio where only this slot's voice was heard: a sample to remember it by.
     public func voice(slot: Int) -> [Float] { solo[slot] ?? [] }
 
-    var settledEnd: Double { Double(firstFrame + settled.count) * frameLength }
-
-    /// The diarizer has the audio up to `time` (caller's clock) and has settled it. Audio that
-    /// never came (muted) is never ready: the wait times out.
+    /// The diarizer has run on the audio up to `time` (caller's clock): its frames are there,
+    /// settled or tentative. A time in skipped audio (muted, all zeros) counts from the end of
+    /// the audio before it, once later audio has come. Audio that never comes times out.
     func ready(_ time: Double) -> Bool {
-        guard let s = spans.last(where: { $0.caller < time && time <= $0.caller + $0.length + 0.001 }) else { return false }
-        return settledEnd >= s.diar + (time - s.caller)
+        let at: Double
+        if let s = spans.last(where: { $0.caller < time && time <= $0.caller + $0.length + 0.001 }) {
+            at = s.diar + (time - s.caller)
+        } else if spans.contains(where: { $0.caller >= time }), let before = spans.last(where: { $0.caller < time }) {
+            at = before.diar + before.length
+        } else {
+            return false
+        }
+        return Double(firstFrame + settled.count + tentative.count) * frameLength >= at - 0.001
     }
 
     private func probs(at frame: Int) -> [Float]? {
@@ -217,14 +240,25 @@ public actor SpeakerTracker: SpeakerTracking {
         func rows(_ flat: [Float], _ count: Int) -> [[Float]] {
             (0..<count).map { f in Array(flat[f * slots..<min(flat.count, (f + 1) * slots)]) }
         }
-        let new = rows(chunk.finalizedPredictions, chunk.finalizedFrameCount)
-        if settled.isEmpty { firstFrame = chunk.startFrame }
+        receive(settled: rows(chunk.finalizedPredictions, chunk.finalizedFrameCount),
+                tentative: rows(chunk.tentativePredictions, chunk.tentativeFrameCount), from: chunk.startFrame)
+    }
+
+    /// New frames from the diarizer (one row of slot probabilities each): settled ones from frame
+    /// `first` on, and the tentative ones after them.
+    func receive(settled new: [[Float]], tentative: [[Float]], from first: Int) {
+        if settled.isEmpty { firstFrame = first }
         let startIndex = firstFrame + settled.count
         settled += new
-        tentative = rows(chunk.tentativePredictions, chunk.tentativeFrameCount)
+        self.tentative = tentative
         collectSolo(new, from: startIndex)
         if settled.count > keepFrames * 2 { firstFrame += settled.count - keepFrames; settled.removeFirst(settled.count - keepFrames) }
         for (id, w) in waiters where ready(w.until) { waiters[id] = nil; w.resume.resume() }
+    }
+
+    /// A tracker without a model, for tests: frames come only from `receive`.
+    static func unloaded() -> SpeakerTracker {
+        SpeakerTracker(box: Box(SortformerDiarizer(config: .default)), voices: [])
     }
 
     /// Frames where one voice is clearly alone go into that voice's sample.
