@@ -64,6 +64,9 @@ final class Preferences {
     var maxChunk: Double { didSet { save(maxChunk, "maxChunk") } }
 
     var translation: TranslationSettings { didSet { save(try? JSONEncoder().encode(translation), "translation") } }
+    /// Translate lines into English with Claude as they are heard. Off by default: transcription
+    /// is free and on-device, translation spends API credits on every line.
+    var translate: Bool { didSet { save(translate, "translate") } }
     var transcriptMode: TranscriptMode { didSet { save(transcriptMode.rawValue, "transcriptMode") } }
     /// The ⌃⌥J switch: Japanese shown (with English) or English only.
     var showJapanese: Bool {
@@ -102,6 +105,7 @@ final class Preferences {
         lastSourceID = d.string(forKey: "lastSourceID")
         speechModel = SpeechModel(rawValue: get("speechModel", "")) ?? .apple
         maxChunk = get("maxChunk", 6.0)
+        translate = get("translate", false)
         translation = (d.data(forKey: "translation")).flatMap { try? JSONDecoder().decode(TranslationSettings.self, from: $0) } ?? .init()
         transcriptMode = TranscriptMode(rawValue: get("transcriptMode", ""))
             ?? (get("showJapanese", true) ? .both : .english)   // the earlier on/off setting

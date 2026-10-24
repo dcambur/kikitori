@@ -110,7 +110,7 @@ struct OverlayView: View {
         }
         .multilineTextAlignment(.center)
         .shadow(color: prefs.overlayStyle == .outline ? .black : .clear, radius: 2)
-        .onTapGesture { if line.en != nil { explaining = line } }
+        .onTapGesture { if !model.pendingLines.contains(line.id) { explaining = line } }
     }
 
     @ViewBuilder func noteChip(_ line: TranscriptLine, size: Preferences.TextSize) -> some View {

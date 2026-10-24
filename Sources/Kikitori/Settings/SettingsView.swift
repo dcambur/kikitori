@@ -123,6 +123,12 @@ struct TranslationTab: View {
     var body: some View {
         @Bindable var prefs = model.prefs
         Form {
+            Section {
+                Toggle("Translate as you listen", isOn: Binding(get: { prefs.translate }, set: { model.setTranslate($0) }))
+            } footer: {
+                Text("Off: lines stay Japanese, transcribed on this Mac for free. On: each line is also sent to Claude Haiku for English, which uses API credits. Explanations are always on demand.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Translation") {
                 LabeledContent("Translate into", value: prefs.translation.targetLanguage)
                 LabeledContent("Style") {

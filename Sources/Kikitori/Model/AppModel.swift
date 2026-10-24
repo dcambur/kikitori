@@ -164,7 +164,7 @@ final class AppModel {
         case .paused: return "Paused"
         case .listening:
             if let issue = topIssue { return Self.shortText(issue) }
-            if let latency { return String(format: "Translating · ≈ %.1f s", latency) }
+            if prefs.translate, let latency { return String(format: "Translating · ≈ %.1f s", latency) }
             return "Listening"
         }
     }
@@ -206,7 +206,7 @@ final class AppModel {
         } else {
             hasAPIKey = false
             translator = nil
-            raise(.noKey)
+            if prefs.translate { raise(.noKey) }
         }
         do {
             try await startCapture()
@@ -508,7 +508,21 @@ final class AppModel {
         pendingEnds.removeAll()
     }
 
+    /// Translation on or off (Live toolbar, Watch panel, menu bar, Settings). Takes effect from the
+    /// next line; turning it off clears the issues only translation raises.
+    func setTranslate(_ on: Bool) {
+        prefs.translate = on
+        if on {
+            if isLive, translator == nil { raise(.noKey) }
+        } else {
+            for issue in [Issue.noKey, .keyInvalid, .creditsExhausted, .capReached, .offline, .apiOutage, .rateLimited] {
+                clear(issue)
+            }
+        }
+    }
+
     private func translationAllowed() -> Bool {
+        guard prefs.translate else { return false }   // Japanese only: no request, no cost
         if capReached && prefs.capAction != .noExplain {
             if !issues.contains(.capReached) {
                 Notifier.post("Monthly cap reached", body: "Translation is paused. Japanese subtitles keep working.")
@@ -532,7 +546,7 @@ final class AppModel {
             pendingEnds[t] = Date.now.addingTimeInterval(-asr)
             let line = TranscriptLine(time: t, ja: ja)
             record.lines.append(line)
-            pendingLines.insert(line.id)
+            if prefs.translate, translator != nil { pendingLines.insert(line.id) }   // else no dots: no English is coming
             clips.store(audio, at: t)
             recentHeard = Array((recentHeard + [line]).suffix(4))
             Task { [weak self, id = line.id] in   // subtitles leave the video once speech stops
@@ -676,7 +690,8 @@ final class AppModel {
         return Array(lines[max(0, i - 12)..<i])
     }
 
-    var lastLine: TranscriptLine? { session?.lines.last { $0.en != nil } }
+    /// The newest line Explain can take: translated, or settled without English (translation off).
+    var lastLine: TranscriptLine? { session?.lines.last { !pendingLines.contains($0.id) } }
 
     /// Sent to the translator and the explainer. For the built-in player, the video's channel
     /// too (the title is filled in from the page; see PlayerController).

@@ -23,6 +23,7 @@ struct MenuBarPanel: View {
                 HStack(spacing: 14) {
                     round("captions.bubble", "Subtitles", model.prefs.overlayVisible) { model.prefs.overlayVisible.toggle() }
                     round("character.ja", "Japanese", model.prefs.showJapanese) { model.prefs.showJapanese.toggle() }
+                    round("translate", "Translate", model.prefs.translate) { model.setTranslate(!model.prefs.translate) }
                     round("cursorarrow.slash", "Click-through", model.prefs.clickThrough) { model.prefs.clickThrough.toggle() }
                     round("pause.fill", "Pause", model.state == .paused) { Task { await model.togglePause() } }
                 }

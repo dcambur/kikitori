@@ -47,7 +47,7 @@ struct PlayerView: View {
                         Label("Translation", systemImage: "sidebar.right").labelStyle(.titleAndIcon)
                     }
                     .toggleStyle(.button)
-                    .help("The English transcript and explanations, beside the video (⌥⌘I)")
+                    .help("The transcript, translation and explanations, beside the video (⌥⌘I)")
                     .keyboardShortcut("i", modifiers: [.command, .option])
                 }
             }
@@ -94,10 +94,15 @@ struct WatchInspector: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Show", selection: Binding(get: { model.prefs.transcriptMode }, set: { model.prefs.transcriptMode = $0 })) {
-                ForEach(Preferences.TranscriptMode.allCases, id: \.self) { Text($0.title) }
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Translate new lines (uses API credits)",
+                       isOn: Binding(get: { model.prefs.translate }, set: { model.setTranslate($0) }))
+                    .toggleStyle(.switch).controlSize(.small)
+                Picker("Show", selection: Binding(get: { model.prefs.transcriptMode }, set: { model.prefs.transcriptMode = $0 })) {
+                    ForEach(Preferences.TranscriptMode.allCases, id: \.self) { Text($0.title) }
+                }
+                .pickerStyle(.segmented).labelsHidden().controlSize(.small)
             }
-            .pickerStyle(.segmented).labelsHidden().controlSize(.small)
             .padding(10)
             Divider()
             if let focused {
@@ -134,9 +139,9 @@ struct WatchInspector: View {
                       textSize: model.prefs.transcriptTextSize - 1, mode: model.prefs.transcriptMode,
                       replay: model.replayControl(for: line))
             .id(line.id)
-            .onTapGesture { if line.en != nil { model.focusExplanation(line) } }
+            .onTapGesture { if !model.pendingLines.contains(line.id) { model.focusExplanation(line) } }
             .contextMenu {
-                Button("Explain") { model.focusExplanation(line) }.disabled(line.en == nil)
+                Button("Explain") { model.focusExplanation(line) }.disabled(model.pendingLines.contains(line.id))
                 ReplayMenuItems(line: line)
             }
     }

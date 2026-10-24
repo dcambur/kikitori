@@ -132,6 +132,7 @@ struct LiveView: View {
                 Label("Subtitles", systemImage: "captions.bubble")
             }
             .help("Show subtitles")
+            TranslateToggle()
             TranscriptModeMenu()
         }
         ToolbarItemGroup {
@@ -166,12 +167,25 @@ struct LiveView: View {
     func select(_ line: TranscriptLine) {
         selection = line.id
         showInspector = true
-        if line.en != nil { model.explain(line) }
+        if !model.pendingLines.contains(line.id) { model.explain(line) }
     }
 
     func copy(_ s: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(s, forType: .string)
+    }
+}
+
+/// Translation on or off. Off (the default), lines stay Japanese and nothing is sent to Claude
+/// except explanations you ask for.
+struct TranslateToggle: View {
+    @Environment(AppModel.self) var model
+    var body: some View {
+        Toggle(isOn: Binding(get: { model.prefs.translate }, set: { model.setTranslate($0) })) {
+            Label("Translate", systemImage: "translate")
+        }
+        .help(model.prefs.translate ? "Translating new lines into English with Claude (uses API credits)"
+                                     : "Translate new lines into English with Claude (uses API credits)")
     }
 }
 
