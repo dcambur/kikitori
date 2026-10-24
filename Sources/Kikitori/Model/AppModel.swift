@@ -298,13 +298,17 @@ final class AppModel {
         let generation = captureGeneration
         let engine = AppleSpeechEngine()
         let vad: SileroVAD
+        // After each await, a newer decision (stop, another start) wins over this start's own
+        // failure, which would otherwise tear down the newer session.
         do {
             try await engine.prepare()
             vad = try await SileroVAD.load()
         } catch {
+            guard generation == captureGeneration else { throw CancellationError() }
             throw ModelUnavailable(message: error.localizedDescription)
         }
         if source.id.hasPrefix("mic:"), !(await AVCaptureDevice.requestAccess(for: .audio)) {
+            guard generation == captureGeneration else { throw CancellationError() }
             throw CocoaError(.userCancelled)
         }
         // No awaits from here on, so nothing can change between this check and the install.
@@ -956,6 +960,7 @@ final class AppModel {
         deleteSessions(sessions.map(\.id))
         profiles = []
         saveProfiles()
+        try? FileManager.default.removeItem(at: supportURL.appending(path: "voices"))   // the profiles' voice samples
         ledger.entries = []
         Self.save(ledger.entries, to: supportURL.appending(path: "usage.json"))
     }
