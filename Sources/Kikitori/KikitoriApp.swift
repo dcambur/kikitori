@@ -19,7 +19,7 @@ enum Main {
             let (input, seconds, log) = (args[i + 1], Double(args[i + 2]) ?? 60, args[i + 3])
             NSApplication.shared.setActivationPolicy(.accessory)
             Task { @MainActor in
-                await PlayerTest.run(input: input, seconds: seconds, logPath: log)
+                await PlayerTest.run(input: input, seconds: seconds, logPath: log, muted: args.contains("--muted"))
                 exit(0)
             }
             NSApplication.shared.run()

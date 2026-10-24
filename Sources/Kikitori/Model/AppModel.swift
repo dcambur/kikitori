@@ -113,6 +113,7 @@ final class AppModel {
     @ObservationIgnored private var cueAudio: [UUID: [Float]] = [:]
     @ObservationIgnored private var revealedLines: Set<String> = []
     @ObservationIgnored private var playerVideo = ""
+    @ObservationIgnored private var lastMediaAudio = Date.distantPast
     @ObservationIgnored private var clips = LineClips()
     @ObservationIgnored private let clipPlayer = ClipPlayer()
     private var warned80Cycle: Date?
@@ -365,7 +366,10 @@ final class AppModel {
             cues = cues.filter { $0.value.videoID == videoID }
             cueAudio = cueAudio.filter { cues[$0.key] != nil }
         }
-        let want = hasAudio && !live
+        // Leave synced mode only after 5 s without the video's audio at the playhead (decoding
+        // stopped, say): a seek beyond what's decoded takes a moment to fill and shouldn't flap.
+        if hasAudio { lastMediaAudio = .now }
+        let want = !live && (hasAudio || (synced && Date.now.timeIntervalSince(lastMediaAudio) < 5))
         if want != synced {
             synced = want
             muteForSync = want

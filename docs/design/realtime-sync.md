@@ -1,8 +1,9 @@
 # Exact-sync subtitles in Watch: research and recommendation
 
-Status: research with spikes, 2026-10-23. **Approach A chosen** (decision 1 in §10, answered
-2026-10-23); decisions 2–4 are still open. Nothing here is built into the app yet. The spike code
-is in `Experiments/` (see its README), and trimmed logs are in `Experiments/results/`.
+Status: **approach A chosen** (decision 1 in §10, answered 2026-10-23). **Phases 1–4 are built**
+(2026-10-24, §11): synced subtitles work on YouTube videos in Watch. Live streams, start/seek
+behaviour and the fallback wait on decisions 2–4. The spike code is in `Experiments/` (see its
+README), and trimmed logs are in `Experiments/results/`.
 
 ## In short
 
@@ -425,6 +426,66 @@ This is an engineering assessment, not legal advice.
    running 12 s ahead of the picture? Any delay-based approach has this.
 4. **No lead available** (live without DVR, viewer jumps to live): fall back to today's live line,
    or show nothing on the video?
+
+## 11. Implementation status (phases 1–4)
+
+Built on this branch. Live streams, start/seek behaviour and the fallback (phases 5–6) wait on
+decisions 2–4.
+
+| Piece | Where | Notes |
+|---|---|---|
+| Page media tap | `Sources/Kikitori/Player/MediaTapScript.swift` | See below |
+| Media timeline, resampler | `Sources/KikitoriCore/Sync/MediaTimeline.swift` | 16 kHz by video time; overlap dropped, ≤ 30 ms seams joined; 5 min kept behind the playhead |
+| Media pipeline | `Sources/KikitoriCore/Sync/MediaPipeline.swift` | See below |
+| Timed recognition | `AppleSpeechEngine.transcribeTimed`, `Speech/TimedText.swift` | Same preset plus `.audioTimeRange`; filter keeps the times; long characters start at their first sound |
+| Lines on characters | `Sync/Cue.swift` (`CueAligner`) | Edit-distance alignment of the translator's (corrected) Japanese |
+| Reveal | `PlayerScript` (`__kikitori.sync/cues`) | See below |
+| Wiring | `AppModel` (`startSyncedSubtitles`, `playerState`, `mediaArrived`, `revealed`), `PlayerController` | See below |
+
+The page media tap:
+- Hooks MSE at document start, and its demuxers (WebM/Opus, fMP4/AAC) are incremental with resync.
+- Decodes with WebCodecs.
+- Tells ads apart by the MediaSource attached while `ad-showing`.
+- Keys each of the video's MediaSources (track switch, after an ad, reload).
+- Keeps 8 MB of bytes per stream, for a session started later.
+
+The media pipeline:
+- Uses the same chunker, recognizer and translator as `LivePipeline`.
+- Works from the playhead up to 30 s ahead. A seek starts over, and work already done isn't repeated.
+- Drops chunks more than 30 s behind, or of another key.
+
+The reveal:
+- Runs every frame on `currentTime`. Rows are reused, so nothing fades in twice.
+- `kkReveal` fires when a line begins (also every 500 ms); a seek skips lines it jumps over.
+- Nothing shows during ads.
+
+The wiring:
+- During a player session the media pipeline runs beside the process tap. While synced, the tap
+  passes silence, so nothing is billed twice.
+- Lines enter the transcript, with their English, when they begin on the video.
+
+Interim behaviour until decisions 2–4:
+- Live streams keep today's subtitles.
+- After a start or seek, cues that arrive after their moment (the first line or so) are not
+  drawn on the video; they still go to the transcript.
+- The video shows the Japanese only, as before. The English goes to the Translation panel (and
+  the full-screen overlay) at the moment its line begins.
+
+Measured (muted; logs not committed):
+
+| Check | Result |
+|---|---|
+| `kk-check-mediatap` on captured bytes, random 1–48 KB appends | WebM 130 s and 230 s with no gaps; switched on late (replay of kept bytes) identical; after `abort()` + a 64 KB skip it resyncs at the next cluster or fragment. Live fMP4: 79.6 s, continuous |
+| `kk-check-reveal` (page harness with Trusted Types) | Characters on time, rows kept, late cues kept off the video but posted, seek-back redraws, forward seeks skip, nothing during ads or for another video |
+| `kk-check-sync` (real YouTube, no app, no translation) | Seek and a mid-roll ad included, after the review fixes: cue lead median 21.2 s (min 0.0 s, right after the seek); no duplicate cues. 309 characters revealed 8 ms median, 17 ms p95 after their time; one at 212 ms (a stalled frame in the harness's background window); none early |
+| App, `--player-test … --muted`, 90 s, with translation | Synced 16 s after start (after the auto-dub switch). 284 characters: 8 ms median, 16 ms p95, 39 ms max. 16 transcript lines, 13 with English (the rest fillers) |
+
+Known costs and limits:
+- After a mid-roll ad, YouTube resumes in a new MediaSource, so up to the 30 s horizon is
+  recognized and translated again (fractions of a cent per ad).
+- The last few seconds of a video may never close into a chunk.
+- Before YouTube's auto-dub is switched back, the first seconds can be processed from the dub,
+  under their own key; they are never shown once the original plays.
 
 ## Reproducing
 

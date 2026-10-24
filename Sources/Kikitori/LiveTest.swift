@@ -76,12 +76,14 @@ enum LiveTest {
 }
 
 /// Headless check of the built-in player, through the real app identity:
-///   open build/Kikitori.app --args --player-test <link or search words> <seconds> <log path>
+///   open build/Kikitori.app --args --player-test <link or search words> <seconds> <log path> [--muted]
 /// Plays the video (the first search result for search words), starts subtitles as the Start
-/// Subtitles button does, and logs the audio heard, the lines and where the page draws them.
+/// Subtitles button does, and logs the audio heard, the lines and where the page draws them, and
+/// for synced subtitles how far from its time each character appeared. --muted silences the page
+/// (WebKit's page mute, test only): synced subtitles don't need to hear it.
 @MainActor
 enum PlayerTest {
-    static func run(input: String, seconds: Double, logPath: String) async {
+    static func run(input: String, seconds: Double, logPath: String, muted: Bool = false) async {
         FileManager.default.createFile(atPath: logPath, contents: nil)
         let log = FileHandle(forWritingAtPath: logPath)
         func write(_ line: String) { log?.write(Data((line + "\n").utf8)) }
@@ -92,6 +94,11 @@ enum PlayerTest {
                               backing: .buffered, defer: false)
         window.contentView = player.webView
         window.orderFrontRegardless()
+        let mute = NSSelectorFromString("_setPageMuted:")
+        if muted, player.webView.responds(to: mute) {
+            typealias Fn = @convention(c) (AnyObject, Selector, UInt) -> Void
+            unsafeBitCast(player.webView.method(for: mute), to: Fn.self)(player.webView, mute, 1)
+        }
         player.load(input)
         for _ in 0..<40 where !(player.hasVideo && !player.paused) {
             try? await Task.sleep(for: .seconds(1))
@@ -105,6 +112,13 @@ enum PlayerTest {
         await model.start(source: AudioSource(id: PlayerController.sourceID, name: "kikitori Player", pid: 0,
                                               processObjects: [], isPlaying: true))
         write("session: state=\(model.state) issues=\(model.issues)")
+        // Each synced character as it appears: the video's time then minus its own time.
+        let observe = """
+            if (window.__kkObs) return 1; window.__kkReveal = []; const seen = new WeakSet();
+            window.__kkObs = new MutationObserver(ms => { const v = document.querySelector('#movie_player video'); if (!v) return;
+              for (const m of ms) { const e = m.target; if (e.classList && e.classList.contains('kk-c') && e.classList.contains('on') && !seen.has(e)) { seen.add(e); window.__kkReveal.push(v.currentTime - +e.dataset.t); } } });
+            window.__kkObs.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['class'] }); return 1;
+            """
         let began = Date()
         var probe: ProcessTapCapture?
         let peak = Mutex<Float>(0)   // loudest sample since the last report, from a second tap
@@ -119,6 +133,7 @@ enum PlayerTest {
                 }
             }
             let loudest = peak.withLock { p in defer { p = 0 }; return p }
+            _ = try? await player.webView.callAsyncJavaScript(observe, contentWorld: .page)
             let page = try? await player.webView.callAsyncJavaScript("""
                 const v = document.querySelector('video.html5-main-video') || document.querySelector('video');
                 const l = document.getElementById('kikitori-subs');
@@ -131,14 +146,24 @@ enum PlayerTest {
                                         text: l ? l.innerText.slice(0, 60) : '', layerBox: r(l), videoBox: r(v), playing: v ? !v.paused : false });
                 """, contentWorld: .page)
             let lines = model.session?.lines ?? []
-            write(String(format: "[%4.0f s] webkit audio objects=%d peak=%.3f lines=%d pending=%d issues=%@ page=%@",
-                         Date().timeIntervalSince(began), objects.count, loudest, lines.count, model.pendingLines.count,
-                         "\(model.issues)", (page as? String) ?? "nil"))
+            write(String(format: "[%4.0f s] %@ webkit audio objects=%d peak=%.3f lines=%d pending=%d issues=%@ page=%@",
+                         Date().timeIntervalSince(began), model.synced ? "SYNCED" : "unsynced", objects.count, loudest, lines.count,
+                         model.pendingLines.count, "\(model.issues)", (page as? String) ?? "nil"))
             if !model.hearing.isEmpty { write("    live: \(model.hearing)") }
             if let last = lines.last {
                 write("    last: \(last.ja) → \(last.en ?? "…")\(model.canReplay(last) ? "  [audio kept]" : "")")
             }
         }
+        let deltas = ((try? await player.webView.callAsyncJavaScript("return window.__kkReveal || [];", contentWorld: .page)) as? [Double] ?? [])
+            .map(abs).sorted()
+        if !deltas.isEmpty {
+            func pct(_ p: Double) -> Double { deltas[min(deltas.count - 1, Int(Double(deltas.count - 1) * p))] * 1000 }
+            write(String(format: "synced reveals: %d characters, |video time − character time| median %.0f ms, p95 %.0f ms, max %.0f ms",
+                         deltas.count, pct(0.5), pct(0.95), pct(1)))
+        }
+        let all = model.session?.lines ?? []
+        write("transcript: \(all.count) lines, \(all.filter { $0.en != nil }.count) with English")
+        for l in all.suffix(6) { write("    \(l.ja) → \(l.en ?? "—")") }
         // The heard chunks as one file next to the log, for offline checks of the real audio
         // (`kikitori-cli run` or `preview` on it). Test runs only; the app never saves audio.
         var audio: [Int16] = [], seen = Set<Double>()

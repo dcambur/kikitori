@@ -91,6 +91,13 @@ final class Sink: NSObject, WKScriptMessageHandler {
     await at(45, expect: "")
     _ = await js("window.fakeT = 60; document.querySelector('video').dispatchEvent(new Event('seeking')); return 1;")
     await at(60.5, expect: "", reveals: ["A:0", "A:1", "B:0"])
+    // A cue for the stretch the seek jumped over, arriving afterwards: not posted either…
+    _ = await js("window.__kikitori.cues([{ id: 'D', vid: 'vid1', chars: [['跳', 55.0, 55.5]], lines: [[0, 1]] }], false); return 1;")
+    await at(61, expect: "", reveals: ["A:0", "A:1", "B:0"])
+    // …until the viewer seeks back before it and plays through it.
+    _ = await js("window.fakeT = 54; document.querySelector('video').dispatchEvent(new Event('seeking')); return 1;")
+    await at(54.5, expect: "飛ぶ")   // spoken at 50–51: still within its 8 s, as playback from there would show
+    await at(55.2, expect: "飛ぶ / 跳", reveals: ["A:0", "A:1", "B:0", "D:0"])
     print(failures == 0 ? "all checks passed" : "\(failures) check(s) failed")
     exit(failures == 0 ? 0 : 1)
 }

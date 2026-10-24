@@ -227,6 +227,11 @@ enum MediaTapScript {
         }
 
         // ---- decoding ---------------------------------------------------------------------------
+        // A parser that throws on damaged bytes drops what it holds and resyncs at the next cluster
+        // or fragment, instead of failing on every later append.
+        function feed(st, bytes) {
+          try { st.demux.push(bytes); } catch (e) { log('demux: ' + e); try { st.demux.reset(); } catch (e2) {} }
+        }
         function open(st) {
           close(st);
           // Live fMP4 repeats its init in every fragment: the same config keeps the decoder. A new
@@ -250,7 +255,8 @@ enum MediaTapScript {
               } catch (e) { log('decoder setup: ' + e); st.cfg = null; }
             }
             if (!st.decoder || st.decoder.state !== 'configured') return;
-            try { st.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: Math.round(t * 1e6), data })); } catch (e) {}
+            // The SourceBuffer's timestampOffset moves its media onto the video's timeline.
+            try { st.decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: Math.round((t + st.offset) * 1e6), data })); } catch (e) {}
           };
           st.demux = st.type.includes('mp4') ? MP4(st.codec, config, frame) : WebM(config, frame);
         }
@@ -283,6 +289,7 @@ enum MediaTapScript {
           for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 8192));
           post('kkMedia', { vid: st.ms.__kkKey, s: st.id, t: o.t, r: o.rate, pcm: btoa(bin) });
           st.decoded += o.n / o.rate;
+          st.until = Math.max(st.until, o.t + o.n / o.rate);
           M.lastEnd = o.t + o.n / o.rate;
         }
 
@@ -298,10 +305,15 @@ enum MediaTapScript {
                 // ad: null until the MediaSource is seen attached (classify, below).
                 const st = { id: ++M.made, sb, ms: this, type: String(type), codec, ad: null,
                              head: null, kept: [], keptBytes: 0, trimmed: false, demux: null, decoder: null, cfg: null,
-                             out: null, timer: 0, decoded: 0 };
+                             out: null, timer: 0, decoded: 0, until: -1, offset: 0 };
                 sb.__kikitori = st;
                 M.streams.push(st);
-                this.addEventListener('sourceclose', () => { close(st); M.streams = M.streams.filter(x => x !== st); });
+                const ms = this;
+                this.addEventListener('sourceclose', () => {
+                  close(st); st.head = null; st.kept = []; st.keptBytes = 0;
+                  M.streams = M.streams.filter(x => x !== st);
+                  for (const [url, obj] of M.urls) if (obj === ms) M.urls.delete(url);
+                });
                 classify();
               }
             } catch (e) { log('addSourceBuffer: ' + e); }
@@ -314,12 +326,16 @@ enum MediaTapScript {
         SourceBuffer.prototype.appendBuffer = function (data) {
           try {
             const st = this.__kikitori;
-            if (st && st.ad !== true) {
+            if (st) {
               const u8 = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
               const bytes = u8.slice();
               if (!st.head) st.head = bytes;
-              else { st.kept.push(bytes); st.keptBytes += bytes.length; while (st.keptBytes > KEEP && st.kept.length > 1) { st.keptBytes -= st.kept.shift().length; st.trimmed = true; } }
-              if (M.active && st.ad === false) { if (!st.demux) open(st); st.demux.push(bytes); }
+              else {
+                st.kept.push(bytes); st.keptBytes += bytes.length;
+                while (st.keptBytes > KEEP && st.kept.length > 1) { const old = st.kept.shift(); st.keptBytes -= old ? old.length : 0; st.trimmed = true; }
+              }
+              try { st.offset = this.timestampOffset || 0; } catch (e) {}
+              if (M.active && st.ad === false) { if (!st.demux) open(st); feed(st, bytes); }
             }
           } catch (e) { log('appendBuffer: ' + e); }
           return append.apply(this, arguments);
@@ -330,7 +346,10 @@ enum MediaTapScript {
             try {
               const st = this.__kikitori;
               if (st && name === 'changeType') { st.type = String(type); st.codec = (/codecs="?([^",]+)/.exec(type) || [])[1] || ''; if (st.demux) open(st); }
-              else if (st && st.demux) { flush(st); st.demux.reset(); }
+              else if (st) {   // abort(): the partial segment is dropped; replays of kept bytes reset here too
+                st.kept.push(null);
+                if (st.demux) { flush(st); st.demux.reset(); }
+              }
             } catch (e) {}
             return original.apply(this, arguments);
           };
@@ -358,16 +377,16 @@ enum MediaTapScript {
           for (const st of M.streams) {
             if (st.ms !== ms || st.ad === ad) continue;
             st.ad = ad;
-            if (ad) { close(st); st.head = null; st.kept = []; st.keptBytes = 0; }
+            if (ad) close(st);   // its bytes stay (ads are short), in case this call is undone
             else if (M.active) replay(st);
           }
         }
         setInterval(classify, 250);
         function replay(st) {
           open(st);
-          if (st.head) st.demux.push(st.head);
+          if (st.head) feed(st, st.head);
           if (st.trimmed) st.demux.reset();   // a gap after the init: resync at the next cluster or fragment
-          for (const bytes of st.kept) st.demux.push(bytes);
+          for (const bytes of st.kept) { if (bytes) feed(st, bytes); else st.demux.reset(); }
         }
 
         // ---- control (from the app) -------------------------------------------------------------
@@ -382,8 +401,13 @@ enum MediaTapScript {
           log((on ? 'on' : 'off') + ', ' + M.streams.filter(s => s.ad === false).length + ' audio stream(s) of the video');
         };
         // For kkState: whether the video playing has decoded audio.
-        M.status = () => ({ key: M.key, ok: M.active && M.streams.some(s => s.ad === false && s.ms.__kkKey === M.key && s.decoded > 0),
-                            until: M.lastEnd });
+        // ok: decoded audio reaches the playhead (it stops being true if decoding stops).
+        M.status = () => {
+          const v = document.querySelector('#movie_player video') || document.querySelector('video');
+          const t = v ? v.currentTime : 0;
+          return { key: M.key, ok: M.active && M.streams.some(s => s.ad === false && s.ms.__kkKey === M.key && s.until >= t - 2),
+                   until: M.lastEnd };
+        };
         })();
         """#
 }

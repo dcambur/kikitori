@@ -60,7 +60,7 @@ enum PlayerScript {
           if (lastShow && !sync.on) { const v = video(); if (v && (!layer || layer.parentElement !== playerBox(v))) kk.show(...lastShow); }
           place();
           keepOriginalAudio();
-          if (sync.on) { const v = video(); if (v && !document.querySelector('#movie_player.ad-showing')) postReveals(v.currentTime); }
+          if (sync.on) { const v = video(); if (v && !v.seeking && !document.querySelector('#movie_player.ad-showing')) postReveals(v.currentTime); }
         }, 500);
 
         // ---- audio track ---------------------------------------------------------
@@ -181,29 +181,34 @@ enum PlayerScript {
         // Every frame: the newest lines that have begun (up to `lines`), each until 8 s after its
         // last character, its characters shown from their own times. Unrevealed characters keep
         // their place (transparent), so a line never moves while it fills.
-        const sync = { on: false, lines: 1, cues: [], posted: new Set(), lastT: null, postedT: null, raf: 0, rows: '', spans: [], els: new Map() };
-        // Lines that have begun by `t`, once each, to the app.
+        const sync = { on: false, lines: 1, cues: [], posted: new Set(), lastT: null, postedT: null, skips: [], skipsVid: null, raf: 0, rows: '', spans: [], els: new Map() };
+        // Lines that have begun by `t`, once each, to the app; never those a forward seek jumped
+        // over (`skips`, also for cues that arrive later). Not while the video is seeking: its
+        // currentTime is already the new one before the 'seeking' event says so.
         function postReveals(t) {
           const vid = currentVid();
+          if (vid !== sync.skipsVid) { sync.skips = []; sync.skipsVid = vid; }
           for (const c of sync.cues) {
             if (c.vid !== vid || c.chars[0][1] > t) continue;
             c.lines.forEach(([from, to], i) => {
               const key = c.id + ':' + i;
-              if (from < to && c.chars[from][1] <= t && !sync.posted.has(key)) { sync.posted.add(key); post('kkReveal', { id: c.id, line: i }); }
+              if (from >= to || sync.posted.has(key)) return;
+              const start = c.chars[from][1];
+              if (start > t || sync.skips.some(([a, b]) => start > a && start < b)) return;
+              sync.posted.add(key);
+              post('kkReveal', { id: c.id, line: i });
             });
           }
           sync.postedT = t;
         }
-        // A seek: first what had begun before it, then the lines it jumps over are passed by.
         document.addEventListener('seeking', e => {
           const v = video();
           if (!sync.on || e.target !== v || sync.postedT === null || document.querySelector('#movie_player.ad-showing')) return;
-          const from = sync.postedT, to = v.currentTime, vid = currentVid();
-          postReveals(from);
-          if (to > from) for (const c of sync.cues) {
-            if (c.vid !== vid) continue;
-            c.lines.forEach(([f], i) => { const s0 = c.chars[Math.min(f, c.chars.length - 1)][1]; if (s0 > from && s0 < to) sync.posted.add(c.id + ':' + i); });
-          }
+          const from = sync.postedT, to = v.currentTime;
+          postReveals(from);   // what had begun before the seek
+          // Seeking back before a skipped stretch makes it playable again; forward adds one.
+          sync.skips = sync.skips.filter(([a]) => a < to).map(([a, b]) => [a, Math.min(b, to)]);
+          if (to > from) sync.skips.push([from, to]);
           sync.postedT = to;
         }, true);
         kk.sync = (on, lines) => {
@@ -215,7 +220,7 @@ enum PlayerScript {
           if (on) { lastShow = null; sync.raf = requestAnimationFrame(frame); }
         };
         kk.cues = (list, reset) => {
-          if (reset) { sync.cues = []; sync.posted.clear(); sync.rows = ''; sync.els = new Map(); sync.postedT = null; }
+          if (reset) { sync.cues = []; sync.posted.clear(); sync.rows = ''; sync.els = new Map(); sync.postedT = null; sync.skips = []; }
           const v = video(), t = v ? v.currentTime : 0, vid = currentVid(), ad = !!document.querySelector('#movie_player.ad-showing');
           for (const c of list) { c.late = !ad && c.vid === vid && c.chars[0][1] < t - 0.05; sync.cues.push(c); }
           sync.cues.sort((a, b) => a.chars[0][1] - b.chars[0][1]);
@@ -231,7 +236,7 @@ enum PlayerScript {
             if (sync.lastT === null || t < sync.lastT - 0.3 || t > sync.lastT + 1.5) for (const c of sync.cues) if (c.chars[0][1] >= t) c.late = false;
             sync.lastT = t;
             if (sync.cues.length > 2000) sync.cues = sync.cues.filter(c => c.chars[c.chars.length - 1][2] > t - 1800);
-            postReveals(t);
+            if (!v.seeking) postReveals(t);
             const shown = [];
             for (const c of sync.cues) {
               if (c.vid !== vid || c.chars[0][1] > t) continue;

@@ -52,6 +52,7 @@ app audio ──process tap──▶ 16 kHz mono ──Silero VAD──▶ speec
 | `Sources/KikitoriCore` | Capture, VAD chunker, speech engine, Claude client and translator, usage ledger, storage, export. Tested in `Tests/`. |
 | `Sources/Kikitori` | The SwiftUI app: main window, floating overlay (`NSPanel`), menu bar, settings, onboarding. |
 | `Sources/kikitori-cli` | Headless checks of the pipeline. |
+| `Experiments` | Spikes and checks behind `docs/design/realtime-sync.md` (synced subtitles); not part of the app. |
 | `docs/design` | The approved design: every screen and state, plus the implementation spec (`spec.md`). |
 | `bench` | The speech-model benchmark behind the engine choice. |
 
@@ -64,14 +65,23 @@ Apple's model ties Whisper turbo in the full pipeline (38.8 % vs 39.0 % characte
 against edited captions) while running about 3× faster with no download; large-v3 adds nothing
 over turbo, and the transducer models drop fast reactions. Details: [bench/README.md](bench/README.md).
 
+### Synced subtitles in the built-in player
+
+On YouTube videos in Watch, subtitles appear character by character as each is spoken. The site's
+player downloads its audio ahead of playback; kikitori decodes that already-buffered audio (no
+extra requests, nothing stored) and runs the same recognizer and translator 15–120 s early. Live
+streams still use the subtitles above. Design and measurements: `docs/design/realtime-sync.md`.
+
 ## Privacy
 
 Sent to Anthropic: the Japanese text of each chunk, the streamer profile, the stream title, and
 for Explain the line with its neighbours. Never sent: audio, your screen, past sessions. There is
 no kikitori server. Transcripts, profiles and usage stay in `~/Library/Application Support/kikitori`.
 Audio is never saved: so you can hear a line again, the last half hour or so of speech stays in
-memory during a session and is dropped when it stops. The stream title (for the built-in player, the
-video's title and channel) is sent as context.
+memory during a session and is dropped when it stops. In Watch, the page also keeps the last few
+minutes of the video's own buffered audio (what the site's player already downloaded) in memory,
+so synced subtitles can start from it; it goes with the page. The stream title (for the built-in
+player, the video's title and channel) is sent as context.
 
 ## Status
 

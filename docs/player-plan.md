@@ -21,7 +21,11 @@ Check on first real use: ScriptProcessor fires in WKWebView, `createMediaElement
 YouTube's MSE video, the AudioContext resumes after the user's play click, the layer survives
 YouTube's SPA navigation, theatre mode and full screen; Google sign-in inside the web view.
 
-## Phase 2: exact sync (next)
+## Phase 2: exact sync
+
+Superseded by `docs/design/realtime-sync.md` (approach A, reading ahead from the player's own
+media buffer instead of a hidden second player); phases 1–4 of that plan are built. The
+original idea, kept for history:
 
 Subtitles can't appear before a sentence ends because the engine needs the whole sentence.
 Fix: listen ahead of what the user watches.

@@ -47,6 +47,15 @@ import Testing
         #expect(lines[1].ja == "すね")
     }
 
+    @Test func everyLineGetsACharacterToBeginOn() {
+        // The translator added a line whose Japanese lines up with nothing heard.
+        let lines = CueAligner.lines([.init(ja: "今日はいい天気ですね", en: "a"), .init(ja: "うん", en: "yeah")], over: chars)
+        #expect(lines.map { [$0.from, $0.to] } == [[0, 9], [9, 10]])
+        let few = Array(chars.prefix(1))
+        let merged = CueAligner.lines([.init(ja: "今", en: "now"), .init(ja: "日", en: "day")], over: few)
+        #expect(merged.count == 1 && merged[0].en == "now day")
+    }
+
     @Test func noTranslationIsOneJapaneseLine() {
         let lines = CueAligner.lines([], over: chars)
         #expect(lines == [Cue.Line(from: 0, to: 10, ja: "今日はいい天気ですね")])
@@ -163,6 +172,21 @@ struct EdgeEngine: TimedSpeechEngine {
         #expect(r[0].count == 1 && abs(r[0][0] - 2) < 0.02, "\(r)")
         #expect(r[1].count == 2 && abs(r[1][0] - 52) < 0.02 && abs(r[1][1] - 56) < 0.02)
         #expect(r[2].count == 1 && abs(r[2][0] - 32) < 0.02)
+    }
+
+    /// Audio starting a little after the playhead (or a gap in it) is worked on once, not again
+    /// on every input, and a gap doesn't hold up what comes after it.
+    @Test func holesInTheAudioAreSkippedNotRepeatedOrWaitedIn() async {
+        var pipeline = MediaPipeline(engine: EdgeEngine(), translator: nil, vad: EnergyVAD())
+        pipeline.horizon = 30
+        let first = packets(start: 100.2, seconds: 9.8, bursts: [102, 106])         // 100.2–110
+        let second = packets(start: 110.5, seconds: 20, bursts: [114, 120])         // after a 0.5 s gap
+        let r = await cues(pipeline, [first + second + [.playhead(videoID: "v", time: 100, process: true)],
+                                      [.playhead(videoID: "v", time: 100.5, process: true)],
+                                      [.playhead(videoID: "v", time: 101, process: true)]])
+        #expect(r[0].count == 4, "\(r)")
+        for (got, want) in zip(r[0], [102.0, 106, 114, 120]) { #expect(abs(got - want) < 0.02) }
+        #expect(r[1].isEmpty && r[2].isEmpty, "\(r)")
     }
 
     @Test func nothingIsWorkedOnWhileNotSynced() async {

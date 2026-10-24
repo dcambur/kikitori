@@ -30,8 +30,6 @@ public struct Cue: Sendable, Equatable, Codable, Identifiable {
 
     public var start: Double { chars.first?.start ?? 0 }
     public var end: Double { chars.last?.end ?? 0 }
-    /// When line `i` begins: its first character.
-    public func start(ofLine i: Int) -> Double { chars[min(lines[i].from, chars.count - 1)].start }
 }
 
 /// Places the translator's lines on the recognized characters. The translator splits a chunk
@@ -43,6 +41,14 @@ public enum CueAligner {
         let heard = chars.text
         guard !translated.isEmpty, !chars.isEmpty else {
             return chars.isEmpty ? [] : [Cue.Line(from: 0, to: chars.count, ja: heard)]
+        }
+        // Every line needs a character to begin on (that is when it is shown and transcribed);
+        // more lines than characters: one line.
+        if translated.count > chars.count {
+            let note = translated.map(\.note).filter { !$0.isEmpty }.joined(separator: " ")
+            let term = translated.map(\.term).filter { !$0.isEmpty }.joined(separator: ", ")
+            return [Cue.Line(from: 0, to: chars.count, ja: translated.map(\.ja).joined().isEmpty ? heard : translated.map(\.ja).joined(),
+                             en: translated.map(\.en).joined(separator: " "), note: note.isEmpty ? nil : note, term: term.isEmpty ? nil : term)]
         }
         // Character offset where each piece starts, and the end.
         var offsets: [Int] = [], total = 0
@@ -65,7 +71,8 @@ public enum CueAligner {
         }
         var out: [Cue.Line] = [], from = 0
         for (k, line) in translated.enumerated() {
-            let to = k == translated.count - 1 ? chars.count : min(chars.count, max(from, piece(atChar: ends[k])))
+            let after = translated.count - 1 - k   // lines still to place, one character each at least
+            let to = k == translated.count - 1 ? chars.count : min(chars.count - after, max(from + 1, piece(atChar: ends[k])))
             let ja = line.ja.isEmpty ? chars[from..<to].map(\.text).joined() : line.ja
             out.append(Cue.Line(from: from, to: to, ja: ja, en: line.en, note: line.note.isEmpty ? nil : line.note,
                                 term: line.term.isEmpty ? nil : line.term))

@@ -37,8 +37,11 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
     public var maxChunk = 6.0
     /// How far ahead of the playhead to work.
     public var horizon = 30.0
-    /// Chunks ending this long before the playhead are dropped; audio this old is forgotten.
+    /// Chunks ending this long before the playhead are dropped before they cost anything.
     public var staleAfter = 30.0
+    /// Audio kept behind the playhead (16 kHz, ~19 MB for 5 minutes): seeking forward and back into
+    /// a stretch skipped over finds it still here, since the site won't fetch what it has buffered.
+    public var keepBehind = 300.0
     public var shouldTranslate: @Sendable () async -> Bool = { true }
 
     public init(engine: any TimedSpeechEngine, translator: LiveTranslator?, vad: VAD) {
@@ -65,7 +68,7 @@ public struct MediaPipeline<VAD: VoiceActivityDetector>: Sendable {
         let (heard, toTranslate) = AsyncStream.makeStream(of: Heard.self)
         let playhead = Playhead()
         let staleAfter = staleAfter, shouldTranslate = shouldTranslate
-        let cutter = Cutter(vad: vad, maxChunk: maxChunk, horizon: horizon, keep: staleAfter, playhead: playhead) { toRecognize.yield($0) }
+        let cutter = Cutter(vad: vad, maxChunk: maxChunk, horizon: horizon, keep: keepBehind, playhead: playhead) { toRecognize.yield($0) }
         let cut = Task {
             for await input in inputs { await cutter.take(input) }
             toRecognize.finish()
@@ -210,21 +213,28 @@ final class Cutter<VAD: VoiceActivityDetector>: @unchecked Sendable {
     private func step() async {
         guard let head, head.process, let timeline = timelines[head.videoID] else { finishRun(flush: false); return }
         let limit = head.time + horizon
-        for _ in 0..<8 {   // a few runs at most per input: each ends at a stretch already done
+        for _ in 0..<8 {   // a few runs at most per input: each ends at a stretch already done or a gap
+            // A run at a gap in the audio (audio further on, none here): the speech before it ends
+            // here; the next run starts after it. At the end of all the audio, it waits for more.
+            if let r = run, r.videoID == head.videoID, timeline.range(at: r.cursor) == nil,
+               timeline.ranges.contains(where: { $0.start > r.cursor }) { finishRun(flush: true) }
             var claimed = done[head.videoID] ?? Intervals()
             if let r = run, r.videoID == head.videoID { claimed.add(r.start, r.cursor) }
-            let from = claimed.free(from: head.time)
+            // The first time from the playhead on that is not done and has audio: a hole in the audio
+            // (before its first sample, or a gap) is skipped, never waited in.
+            var from = claimed.free(from: head.time)
+            while timeline.range(at: from) == nil, let next = timeline.ranges.first(where: { $0.start > from }) {
+                from = claimed.free(from: next.start)
+            }
             if let r = run, r.videoID != head.videoID || abs(r.cursor - from) > 0.001 { finishRun(flush: false) }
             guard from < limit else { return }
             if run == nil {
-                guard let range = timeline.range(at: from, slack: 0.5) else { return }   // no audio there yet
-                let start = max(from, range.start)
-                guard start < limit else { return }
+                guard timeline.range(at: from) != nil else { return }   // no audio there yet
                 var fresh = vad
                 await fresh.reset()
                 var chunker = Chunker(vad: fresh)
                 chunker.maxChunk = maxChunk
-                run = Run(videoID: head.videoID, start: start, cursor: start, emitted: start, chunker: chunker)
+                run = Run(videoID: head.videoID, start: from, cursor: from, emitted: from, chunker: chunker)
             }
             guard var r = run, let range = timeline.range(at: r.cursor) else { return }   // waiting for audio
             let next = done[head.videoID]?.next(after: r.cursor)
@@ -236,9 +246,11 @@ final class Cutter<VAD: VoiceActivityDetector>: @unchecked Sendable {
             }
             r.cursor += Double(samples.count) / MediaTimeline.rate
             run = r
+            if stop == range.end { continue }   // reached a gap or the end of the audio: see the top
             // Reached a stretch already done (after seeking back): close this run, carry on after it.
             guard let next, r.cursor >= next - 0.001 else { return }
             finishRun(flush: true)
         }
     }
+
 }

@@ -11,6 +11,9 @@ come from these runs; trimmed logs are in `results/`.
 | `timing/make_truth.py` | A synthetic recording with known word times (macOS `say`, voice Kyoko). |
 | `timing/karaoke.py` | A page that plays a file and reveals each character at its time, to judge the sync by ear. |
 | `kk-spike-gpu` (`gpu-process/`) | Two web views in one process: one WebKit GPU process or two? |
+| `kk-check-mediatap` (`mediatap-check/`) | The production `MediaTapScript` on bytes captured by `kk-spike-mse`, in random appends: coverage, gaps, switched on late, resync after `abort()` |
+| `kk-check-reveal` (`reveal-check/`) | The production `PlayerScript` reveal with a fake clock: timing, `kkReveal`, late cues, seeks, ads |
+| `kk-check-sync` (`sync-check/`) | Both production scripts plus `MediaPipeline` on a real YouTube page, muted and without translation: cue lead and reveal accuracy |
 
 ```bash
 swift run kk-spike-mse "<youtube url>" <seconds> <out prefix> [--behind <s>] [--seek <to>@<at>]
@@ -18,7 +21,13 @@ swift run kk-spike-timing <audio> [--truth truth.json] [--json out.json] [--ass 
 python3 Experiments/timing/make_truth.py <dir>
 python3 Experiments/timing/karaoke.py <timing.json> <audio> <out.html>
 swift run kk-spike-gpu [url]
+swift run kk-check-mediatap <captured .webm/.mp4> [--late] [--abort]
+swift run kk-check-reveal
+swift run kk-check-sync "<youtube url>" <seconds> [--seek <to>@<at>]
 ```
+
+The app itself: `open -n build/Kikitori.app --args --player-test "<url>" <seconds> <log> --muted`
+(logs synced reveals and the transcript; translates, so it bills a little).
 
 The web-view spikes open small windows with the page muted (WebKit's page mute plus
 `video.muted`): nothing plays aloud. `out/` (git-ignored) holds pages built from stream audio;
