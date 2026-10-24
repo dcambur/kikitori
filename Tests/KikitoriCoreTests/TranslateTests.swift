@@ -122,6 +122,19 @@ func messageJSON(text: String, model: String = "claude-haiku-5-5", stop: String 
         catch { return error as? ClaudeClient.Failure }
     }
 
+    @Test func aTimeoutIsNotOffline() async {
+        struct SlowServer: HTTPTransport {
+            func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) { throw URLError(.timedOut) }
+        }
+        let req = ClaudeClient.Request(model: "m", maxTokens: 1, system: [], messages: [.user("x")])
+        do { _ = try await ClaudeClient(apiKey: "k", transport: SlowServer()).send(req); Issue.record("expected a failure") }
+        catch { #expect(error as? ClaudeClient.Failure == .timedOut) }
+        // Explanations think first: they get longer than live lines.
+        let stub = StubTransport([(500, "{}", [:])])
+        _ = try? await Explainer(client: ClaudeClient(apiKey: "k", transport: stub)).explain(TranscriptLine(time: 0, ja: "草"), context: [], profile: nil)
+        #expect(stub.sent.withLock { $0[0].timeoutInterval } >= 150)
+    }
+
     @Test func mapsStatusesToAppStates() async {
         #expect(await failure(401) == .invalidKey)
         #expect(await failure(429, "{}", ["retry-after": "20"]) == .rateLimited(retryAfter: 20))

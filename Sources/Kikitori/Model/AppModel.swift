@@ -701,7 +701,7 @@ final class AppModel {
         case .creditsExhausted: raise(.creditsExhausted)
         case .rateLimited: raise(.rateLimited)
         case .offline: raise(.offline)
-        case .overloaded: if consecutiveFailures >= 3 { raise(.apiOutage) }
+        case .overloaded, .timedOut: if consecutiveFailures >= 3 { raise(.apiOutage) }
         default: break
         }
     }
@@ -750,13 +750,14 @@ final class AppModel {
         explainTasks[line.id] = Task {
             do {
                 let r = try await Explainer(client: ClaudeClient(apiKey: key)).explain(line, context: context, profile: profile, streamInfo: info)
-                guard !Task.isCancelled else { return }
-                explain[line.id] = .result(previous + [r.explanation], cost: r.cost)
+                // Billed even if it was cancelled meanwhile (another Explain): it counts toward the cap.
                 ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
                                                  cost: r.cost, tokens: r.usage.inputTokens + r.usage.outputTokens))
                 session?.cost += r.cost
-                if prefs.saveExplanations { session?.explanations[line.id, default: []].append(r.explanation) }
                 saveLedgerSoon()
+                guard !Task.isCancelled else { return }
+                explain[line.id] = .result(previous + [r.explanation], cost: r.cost)
+                if prefs.saveExplanations { session?.explanations[line.id, default: []].append(r.explanation) }
             } catch {
                 if let billed = error as? ClaudeClient.BilledFailure {   // billed with nothing to show: still counts
                     ledger.add(UsageEntry(session: session?.id, model: Explainer.model, kind: .explain,
