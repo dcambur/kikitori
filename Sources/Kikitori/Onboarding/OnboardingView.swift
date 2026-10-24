@@ -220,7 +220,8 @@ struct ClaudeStep: View {
         let candidate = key.trimmingCharacters(in: .whitespacesAndNewlines)
         Task {
             let r = await KeyCheck.check(candidate)
-            if r.shouldSave { try? KeychainStore.setAPIKey(candidate); model.hasAPIKey = true }
+            if r.shouldSave { try? KeychainStore.setAPIKey(candidate) }
+            model.hasAPIKey = KeychainStore.apiKey() != nil   // what the Keychain holds, saved or not
             result = r
             checking = false
         }

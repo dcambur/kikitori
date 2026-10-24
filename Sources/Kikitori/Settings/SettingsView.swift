@@ -267,7 +267,11 @@ struct AccountTab: View {
         }
         .formStyle(.grouped)
         .alert("Remove the API key?", isPresented: $confirmRemove) {
-            Button("Remove", role: .destructive) { try? KeychainStore.removeAPIKey(); model.hasAPIKey = false; status = "" }
+            Button("Remove", role: .destructive) {
+                try? KeychainStore.removeAPIKey()
+                model.hasAPIKey = KeychainStore.apiKey() != nil
+                status = model.hasAPIKey ? "The key couldn’t be removed from the Keychain." : ""
+            }
             Button("Cancel", role: .cancel) {}
         } message: { Text("Translation stops until you add a key again.") }
         .alert("Delete all kikitori data?", isPresented: $confirmDeleteData) {
@@ -282,7 +286,9 @@ struct AccountTab: View {
         Task {
             let result = await KeyCheck.check(candidate)
             status = result.message
-            if result.shouldSave, (try? KeychainStore.setAPIKey(candidate)) != nil { model.hasAPIKey = true; key = "" }
+            guard result.shouldSave else { return }
+            do { try KeychainStore.setAPIKey(candidate); model.hasAPIKey = true; key = "" }
+            catch { status = "The key couldn’t be saved in the Keychain (\((error as NSError).code))." }
         }
     }
 }
