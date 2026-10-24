@@ -98,6 +98,10 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
     nonisolated func userContentController(_ userContentController: WKUserContentController,
                                            didReceive message: WKScriptMessage) {
         MainActor.assumeIsolated {   // WebKit delivers script messages on the main thread
+            // Our scripts run in the main frame only, but the handlers are there for every frame in
+            // the page's world: an ad's or an embed's iframe could otherwise post titles (sent to
+            // Claude), audio or log lines.
+            guard message.frameInfo.isMainFrame else { return }
             let body = message.body as? [String: Any] ?? (message.body as? String).map { ["message": $0] } ?? [:]
             handle(message.name, body)
         }
@@ -110,11 +114,12 @@ final class PlayerController: NSObject, WKScriptMessageHandler, WKNavigationDele
             let paused = body["paused"] as? Bool ?? true
             let hasVideo = body["hasVideo"] as? Bool ?? false
             // "(3) Title - YouTube": the count of unread notifications comes and goes.
-            let title = (body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
-                .replacingOccurrences(of: #"^\(\d+\)\s*"#, with: "", options: .regularExpression)
+            // Capped (a video title is at most 100 characters): any page's title goes to Claude.
+            let title = String((body["title"] as? String ?? "").replacingOccurrences(of: " - YouTube", with: "")
+                .replacingOccurrences(of: #"^\(\d+\)\s*"#, with: "", options: .regularExpression).prefix(200))
             let url = (body["url"] as? String).flatMap(URL.init(string:))
             // The channel name is briefly missing while YouTube swaps pages: keep the last one.
-            let channel = (body["channel"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? self.channel
+            let channel = (body["channel"] as? String).flatMap { $0.isEmpty ? nil : String($0.prefix(100)) } ?? self.channel
             if paused != self.paused { self.paused = paused }
             if hasVideo != self.hasVideo { self.hasVideo = hasVideo }
             if url != self.url { self.url = url }
